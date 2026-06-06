@@ -1,4 +1,10 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { auth, googleProvider } from "./firebase";
+import {
+  signInWithEmailAndPassword, createUserWithEmailAndPassword,
+  signInWithPopup, signOut, onAuthStateChanged, updateProfile,
+  sendPasswordResetEmail
+} from "firebase/auth";
 
 /* ─── GROQ API HELPER ─────────────────────────────────────────────────────
    Calls go through /api/chat (Vercel serverless function).
@@ -605,33 +611,75 @@ function Boot({ onBegin, hasPlan }) {
   );
 }
 
+function getErrorMsg(code) {
+  const map = {
+    "auth/user-not-found":       "No account found with this email.",
+    "auth/wrong-password":       "Incorrect password.",
+    "auth/invalid-credential":   "Incorrect email or password.",
+    "auth/email-already-in-use": "Email already registered — sign in instead.",
+    "auth/weak-password":        "Password must be at least 6 characters.",
+    "auth/invalid-email":        "Invalid email address.",
+    "auth/too-many-requests":    "Too many attempts. Try again later.",
+    "auth/popup-blocked":        "Popup blocked — allow popups for this site.",
+    "auth/popup-closed-by-user": "",
+  };
+  return map[code] || "Something went wrong. Try again.";
+}
+
 function Auth({ onAuth }) {
-  const [mode, setMode]     = useState("signin");
-  const [email, setEmail]   = useState("");
-  const [password, setPassword] = useState("");
-  const [name, setName]     = useState("");
-  const [loading, setLoading] = useState(false);
+  const [mode, setMode]           = useState("signin");
+  const [email, setEmail]         = useState("");
+  const [password, setPassword]   = useState("");
+  const [name, setName]           = useState("");
+  const [loading, setLoading]     = useState(false);
+  const [error, setError]         = useState("");
+  const [resetSent, setResetSent] = useState(false);
   const [focusedField, setFocusedField] = useState(null);
-  const [shake, setShake]   = useState(false);
+  const [shake, setShake]         = useState(false);
   const [googleHover, setGoogleHover] = useState(false);
-  const [googleError, setGoogleError] = useState(false);
-  const [ready, setReady]   = useState(false);
+  const [ready, setReady]         = useState(false);
 
   useEffect(()=>{ setTimeout(()=>setReady(true), 80); },[]);
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if(!email.trim()||!password.trim()||(mode==="signup"&&!name.trim())){
       setShake(true); setTimeout(()=>setShake(false),600); return;
     }
-    setLoading(true);
-    setTimeout(()=>{ setLoading(false); onAuth({email, name:name||email.split("@")[0], method:"email"}); },900);
+    setLoading(true); setError("");
+    try {
+      if(mode === "signup") {
+        const cred = await createUserWithEmailAndPassword(auth, email.trim(), password);
+        await updateProfile(cred.user, { displayName: name.trim() });
+        onAuth({ email: cred.user.email, name: name.trim(), uid: cred.user.uid });
+      } else {
+        const cred = await signInWithEmailAndPassword(auth, email.trim(), password);
+        onAuth({ email: cred.user.email, name: cred.user.displayName||email.split("@")[0], uid: cred.user.uid });
+      }
+    } catch(e) {
+      const msg = getErrorMsg(e.code);
+      if(msg){ setError(msg); setShake(true); setTimeout(()=>setShake(false),600); }
+    }
+    setLoading(false);
   };
 
-  const handleGoogle = () => {
-    // Real Google OAuth requires a backend — coming in v2
-    // For now show a clear message instead of silently bypassing
-    setGoogleError(true);
-    setTimeout(()=>setGoogleError(false), 3000);
+  const handleGoogle = async () => {
+    setLoading(true); setError("");
+    try {
+      const cred = await signInWithPopup(auth, googleProvider);
+      onAuth({ email: cred.user.email, name: cred.user.displayName||cred.user.email.split("@")[0], uid: cred.user.uid });
+    } catch(e) {
+      const msg = getErrorMsg(e.code);
+      if(msg) setError(msg);
+    }
+    setLoading(false);
+  };
+
+  const handleForgotPassword = async () => {
+    if(!email.trim()){ setError("Enter your email above first."); return; }
+    try {
+      await sendPasswordResetEmail(auth, email.trim());
+      setResetSent(true); setError("");
+    } catch(e) { setError(getErrorMsg(e.code)); }
   };
 
   const inputStyle = (field) => ({
@@ -647,96 +695,37 @@ function Auth({ onAuth }) {
   return(
     <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",position:"relative",padding:"80px 24px"}}>
       <div style={{position:"fixed",top:"50%",left:"50%",transform:"translate(-50%,-50%)",width:800,height:800,background:"radial-gradient(circle,rgba(255,100,0,0.07) 0%,transparent 70%)",pointerEvents:"none",zIndex:0}}/>
-
-      <div className="auth-wrap" style={{
-        width:"100%", maxWidth:460, position:"relative", zIndex:2,
-        opacity:ready?1:0, transform:ready?"translateY(0)":"translateY(24px)",
-        transition:"all .8s cubic-bezier(.16,1,.3,1)",
-        animation:shake?"shakeX .5s ease":"none",
-      }}>
-        {/* Header */}
+      <div className="auth-wrap" style={{width:"100%",maxWidth:460,position:"relative",zIndex:2,opacity:ready?1:0,transform:ready?"translateY(0)":"translateY(24px)",transition:"all .8s cubic-bezier(.16,1,.3,1)",animation:shake?"shakeX .5s ease":"none"}}>
         <div style={{textAlign:"center",marginBottom:36}}>
-          <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:14,marginBottom:20}}>
-            <NeuralMark size={52}/>
-          </div>
-          <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:26,fontWeight:900,letterSpacing:-1,background:"linear-gradient(145deg,#fff 30%,rgba(255,180,80,.75) 100%)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",marginBottom:8}}>
-            SYNAPSE
-          </div>
-          <div style={{fontSize:12,color:"rgba(255,255,255,0.2)",letterSpacing:2,textTransform:"uppercase"}}>
-            {mode==="signin"?"Welcome back, soldier":"Initialize your protocol"}
-          </div>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:14,marginBottom:20}}><NeuralMark size={52}/></div>
+          <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:26,fontWeight:900,letterSpacing:-1,background:"linear-gradient(145deg,#fff 30%,rgba(255,180,80,.75) 100%)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",marginBottom:8}}>SYNAPSE</div>
+          <div style={{fontSize:12,color:"rgba(255,255,255,0.2)",letterSpacing:2,textTransform:"uppercase"}}>{mode==="signin"?"Welcome back, soldier":"Initialize your protocol"}</div>
         </div>
-
-        {/* Card */}
         <div className="glass" style={{padding:36,boxShadow:"0 0 60px rgba(255,140,0,0.08),0 32px 64px rgba(0,0,0,0.4)",animation:"borderGlow 5s ease-in-out infinite"}}>
-          {/* Mode tabs */}
           <div style={{display:"flex",background:"rgba(255,255,255,0.03)",borderRadius:10,padding:4,marginBottom:28,border:"1px solid rgba(255,140,0,0.08)"}}>
             {[["signin","Sign In"],["signup","Sign Up"]].map(([m,l])=>(
-              <button key={m} onClick={()=>setMode(m)} style={{flex:1,padding:"9px 0",borderRadius:8,border:"none",background:mode===m?"linear-gradient(135deg,rgba(255,140,0,0.18),rgba(255,80,0,0.1))":"transparent",color:mode===m?"#ffb347":"rgba(255,255,255,0.25)",fontSize:12,fontWeight:600,letterSpacing:.8,textTransform:"uppercase",transition:"all .25s",cursor:"none"}}>
-                {l}
-              </button>
+              <button key={m} onClick={()=>{setMode(m);setError("");setResetSent(false);}} style={{flex:1,padding:"9px 0",borderRadius:8,border:"none",background:mode===m?"linear-gradient(135deg,rgba(255,140,0,0.18),rgba(255,80,0,0.1))":"transparent",color:mode===m?"#ffb347":"rgba(255,255,255,0.25)",fontSize:12,fontWeight:600,letterSpacing:.8,textTransform:"uppercase",transition:"all .25s",cursor:"none"}}>{l}</button>
             ))}
           </div>
-
           <div style={{display:"flex",flexDirection:"column",gap:14}}>
-            {mode==="signup"&&(
-              <div>
-                <div style={{fontSize:11,color:"rgba(255,180,80,0.4)",letterSpacing:1,textTransform:"uppercase",marginBottom:7,fontWeight:500}}>Name</div>
-                <input style={inputStyle("name")} type="text" placeholder="Your name" value={name} onChange={e=>setName(e.target.value)} onFocus={()=>setFocusedField("name")} onBlur={()=>setFocusedField(null)} onKeyDown={e=>e.key==="Enter"&&handleSubmit()}/>
-              </div>
-            )}
-            <div>
-              <div style={{fontSize:11,color:"rgba(255,180,80,0.4)",letterSpacing:1,textTransform:"uppercase",marginBottom:7,fontWeight:500}}>Email</div>
-              <input style={inputStyle("email")} type="email" placeholder="your@email.com" value={email} onChange={e=>setEmail(e.target.value)} onFocus={()=>setFocusedField("email")} onBlur={()=>setFocusedField(null)} onKeyDown={e=>e.key==="Enter"&&handleSubmit()}/>
-            </div>
-            <div>
-              <div style={{fontSize:11,color:"rgba(255,180,80,0.4)",letterSpacing:1,textTransform:"uppercase",marginBottom:7,fontWeight:500}}>Password</div>
-              <input style={inputStyle("password")} type="password" placeholder="••••••••" value={password} onChange={e=>setPassword(e.target.value)} onFocus={()=>setFocusedField("password")} onBlur={()=>setFocusedField(null)} onKeyDown={e=>e.key==="Enter"&&handleSubmit()}/>
-            </div>
-            {mode==="signin"&&(
-              <div style={{textAlign:"right",marginTop:-6}}>
-                <span style={{fontSize:11,color:"rgba(255,140,0,0.32)",letterSpacing:.3,cursor:"none"}}>Forgot password?</span>
-              </div>
-            )}
-
-            <button className="btn-primary" onClick={handleSubmit} disabled={loading}
-              style={{width:"100%",marginTop:8,padding:"15px",fontSize:13,borderRadius:12,justifyContent:"center",display:"flex",alignItems:"center",gap:8}}>
-              {loading
-                ? <span style={{display:"flex",gap:4}}>{[0,1,2].map(i=><span key={i} style={{width:4,height:4,borderRadius:"50%",background:"#fff",animation:`dotBlink 1s ${i*.18}s infinite`}}/>)}</span>
-                : mode==="signin" ? "Enter the Protocol →" : "Initialize Protocol →"
-              }
+            {mode==="signup"&&<div><div style={{fontSize:11,color:"rgba(255,180,80,0.4)",letterSpacing:1,textTransform:"uppercase",marginBottom:7,fontWeight:500}}>Name</div><input style={inputStyle("name")} type="text" placeholder="Your name" value={name} onChange={e=>setName(e.target.value)} onFocus={()=>setFocusedField("name")} onBlur={()=>setFocusedField(null)} onKeyDown={e=>e.key==="Enter"&&handleSubmit()}/></div>}
+            <div><div style={{fontSize:11,color:"rgba(255,180,80,0.4)",letterSpacing:1,textTransform:"uppercase",marginBottom:7,fontWeight:500}}>Email</div><input style={inputStyle("email")} type="email" placeholder="your@email.com" value={email} onChange={e=>setEmail(e.target.value)} onFocus={()=>setFocusedField("email")} onBlur={()=>setFocusedField(null)} onKeyDown={e=>e.key==="Enter"&&handleSubmit()}/></div>
+            <div><div style={{fontSize:11,color:"rgba(255,180,80,0.4)",letterSpacing:1,textTransform:"uppercase",marginBottom:7,fontWeight:500}}>Password</div><input style={inputStyle("password")} type="password" placeholder="••••••••" value={password} onChange={e=>setPassword(e.target.value)} onFocus={()=>setFocusedField("password")} onBlur={()=>setFocusedField(null)} onKeyDown={e=>e.key==="Enter"&&handleSubmit()}/></div>
+            {error&&<div style={{fontSize:12,color:"#ff7777",padding:"10px 14px",background:"rgba(255,60,60,0.07)",border:"1px solid rgba(255,60,60,0.2)",borderRadius:8,lineHeight:1.5}}>{error}</div>}
+            {resetSent&&<div style={{fontSize:12,color:"#66ffaa",padding:"10px 14px",background:"rgba(60,255,120,0.06)",border:"1px solid rgba(60,255,120,0.2)",borderRadius:8}}>✓ Reset email sent — check your inbox.</div>}
+            {mode==="signin"&&<div style={{textAlign:"right",marginTop:-6}}><span onClick={handleForgotPassword} style={{fontSize:11,color:"rgba(255,140,0,0.35)",letterSpacing:.3,cursor:"none"}} onMouseEnter={e=>e.target.style.color="rgba(255,140,0,0.65)"} onMouseLeave={e=>e.target.style.color="rgba(255,140,0,0.35)"}>Forgot password?</span></div>}
+            <button className="btn-primary" onClick={handleSubmit} disabled={loading} style={{width:"100%",marginTop:8,padding:"15px",fontSize:13,borderRadius:12,justifyContent:"center",display:"flex",alignItems:"center",gap:8}}>
+              {loading?<span style={{display:"flex",gap:4}}>{[0,1,2].map(i=><span key={i} style={{width:4,height:4,borderRadius:"50%",background:"#fff",animation:`dotBlink 1s ${i*.18}s infinite`}}/>)}</span>:mode==="signin"?"Enter the Protocol →":"Initialize Protocol →"}
             </button>
-
-            <div style={{display:"flex",alignItems:"center",gap:12,margin:"4px 0"}}>
-              <div style={{flex:1,height:1,background:"rgba(255,255,255,0.06)"}}/>
-              <span style={{fontSize:11,color:"rgba(255,255,255,0.16)",letterSpacing:1}}>OR</span>
-              <div style={{flex:1,height:1,background:"rgba(255,255,255,0.06)"}}/>
-            </div>
-
-            <button onClick={handleGoogle} disabled={loading} onMouseEnter={()=>setGoogleHover(true)} onMouseLeave={()=>setGoogleHover(false)}
-              style={{width:"100%",padding:"14px",borderRadius:12,background:googleError?"rgba(255,60,60,0.08)":googleHover?"rgba(255,255,255,0.06)":"rgba(255,255,255,0.03)",border:`1px solid ${googleError?"rgba(255,80,80,0.4)":googleHover?"rgba(255,255,255,0.18)":"rgba(255,255,255,0.08)"}`,color:googleError?"rgba(255,120,120,0.85)":googleHover?"rgba(255,255,255,0.85)":"rgba(255,255,255,0.4)",fontSize:13,fontWeight:500,cursor:"none",transition:"all .25s",display:"flex",alignItems:"center",justifyContent:"center",gap:10}}>
-              {googleError ? (
-                <span style={{fontSize:12,letterSpacing:.3}}>⚠ Google OAuth requires backend — use email for now</span>
-              ) : (
-                <>
-                  <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-                    <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z" fill={googleHover?"#4285F4":"rgba(66,133,244,0.6)"}/>
-                    <path d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z" fill={googleHover?"#34A853":"rgba(52,168,83,0.6)"}/>
-                    <path d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332z" fill={googleHover?"#FBBC05":"rgba(251,188,5,0.6)"}/>
-                    <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z" fill={googleHover?"#EA4335":"rgba(234,67,53,0.6)"}/>
-                  </svg>
-                  Continue with Google
-                </>
-              )}
+            <div style={{display:"flex",alignItems:"center",gap:12,margin:"4px 0"}}><div style={{flex:1,height:1,background:"rgba(255,255,255,0.06)"}}/><span style={{fontSize:11,color:"rgba(255,255,255,0.16)",letterSpacing:1}}>OR</span><div style={{flex:1,height:1,background:"rgba(255,255,255,0.06)"}}/></div>
+            <button onClick={handleGoogle} disabled={loading} onMouseEnter={()=>setGoogleHover(true)} onMouseLeave={()=>setGoogleHover(false)} style={{width:"100%",padding:"14px",borderRadius:12,background:googleHover?"rgba(255,255,255,0.06)":"rgba(255,255,255,0.03)",border:`1px solid ${googleHover?"rgba(255,255,255,0.18)":"rgba(255,255,255,0.08)"}`,color:googleHover?"rgba(255,255,255,0.85)":"rgba(255,255,255,0.4)",fontSize:13,fontWeight:500,cursor:"none",transition:"all .25s",display:"flex",alignItems:"center",justifyContent:"center",gap:10}}>
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z" fill={googleHover?"#4285F4":"rgba(66,133,244,0.6)"}/><path d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z" fill={googleHover?"#34A853":"rgba(52,168,83,0.6)"}/><path d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332z" fill={googleHover?"#FBBC05":"rgba(251,188,5,0.6)"}/><path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z" fill={googleHover?"#EA4335":"rgba(234,67,53,0.6)"}/>
+              </svg>
+              Continue with Google
             </button>
           </div>
+          <p style={{textAlign:"center",fontSize:11,color:"rgba(255,255,255,0.12)",marginTop:20,lineHeight:1.7,letterSpacing:.2}}>By continuing, you agree to the Synapse Protocol.<br/><span style={{color:"rgba(255,140,0,0.28)"}}>Encrypted. Private. Never sold.</span><br/><span style={{color:"rgba(255,255,255,0.1)"}}>⚠ Progress stored locally. Clearing browser data erases your streak.</span></p>
         </div>
-
-        <p style={{textAlign:"center",fontSize:11,color:"rgba(255,255,255,0.12)",marginTop:20,lineHeight:1.7,letterSpacing:.2}}>
-          By continuing, you agree to the Synapse Protocol.<br/>
-          <span style={{color:"rgba(255,140,0,0.28)"}}>Encrypted. Private. Never sold.</span><br/>
-          <span style={{color:"rgba(255,255,255,0.1)"}}>⚠ Progress is stored locally on this device only.<br/>Clearing browser data will erase your streak.</span>
-        </p>
       </div>
     </div>
   );
@@ -1765,7 +1754,8 @@ function EmergencyOverlay({savedPlan,streak,onClose}){
 /* ─── ROOT ───────────────────────────────────────────────────────────────── */
 export default function App() {
   const [screen,setScreen]  =useState("boot");
-  const [authed,setAuthed]  =useState(()=>!!ls.get("syn_user",null));
+  const [authed,setAuthed]  =useState(false);
+  const [authLoading,setAuthLoading]=useState(true);
   const [showAuth,setShowAuth]=useState(false);
   const [plan,setPlan]      =useState("");
   const [planLoading,setPL] =useState(false);
@@ -1780,6 +1770,20 @@ export default function App() {
 
   useEffect(()=>{const s=document.createElement("style");s.textContent=G;document.head.appendChild(s);return()=>document.head.removeChild(s);},[]);
   useEffect(()=>{"serviceWorker" in navigator&&navigator.serviceWorker.register("/sw.js",{scope:"/"}).catch(()=>{});},[]);
+
+  // Firebase auth state listener — restores session on page reload
+  useEffect(()=>{
+    const unsub=onAuthStateChanged(auth,user=>{
+      if(user){
+        ls.set("syn_user",JSON.stringify({email:user.email,name:user.displayName||user.email?.split("@")[0],uid:user.uid}));
+        setAuthed(true);
+      } else {
+        setAuthed(false);
+      }
+      setAuthLoading(false);
+    });
+    return unsub;
+  },[]);
 
   const goTo=useCallback(s=>{setTr(true);setTimeout(()=>{setScreen(s);setTr(false);window.scrollTo({top:0,behavior:"instant"});},260);},[]);
 
@@ -1873,6 +1877,7 @@ export default function App() {
     if(!confirm("Reset all progress? This cannot be undone."))return;
     ["syn_streak","syn_last","syn_plan","syn_plan_history","syn_history","syn_user","syn_archetype","syn_milestones"].forEach(k=>ls.remove(k));
     setStreak(0);setLastCI(null);setSP("");setPlanHist([]);setHistory([]);setPlan("");setAuthed(false);setShowAuth(false);
+    signOut(auth).catch(()=>{});
     setScreen("boot");setTr(false);window.scrollTo({top:0,behavior:"instant"});
   };
 
@@ -1883,7 +1888,14 @@ export default function App() {
       <FloatingNeurons/>
       <div style={{position:"fixed",inset:0,background:"#07040a",zIndex:900,pointerEvents:"none",opacity:tr?1:0,transition:"opacity .26s ease"}}/>
 
-      {!authed && !showAuth ? (
+      {authLoading ? (
+        <div style={{position:"fixed",inset:0,display:"flex",alignItems:"center",justifyContent:"center",zIndex:10}}>
+          <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:20}}>
+            <NeuralMark size={56}/>
+            <div style={{display:"flex",gap:6}}>{[0,1,2].map(i=><div key={i} style={{width:6,height:6,borderRadius:"50%",background:"#ff9500",animation:`dotBlink 1s ${i*.2}s infinite`}}/>)}</div>
+          </div>
+        </div>
+      ) : !authed && !showAuth ? (
         /* ── STEP 1: BOOT ── */
         <div style={{position:"relative",zIndex:2}}>
           <Boot onBegin={handleBegin} hasPlan={!!savedPlan}/>
