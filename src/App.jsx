@@ -126,7 +126,12 @@ Paragraph 3 — IDENTITY: One line reconnecting them to who they're becoming. Re
 
 Under 80 words total. No headers. No emojis. Write like you're whispering fire into their ear at 2am.`;
 
-/* ─── MILESTONE DATA ─────────────────────────────────────────────────────── */
+/* ─── CHAT SYSTEM PROMPT ─────────────────────────────────────────────────── */
+const SYSTEM_CHAT=`You are SYNAPSE — an AI recovery coach. You ONLY discuss topics directly related to: dopamine recovery, addiction (any type), porn addiction, social media addiction, gaming addiction, junk food, substance use, mental health struggles, motivation, habit breaking, urges, cravings, relapses, streaks, discipline, focus, self-improvement, and withdrawal.
+
+STRICT RULE: If the user's message is off-topic (anything unrelated to recovery, addiction, mental health, or self-improvement), you MUST respond with ONLY this exact token and nothing else: [OFF_TOPIC]
+
+For on-topic messages: speak like a tough, direct recovery coach who genuinely believes in the person. No therapy speak. No "I understand your feelings." Practical, honest, fired up. Keep responses under 120 words unless depth is truly needed. No bullet points — flowing prose only.`;
 const MILESTONE_DATA={
   7: {emoji:"🔥",name:"IGNITION",   color:"#ff9500",rgb:"255,149,0",  msg:"7 days. Your dopamine receptors are beginning to reset. The fog is lifting. This is where most people quit — you didn't."},
   21:{emoji:"⚡",name:"REWIRED",    color:"#ffcc00",rgb:"255,204,0",  msg:"21 days. Neural pathways are physically changing. Old cravings are losing their signal. You are not the same person who started."},
@@ -438,53 +443,71 @@ input[type=range]{-webkit-appearance:none;appearance:none;background:transparent
 .addiction-grid{box-sizing:border-box;}
 
 @media(max-width:768px){
-  /* Nav */
-  nav{padding:12px 20px !important;}
-  nav .nav-pill{padding:6px 12px !important;font-size:9px !important;letter-spacing:.4px !important;}
+  /* ── Nav ── */
+  nav{padding:10px 16px !important;}
+  nav .nav-pill{padding:5px 10px !important;font-size:9px !important;letter-spacing:.3px !important;}
 
-  /* Boot page */
+  /* ── Global heading scale ── */
+  /* Force all Orbitron giant headings to scale down */
+  [style*="font-size:clamp"]{font-size:clamp(28px,8vw,48px);}
+
+  /* ── Boot page ── */
   .boot-inner{padding:90px 5vw 60px !important;}
 
-  /* Confess steps */
-  .step-inner{padding:100px 5vw 60px !important;}
-
-  /* Step bar */
+  /* ── Confess steps ── */
+  .step-inner{padding:90px 5vw 60px !important;}
   .step-bar{padding:0 4vw !important;}
   .step-label{display:none !important;}
 
-  /* Archetype grid */
-  .archetype-grid{grid-template-columns:1fr 1fr !important;gap:12px !important;}
+  /* ── Grids ── */
+  .archetype-grid{grid-template-columns:1fr 1fr !important;gap:10px !important;}
+  .addiction-grid{grid-template-columns:1fr 1fr !important;gap:8px !important;}
 
-  /* Addiction grid */
-  .addiction-grid{grid-template-columns:1fr 1fr !important;gap:10px !important;}
+  /* ── Content pads ── */
+  .content-pad{padding:72px 5vw 80px !important;}
+  .hero-pad{padding:56px 5vw 32px !important;}
 
-  /* Plan / Checkin / History content */
-  .content-pad{padding:72px 5vw 60px !important;}
-  .hero-pad{padding:60px 5vw 40px !important;}
+  /* ── Streak number ── */
+  .streak-num{font-size:clamp(72px,20vw,120px) !important;}
 
-  /* Streak number */
-  .streak-num{font-size:clamp(80px,22vw,140px) !important;}
-
-  /* Auth card */
+  /* ── Auth ── */
   .auth-wrap{padding:60px 5vw !important;max-width:100% !important;}
 
-  /* Footer */
-  .footer-wrap{padding:20px 5vw !important;flex-direction:column !important;gap:12px !important;}
+  /* ── Buttons ── */
+  .btn-primary{padding:13px 24px !important;font-size:12px !important;}
+  .btn-ghost{padding:13px 24px !important;font-size:12px !important;}
 
-  /* Buttons */
-  .btn-primary{padding:13px 28px !important;font-size:12px !important;}
-  .btn-ghost{padding:13px 28px !important;font-size:12px !important;}
+  /* ── Footer ── */
+  .footer-wrap{padding:20px 5vw !important;flex-direction:column !important;gap:10px !important;}
+
+  /* ── Glass cards ── */
+  .glass{padding:18px !important;}
+
+  /* ── Chat input bar ── */
+  .chat-bar{padding:12px 16px !important;}
 }
 
 @media(max-width:480px){
-  /* Archetype grid → single column on very small */
+  /* ── Single column grids ── */
   .archetype-grid{grid-template-columns:1fr !important;}
-
-  /* Addiction grid → single column */  
   .addiction-grid{grid-template-columns:1fr !important;}
 
-  /* Nav — hide text labels, show only icons */
-  nav .nav-text{display:none !important;}
+  /* ── Nav pills — shorter ── */
+  nav .nav-pill{padding:4px 8px !important;font-size:8px !important;}
+
+  /* ── Body text — enforce readable sizes ── */
+  p{font-size:13px !important;line-height:1.75 !important;}
+
+  /* ── Input fields — prevent iOS zoom (must be 16px+) ── */
+  input,textarea{font-size:16px !important;}
+
+  /* ── Section tag pills ── */
+  [style*="letterSpacing:2.5"]{font-size:8px !important;}
+  [style*='letterSpacing:"2.5']{font-size:8px !important;}
+}
+
+@media(max-width:380px){
+  nav .nav-pill{padding:4px 6px !important;font-size:7px !important;letter-spacing:0 !important;}
 }
 `;
 
@@ -502,7 +525,7 @@ function Nav({screen,goTo,savedPlan,onReset}) {
         </div>
       </div>
       <div style={{display:"flex",gap:8,alignItems:"center"}}>
-        {savedPlan&&[["checkin","Check-In"],["plan","My Plan"],["report","Report"],["history","Log"]].map(([s,l])=>(
+        {savedPlan&&[["checkin","Check-In"],["plan","My Plan"],["chat","Coach"],["report","Report"],["history","Log"]].map(([s,l])=>(
           <button key={s} className={`nav-pill${screen===s?" active":""}`} onClick={()=>goTo(s)}>{l}</button>
         ))}
         <button className={`nav-pill${screen==="confess"?" active":""}`} onClick={()=>goTo("confess")}>Confess</button>
@@ -568,8 +591,8 @@ function Boot({ onBegin, hasPlan }) {
 
             {/* Glitch headline */}
             <div style={{position:"relative",lineHeight:.88,marginBottom:14}}>
-              <h1 style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(36px,10vw,104px)",fontWeight:900,letterSpacing:-2,background:"linear-gradient(145deg,#ffffff 0%,rgba(255,200,100,0.85) 50%,rgba(255,100,30,0.7) 100%)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",animation:"glitch1 9s ease-in-out infinite",lineHeight:.88,whiteSpace:"nowrap",overflow:"hidden"}}>SYNAPSE</h1>
-              <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(36px,10vw,104px)",fontWeight:900,letterSpacing:-2,color:"rgba(255,80,0,.35)",animation:"glitch2 9s ease-in-out infinite",position:"absolute",top:0,left:0,lineHeight:.88,whiteSpace:"nowrap",overflow:"hidden"}}>SYNAPSE</div>
+              <h1 style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(32px,8vw,104px)",fontWeight:900,letterSpacing:-2,background:"linear-gradient(145deg,#ffffff 0%,rgba(255,200,100,0.85) 50%,rgba(255,100,30,0.7) 100%)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",animation:"glitch1 9s ease-in-out infinite",lineHeight:.88,whiteSpace:"nowrap",overflow:"hidden"}}>SYNAPSE</h1>
+              <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(32px,8vw,104px)",fontWeight:900,letterSpacing:-2,color:"rgba(255,80,0,.35)",animation:"glitch2 9s ease-in-out infinite",position:"absolute",top:0,left:0,lineHeight:.88,whiteSpace:"nowrap",overflow:"hidden"}}>SYNAPSE</div>
             </div>
 
             <div className="s3" style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(8px,1vw,12px)",fontWeight:700,letterSpacing:3,color:"rgba(255,140,0,0.65)",textTransform:"uppercase",marginBottom:32,display:"flex",alignItems:"center",gap:10,flexWrap:"nowrap",overflow:"hidden"}}>
@@ -855,10 +878,10 @@ function ArchetypeStep({ onSelect, selected }) {
 
       {/* Headline */}
       <div style={{position:"relative",lineHeight:.9,marginBottom:8,width:"100%"}}>
-        <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(32px,9vw,88px)",fontWeight:900,letterSpacing:-3,background:"linear-gradient(160deg,#fff 0%,rgba(255,210,110,.8) 60%,rgba(255,100,30,.5) 100%)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",animation:"glitch1 9s ease-in-out infinite",lineHeight:.9}}>WHO ARE</div>
-        <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(32px,9vw,88px)",fontWeight:900,letterSpacing:-3,color:"rgba(255,80,0,.35)",animation:"glitch2 9s ease-in-out infinite",position:"absolute",top:0,left:0,lineHeight:.9}}>WHO ARE</div>
+        <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(28px,7vw,88px)",fontWeight:900,letterSpacing:-3,background:"linear-gradient(160deg,#fff 0%,rgba(255,210,110,.8) 60%,rgba(255,100,30,.5) 100%)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",animation:"glitch1 9s ease-in-out infinite",lineHeight:.9}}>WHO ARE</div>
+        <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(28px,7vw,88px)",fontWeight:900,letterSpacing:-3,color:"rgba(255,80,0,.35)",animation:"glitch2 9s ease-in-out infinite",position:"absolute",top:0,left:0,lineHeight:.9}}>WHO ARE</div>
       </div>
-      <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(32px,9vw,88px)",fontWeight:900,letterSpacing:-3,background:"linear-gradient(160deg,#fff 0%,rgba(255,210,110,.8) 60%,rgba(255,100,30,.5) 100%)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",lineHeight:.9,marginBottom:20}}>YOU BECOMING?</div>
+      <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(28px,7vw,88px)",fontWeight:900,letterSpacing:-3,background:"linear-gradient(160deg,#fff 0%,rgba(255,210,110,.8) 60%,rgba(255,100,30,.5) 100%)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",lineHeight:.9,marginBottom:20}}>YOU BECOMING?</div>
 
       <p style={{fontSize:15,color:"rgba(255,255,255,.3)",fontWeight:300,lineHeight:1.75,maxWidth:500,marginBottom:52}}>
         Choose the archetype that resonates with the version of yourself you're fighting to become.{" "}
@@ -982,10 +1005,10 @@ function ConfessStep1({selected, onToggle, onNext}) {
         <span style={{fontSize:10,fontWeight:600,letterSpacing:2.5,color:"rgba(255,180,80,.65)",textTransform:"uppercase"}}>Step 02 of 05 — Select Your Poisons</span>
       </div>
       <div style={{position:"relative",lineHeight:.9,marginBottom:8}}>
-        <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(32px,9.5vw,96px)",fontWeight:900,letterSpacing:-3,background:"linear-gradient(160deg,#fff 0%,rgba(255,210,110,.8) 60%,rgba(255,100,30,.5) 100%)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",animation:"glitch1 8s ease-in-out infinite",lineHeight:.9}}>WHAT ARE</div>
-        <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(32px,9.5vw,96px)",fontWeight:900,letterSpacing:-3,color:"rgba(255,80,0,.4)",animation:"glitch2 8s ease-in-out infinite",position:"absolute",top:0,left:0,lineHeight:.9}}>WHAT ARE</div>
+        <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(28px,7.5vw,96px)",fontWeight:900,letterSpacing:-3,background:"linear-gradient(160deg,#fff 0%,rgba(255,210,110,.8) 60%,rgba(255,100,30,.5) 100%)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",animation:"glitch1 8s ease-in-out infinite",lineHeight:.9}}>WHAT ARE</div>
+        <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(28px,7.5vw,96px)",fontWeight:900,letterSpacing:-3,color:"rgba(255,80,0,.4)",animation:"glitch2 8s ease-in-out infinite",position:"absolute",top:0,left:0,lineHeight:.9}}>WHAT ARE</div>
       </div>
-      <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(32px,9.5vw,96px)",fontWeight:900,letterSpacing:-3,background:"linear-gradient(160deg,#fff 0%,rgba(255,210,110,.8) 60%,rgba(255,100,30,.5) 100%)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",lineHeight:.9,marginBottom:24}}>YOUR POISONS?</div>
+      <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(28px,7.5vw,96px)",fontWeight:900,letterSpacing:-3,background:"linear-gradient(160deg,#fff 0%,rgba(255,210,110,.8) 60%,rgba(255,100,30,.5) 100%)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",lineHeight:.9,marginBottom:24}}>YOUR POISONS?</div>
       <p style={{fontSize:15,color:"rgba(255,255,255,.3)",fontWeight:300,lineHeight:1.75,maxWidth:520,marginBottom:48,marginTop:8,textAlign:"center",marginLeft:"auto",marginRight:"auto"}}>
         Be honest. Select everything that has a grip on you —{" "}
         <span style={{color:"rgba(255,180,80,.6)",fontWeight:400}}>even if it feels embarrassing.</span>
@@ -1033,8 +1056,8 @@ function ConfessStep2({selected, hours, onHoursChange, onNext, onBack}) {
         <div style={{width:6,height:6,borderRadius:"50%",background:"#ff8c00",boxShadow:"0 0 10px #ff8c00"}}/>
         <span style={{fontSize:10,fontWeight:600,letterSpacing:2.5,color:"rgba(255,180,80,.65)",textTransform:"uppercase"}}>Step 03 of 05 — Measure the Damage</span>
       </div>
-      <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(30px,9vw,84px)",fontWeight:900,letterSpacing:-3,background:"linear-gradient(160deg,#fff 0%,rgba(255,210,110,.8) 60%,rgba(255,100,30,.5) 100%)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",lineHeight:.9,marginBottom:8}}>HOW MUCH</div>
-      <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(30px,9vw,84px)",fontWeight:900,letterSpacing:-3,background:"linear-gradient(160deg,#fff 0%,rgba(255,210,110,.8) 60%,rgba(255,100,30,.5) 100%)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",lineHeight:.9,marginBottom:28}}>PER DAY?</div>
+      <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(26px,7vw,84px)",fontWeight:900,letterSpacing:-3,background:"linear-gradient(160deg,#fff 0%,rgba(255,210,110,.8) 60%,rgba(255,100,30,.5) 100%)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",lineHeight:.9,marginBottom:8}}>HOW MUCH</div>
+      <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(26px,7vw,84px)",fontWeight:900,letterSpacing:-3,background:"linear-gradient(160deg,#fff 0%,rgba(255,210,110,.8) 60%,rgba(255,100,30,.5) 100%)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",lineHeight:.9,marginBottom:28}}>PER DAY?</div>
       <p style={{fontSize:14,color:"rgba(255,255,255,.28)",fontWeight:300,lineHeight:1.9,maxWidth:440,marginBottom:40}}>Some addictions are measured in hours, others in times per day. Be brutally honest.</p>
       <div style={{display:"flex",flexDirection:"column",gap:18,marginBottom:40}}>
         {selectedAddictions.map((a,i)=>{
@@ -1123,8 +1146,8 @@ function ConfessStep3({selected, hours, onNext, onBack}) {
         <div style={{width:6,height:6,borderRadius:"50%",background:"#ff4444",boxShadow:"0 0 10px #ff4444",animation:"pulseRing 1.4s ease-out infinite"}}/>
         <span style={{fontSize:10,fontWeight:600,letterSpacing:2.5,color:"rgba(255,120,100,.7)",textTransform:"uppercase"}}>Step 04 of 05 — The Real Cost</span>
       </div>
-      <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(30px,9vw,84px)",fontWeight:900,letterSpacing:-3,background:"linear-gradient(160deg,#ff4444 0%,#ff8844 60%,rgba(255,180,80,.7) 100%)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",lineHeight:.9,marginBottom:8}}>WHAT YOU</div>
-      <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(30px,9vw,84px)",fontWeight:900,letterSpacing:-3,background:"linear-gradient(160deg,#ff4444 0%,#ff8844 60%,rgba(255,180,80,.7) 100%)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",lineHeight:.9,marginBottom:36}}>ARE LOSING.</div>
+      <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(26px,7vw,84px)",fontWeight:900,letterSpacing:-3,background:"linear-gradient(160deg,#ff4444 0%,#ff8844 60%,rgba(255,180,80,.7) 100%)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",lineHeight:.9,marginBottom:8}}>WHAT YOU</div>
+      <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(26px,7vw,84px)",fontWeight:900,letterSpacing:-3,background:"linear-gradient(160deg,#ff4444 0%,#ff8844 60%,rgba(255,180,80,.7) 100%)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",lineHeight:.9,marginBottom:36}}>ARE LOSING.</div>
       <div style={{marginBottom:40,height:52,display:"flex",alignItems:"center"}}>
         <div style={{display:"flex",alignItems:"center",gap:12,opacity:tagVis?1:0,transform:tagVis?"translateY(0)":"translateY(10px)",transition:"all .4s cubic-bezier(.16,1,.3,1)"}}>
           <div style={{width:4,height:4,borderRadius:"50%",background:"#ff4444",flexShrink:0,boxShadow:"0 0 8px #ff4444"}}/>
@@ -1189,10 +1212,10 @@ function ConfessStep4({selected, hours, onSubmit, loading, onBack}) {
         <span style={{fontSize:10,fontWeight:600,letterSpacing:2.5,color:"rgba(255,180,80,.65)",textTransform:"uppercase"}}>Step 05 of 05 — Final Confession</span>
       </div>
       <div style={{position:"relative",lineHeight:.9,marginBottom:8}}>
-        <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(32px,9.5vw,96px)",fontWeight:900,letterSpacing:-3,background:"linear-gradient(160deg,#fff 0%,rgba(255,210,110,.8) 60%,rgba(255,100,30,.5) 100%)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",animation:"glitch1 7s ease-in-out infinite"}}>TELL THE</div>
-        <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(32px,9.5vw,96px)",fontWeight:900,letterSpacing:-3,color:"rgba(255,80,0,.4)",animation:"glitch2 7s ease-in-out infinite",position:"absolute",top:0,left:0}}>TELL THE</div>
+        <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(28px,7.5vw,96px)",fontWeight:900,letterSpacing:-3,background:"linear-gradient(160deg,#fff 0%,rgba(255,210,110,.8) 60%,rgba(255,100,30,.5) 100%)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",animation:"glitch1 7s ease-in-out infinite"}}>TELL THE</div>
+        <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(28px,7.5vw,96px)",fontWeight:900,letterSpacing:-3,color:"rgba(255,80,0,.4)",animation:"glitch2 7s ease-in-out infinite",position:"absolute",top:0,left:0}}>TELL THE</div>
       </div>
-      <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(32px,9.5vw,96px)",fontWeight:900,letterSpacing:-3,background:"linear-gradient(160deg,#fff 0%,rgba(255,210,110,.8) 60%,rgba(255,100,30,.5) 100%)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",lineHeight:.9,marginBottom:20}}>TRUTH.</div>
+      <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(28px,7.5vw,96px)",fontWeight:900,letterSpacing:-3,background:"linear-gradient(160deg,#fff 0%,rgba(255,210,110,.8) 60%,rgba(255,100,30,.5) 100%)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",lineHeight:.9,marginBottom:20}}>TRUTH.</div>
       <p style={{fontSize:14,color:"rgba(255,255,255,.28)",fontWeight:300,lineHeight:1.9,maxWidth:480,marginBottom:36}}>Anything extra SYNAPSE should know? How long, what you've tried, your biggest struggle? <span style={{color:"rgba(255,180,80,.45)"}}>Optional — your plan generates either way.</span></p>
       <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:28}}>
         {selectedAddictions.map(a=>{ const rgb=a.color.replace('#','').match(/.{2}/g).map(x=>parseInt(x,16)).join(','); const v=hours[a.id]||0; const unitStr=FREQ_ADDICTIONS.has(a.id)?`${v}x/d`:`${v}h/d`; return(<div key={a.id} style={{display:"flex",alignItems:"center",gap:6,background:`rgba(${rgb},.1)`,border:`1px solid rgba(${rgb},.28)`,borderRadius:999,padding:"5px 12px",fontSize:10,color:`rgba(${rgb},1)`}}><span>{a.emoji}</span><span>{a.label}</span><span style={{opacity:.4}}>·</span><span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:9}}>{unitStr}</span></div>); })}
@@ -1290,7 +1313,7 @@ function Plan({plan,loading,onBegin}) {
       <div className="hero-pad" className="hero-pad" style={{padding:"clamp(60px,8vw,80px) clamp(20px,8vw,100px) clamp(40px,5vw,64px)",borderBottom:"1px solid rgba(255,140,0,0.07)",position:"relative",zIndex:1}}>
         <div style={{position:"absolute",inset:0,background:"radial-gradient(ellipse at 30% 60%, rgba(255,100,0,0.06) 0%, transparent 60%)",pointerEvents:"none"}}/>
         <div className="tag s1" style={{marginBottom:24}}><span className="d"/>Recovery Protocol</div>
-        <h2 className="s2" style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(36px,10vw,104px)",fontWeight:800,lineHeight:.88,letterSpacing:-3,background:"linear-gradient(145deg,#fff 40%,rgba(255,180,80,0.65) 100%)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent"}}>YOUR<br/>MISSION.</h2>
+        <h2 className="s2" style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(32px,8vw,104px)",fontWeight:800,lineHeight:.88,letterSpacing:-3,background:"linear-gradient(145deg,#fff 40%,rgba(255,180,80,0.65) 100%)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent"}}>YOUR<br/>MISSION.</h2>
       </div>
       <div className="content-pad" style={{maxWidth:820,margin:"0 auto",padding:"clamp(40px,6vw,72px) clamp(16px,8vw,100px)",position:"relative",zIndex:1}}>
         <div className="tag s1" style={{marginBottom:32}}><span className="d"/>Synapse Recovery Plan</div>
@@ -1390,7 +1413,7 @@ function Checkin({streak,savedPlan,lastCheckin,onCheckin}) {
               }catch{return null;}
             })()}
           </div>
-          <div className="streak-num" style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(110px,18vw,200px)",fontWeight:800,lineHeight:.85,color:"#fff",marginBottom:12,textShadow:`0 0 80px rgba(${lv.hex},0.25)`,transition:"text-shadow 1s"}}><AnimatedNumber target={streak}/></div>
+          <div className="streak-num" style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(72px,16vw,200px)",fontWeight:800,lineHeight:.85,color:"#fff",marginBottom:12,textShadow:`0 0 80px rgba(${lv.hex},0.25)`,transition:"text-shadow 1s"}}><AnimatedNumber target={streak}/></div>
           <div style={{fontSize:11,letterSpacing:5,color:"rgba(255,255,255,0.25)",textTransform:"uppercase",marginBottom:24}}>Days Clean</div>
           <div style={{display:"inline-flex",alignItems:"center",gap:9,background:`rgba(${lv.hex},0.09)`,border:`1px solid rgba(${lv.hex},0.3)`,borderRadius:999,padding:"9px 22px",marginBottom:32,transition:"all .8s"}}>
             <div style={{width:7,height:7,borderRadius:"50%",background:lv.color,boxShadow:`0 0 12px ${lv.color}`,transition:"all .8s"}}/>
@@ -1472,7 +1495,7 @@ function Checkin({streak,savedPlan,lastCheckin,onCheckin}) {
           </div>
         ):(
           <>
-            <h3 className="s2" style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(28px,8vw,76px)",fontWeight:800,lineHeight:.92,letterSpacing:-2,marginBottom:36,background:"linear-gradient(145deg,#fff 50%,rgba(255,180,80,0.5) 100%)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent"}}>HOW WAS<br/>TODAY?</h3>
+            <h3 className="s2" style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(26px,6.5vw,76px)",fontWeight:800,lineHeight:.92,letterSpacing:-2,marginBottom:36,background:"linear-gradient(145deg,#fff 50%,rgba(255,180,80,0.5) 100%)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent"}}>HOW WAS<br/>TODAY?</h3>
             <div className="glass s3" style={{padding:32,transition:"box-shadow .4s",boxShadow:focused?"0 0 60px rgba(255,140,0,0.1),0 0 0 1px rgba(255,140,0,0.18)":"none"}}>
               <textarea className="syn-textarea" rows={5} placeholder="Tell SYNAPSE how your day went. Did you hold? Did you slip? What was the hardest moment? What helped? Be real." value={msg} onChange={e=>setMsg(e.target.value)} onFocus={()=>setFocused(true)} onBlur={()=>setFocused(false)}/>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginTop:20,paddingTop:18,borderTop:"1px solid rgba(255,140,0,0.07)"}}>
@@ -1497,7 +1520,7 @@ function History({history}) {
       <div style={{padding:"clamp(60px,8vw,80px) clamp(20px,8vw,100px) clamp(40px,5vw,64px)",borderBottom:"1px solid rgba(255,140,0,0.07)",position:"relative",zIndex:1}}>
         <div style={{position:"absolute",inset:0,background:"radial-gradient(ellipse at 80% 40%, rgba(255,100,0,0.06) 0%, transparent 60%)",pointerEvents:"none"}}/>
         <div className="tag s1" style={{marginBottom:24}}><span className="d"/>Mission Log</div>
-        <h2 className="s2" style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(36px,10vw,104px)",fontWeight:800,lineHeight:.88,letterSpacing:-3,background:"linear-gradient(145deg,#fff 40%,rgba(255,180,80,0.65) 100%)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent"}}>YOUR<br/>RECORD.</h2>
+        <h2 className="s2" style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(32px,8vw,104px)",fontWeight:800,lineHeight:.88,letterSpacing:-3,background:"linear-gradient(145deg,#fff 40%,rgba(255,180,80,0.65) 100%)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent"}}>YOUR<br/>RECORD.</h2>
       </div>
       <div style={{maxWidth:820,margin:"0 auto",padding:"clamp(40px,6vw,72px) clamp(16px,8vw,100px)",position:"relative",zIndex:1}}>
         <div className="tag s1" style={{marginBottom:40}}><span className="d"/>{history.length} entries logged</div>
@@ -1551,7 +1574,7 @@ function Report({history,savedPlan,streak,planHistory}) {
       <div style={{padding:"clamp(60px,8vw,80px) clamp(20px,8vw,100px) clamp(40px,5vw,64px)",borderBottom:"1px solid rgba(255,140,0,0.07)",position:"relative",zIndex:1}}>
         <div style={{position:"absolute",inset:0,background:"radial-gradient(ellipse at 60% 40%, rgba(255,100,0,0.07) 0%, transparent 60%)",pointerEvents:"none"}}/>
         <div className="tag s1" style={{marginBottom:24}}><span className="d"/>Neural Report</div>
-        <h2 className="s2" style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(36px,10vw,104px)",fontWeight:800,lineHeight:.88,letterSpacing:-3,background:"linear-gradient(145deg,#fff 40%,rgba(255,180,80,0.65) 100%)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent"}}>YOUR<br/>REWIRING.</h2>
+        <h2 className="s2" style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(32px,8vw,104px)",fontWeight:800,lineHeight:.88,letterSpacing:-3,background:"linear-gradient(145deg,#fff 40%,rgba(255,180,80,0.65) 100%)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent"}}>YOUR<br/>REWIRING.</h2>
       </div>
       <div style={{maxWidth:820,margin:"0 auto",padding:"clamp(40px,6vw,72px) clamp(16px,8vw,100px)",position:"relative",zIndex:1}}>
 
@@ -1654,6 +1677,104 @@ function Report({history,savedPlan,streak,planHistory}) {
   );
 }
 
+/* ─── CHAT ───────────────────────────────────────────────────────────────── */
+const OFF_TOPIC_MSG="Stay on mission, soldier. I only respond to questions about recovery, addiction, urges, streaks, or mental health. Ask me something specific to your journey.";
+
+function ChatBubble({msg,idx}){
+  const isUser=msg.role==="user";
+  return(
+    <div style={{display:"flex",justifyContent:isUser?"flex-end":"flex-start",marginBottom:16,animation:`fadeUp .4s cubic-bezier(.16,1,.3,1) both`,animationDelay:`${idx*0.04}s`}}>
+      {!isUser&&<div style={{width:28,height:28,borderRadius:"50%",background:"rgba(255,140,0,.12)",border:"1px solid rgba(255,140,0,.25)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,marginRight:10,marginTop:2}}><span style={{fontSize:12}}>⚡</span></div>}
+      <div style={{maxWidth:"78%",padding:"13px 18px",borderRadius:isUser?"16px 16px 4px 16px":"16px 16px 16px 4px",background:isUser?"linear-gradient(135deg,rgba(255,140,0,.18),rgba(255,80,0,.12))":"rgba(255,255,255,.04)",border:`1px solid ${isUser?"rgba(255,140,0,.25)":msg.offTopic?"rgba(255,80,80,.2)":"rgba(255,255,255,.07)"}`,fontSize:13,lineHeight:1.85,color:msg.offTopic?"rgba(255,120,120,.75)":isUser?"rgba(255,255,255,.75)":"rgba(255,255,255,.65)",fontWeight:300}}>
+        {parseBold(msg.text)}
+      </div>
+    </div>
+  );
+}
+
+function Chat({streak,savedPlan}){
+  const [msgs,setMsgs]=useState([{role:"ai",text:`Day ${streak} — I'm here. What's on your mind? Ask me anything about your recovery, urges, or the battle ahead.`}]);
+  const [input,setInput]=useState("");
+  const [loading,setLoading]=useState(false);
+  const [vis,setVis]=useState(false);
+  const bottomRef=useRef(null);
+  useEffect(()=>{setTimeout(()=>setVis(true),60);},[]);
+  useEffect(()=>{bottomRef.current?.scrollIntoView({behavior:"smooth"});},[msgs,loading]);
+
+  const send=async()=>{
+    const txt=input.trim();
+    if(!txt||loading) return;
+    setInput("");
+    const userMsg={role:"user",text:txt};
+    setMsgs(m=>[...m,userMsg]);
+    setLoading(true);
+    try{
+      // Build context — last 6 messages for memory
+      const ctx=([...msgs,userMsg]).slice(-6).map(m=>({role:m.role==="user"?"user":"assistant",content:m.text}));
+      // Add streak context to first message
+      ctx[0]={...ctx[0],content:`[User context: Day ${streak} of recovery. Plan: ${savedPlan?savedPlan.slice(0,120)+"...":"not set yet"}]\n\n${ctx[0].content}`};
+      const reply=await callAI(ctx,SYSTEM_CHAT);
+      if(reply.includes("[OFF_TOPIC]")){
+        setMsgs(m=>[...m,{role:"ai",text:OFF_TOPIC_MSG,offTopic:true}]);
+      } else {
+        setMsgs(m=>[...m,{role:"ai",text:reply}]);
+      }
+    }catch(e){
+      setMsgs(m=>[...m,{role:"ai",text:"Connection error. Stay strong — try again."}]);
+    }
+    setLoading(false);
+  };
+
+  return(
+    <div style={{minHeight:"100vh",display:"flex",flexDirection:"column",opacity:vis?1:0,transition:"opacity .6s ease"}}>
+      {/* Header */}
+      <div style={{padding:"clamp(90px,12vw,120px) clamp(16px,6vw,64px) 24px"}}>
+        <div style={{display:"inline-flex",alignItems:"center",gap:8,background:"rgba(255,140,0,.07)",border:"1px solid rgba(255,140,0,.2)",borderRadius:999,padding:"7px 18px",marginBottom:20}}>
+          <div style={{width:6,height:6,borderRadius:"50%",background:"#ff8c00",boxShadow:"0 0 10px #ff8c00",animation:"pulse 1.5s ease-in-out infinite"}}/>
+          <span style={{fontSize:10,fontWeight:600,letterSpacing:2.5,color:"rgba(255,180,80,.65)",textTransform:"uppercase"}}>SYNAPSE Coach — Live</span>
+        </div>
+        <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(24px,5.5vw,52px)",fontWeight:900,letterSpacing:-2,background:"linear-gradient(135deg,#fff,rgba(255,180,80,.7))",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",lineHeight:.95,marginBottom:12}}>TALK TO<br/>SYNAPSE</div>
+        <p style={{fontSize:13,color:"rgba(255,255,255,.25)",lineHeight:1.8,maxWidth:480}}>Ask about urges, relapses, your plan, or anything on your recovery journey. I stay on topic — recovery only.</p>
+      </div>
+
+      {/* Messages */}
+      <div style={{flex:1,padding:"0 clamp(16px,6vw,64px)",paddingBottom:160,maxWidth:760,width:"100%",margin:"0 auto",boxSizing:"border-box"}}>
+        {msgs.map((m,i)=><ChatBubble key={i} msg={m} idx={i}/>)}
+        {loading&&(
+          <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:16}}>
+            <div style={{width:28,height:28,borderRadius:"50%",background:"rgba(255,140,0,.12)",border:"1px solid rgba(255,140,0,.25)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><span style={{fontSize:12}}>⚡</span></div>
+            <div style={{display:"flex",gap:5,padding:"12px 16px",background:"rgba(255,255,255,.04)",border:"1px solid rgba(255,255,255,.07)",borderRadius:"16px 16px 16px 4px"}}>
+              {[0,1,2].map(i=><div key={i} style={{width:5,height:5,borderRadius:"50%",background:"#ff9500",animation:`dotBlink 1s ${i*.18}s infinite`}}/>)}
+            </div>
+          </div>
+        )}
+        <div ref={bottomRef}/>
+      </div>
+
+      {/* Input bar — fixed at bottom */}
+      <div style={{position:"fixed",bottom:0,left:0,right:0,padding:"16px clamp(16px,6vw,64px)",background:"linear-gradient(0deg,rgba(7,4,10,1) 70%,rgba(7,4,10,0) 100%)",zIndex:100}}>
+        <div style={{maxWidth:760,margin:"0 auto",display:"flex",gap:12,alignItems:"flex-end"}}>
+          <textarea
+            value={input}
+            onChange={e=>setInput(e.target.value)}
+            onKeyDown={e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();send();}}}
+            placeholder="Ask about your urges, battle plan, recovery tactics..."
+            rows={1}
+            style={{flex:1,background:"rgba(255,255,255,.04)",border:"1px solid rgba(255,140,0,.2)",borderRadius:14,padding:"14px 18px",color:"#fff",fontSize:13,fontFamily:"'Inter',sans-serif",fontWeight:300,outline:"none",resize:"none",lineHeight:1.6,caretColor:"#ff8c00",transition:"border .3s",boxSizing:"border-box"}}
+            onFocus={e=>e.target.style.borderColor="rgba(255,140,0,.55)"}
+            onBlur={e=>e.target.style.borderColor="rgba(255,140,0,.2)"}
+          />
+          <button onClick={send} disabled={!input.trim()||loading}
+            style={{background:input.trim()?"linear-gradient(135deg,#ff9500,#ff5000)":"rgba(255,255,255,.05)",border:"none",borderRadius:12,padding:"14px 20px",color:input.trim()?"#fff":"rgba(255,255,255,.2)",fontSize:16,cursor:"none",transition:"all .25s",flexShrink:0,boxShadow:input.trim()?"0 0 20px rgba(255,140,0,.3)":"none"}}>
+            ↑
+          </button>
+        </div>
+        <div style={{textAlign:"center",marginTop:8,fontSize:10,color:"rgba(255,255,255,.1)",letterSpacing:1}}>Recovery topics only · Shift+Enter for new line</div>
+      </div>
+    </div>
+  );
+}
+
 /* ─── MILESTONE CELEBRATION ─────────────────────────────────────────────── */
 function MilestoneCelebration({day,onClose}){
   const m=MILESTONE_DATA[day];
@@ -1694,7 +1815,7 @@ function MilestoneCelebration({day,onClose}){
       <div style={{position:"relative",zIndex:2,textAlign:"center",maxWidth:520,padding:"clamp(36px,7vw,72px) clamp(24px,6vw,64px)",opacity:vis?1:0,transform:vis?"translateY(0)":"translateY(32px)",transition:"all .8s cubic-bezier(.16,1,.3,1) .1s"}}>
         <div style={{fontSize:72,marginBottom:12,filter:`drop-shadow(0 0 40px ${m.color})`}}>{m.emoji}</div>
         <div style={{fontSize:10,letterSpacing:5,color:`rgba(${m.rgb},.55)`,textTransform:"uppercase",marginBottom:14,fontFamily:"'JetBrains Mono',monospace"}}>Day {day} Milestone Unlocked</div>
-        <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(56px,14vw,108px)",fontWeight:900,letterSpacing:-3,background:`linear-gradient(135deg,#fff,${m.color})`,WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",lineHeight:.88,marginBottom:10}}>{day}</div>
+        <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(48px,12vw,108px)",fontWeight:900,letterSpacing:-3,background:`linear-gradient(135deg,#fff,${m.color})`,WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",lineHeight:.88,marginBottom:10}}>{day}</div>
         <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(16px,4vw,24px)",fontWeight:800,color:m.color,letterSpacing:4,marginBottom:28,textTransform:"uppercase",textShadow:`0 0 30px ${m.color}66`}}>{m.name}</div>
         <p style={{fontSize:14,lineHeight:1.95,color:"rgba(255,255,255,.5)",fontWeight:300,marginBottom:40,maxWidth:420,marginLeft:"auto",marginRight:"auto"}}>{m.msg}</p>
         <button className="btn-primary" onClick={onClose} style={{fontSize:13,letterSpacing:1,padding:"16px 52px",background:`linear-gradient(135deg,${m.color},${m.color}99)`,boxShadow:`0 0 40px ${m.color}55,0 8px 32px rgba(0,0,0,.5)`}}>
@@ -1785,7 +1906,7 @@ export default function App() {
     return unsub;
   },[]);
 
-  const goTo=useCallback(s=>{setTr(true);setTimeout(()=>{setScreen(s);setTr(false);window.scrollTo({top:0,behavior:"instant"});},260);},[]);
+  const goTo=useCallback(s=>{setTr(true);setTimeout(()=>{setScreen(s);setTr(false);window.scrollTo({top:0,behavior:"instant"});document.documentElement.scrollTop=0;document.body.scrollTop=0;},260);},[]);
 
   const handleAuth=(u)=>{
     ls.set("syn_user",JSON.stringify(u));
@@ -1914,13 +2035,15 @@ export default function App() {
             {screen==="plan"    &&<Plan plan={plan||savedPlan} loading={planLoading} onBegin={handleBeginDay1}/>}
             {screen==="checkin" &&<Checkin streak={streak} savedPlan={savedPlan} lastCheckin={lastCI} onCheckin={handleCheckin}/>}
             {screen==="history" &&<History history={history}/>}
+            {screen==="chat"    &&<Chat streak={streak} savedPlan={savedPlan}/>}
             {screen==="report"  &&<Report history={history} savedPlan={savedPlan} streak={streak} planHistory={planHistory}/>}
           </div>
           {screen!=="boot"&&<div style={{position:"relative",zIndex:2,marginTop:80,overflow:"hidden",width:"100%",maxWidth:"100%"}}><Marquee/></div>}
           {/* Emergency floating button — only on checkin screen */}
           {screen==="checkin"&&(
-            <button onClick={()=>setEmergency(true)} style={{position:"fixed",bottom:32,right:28,zIndex:800,background:"linear-gradient(135deg,#cc1111,#8b0000)",border:"1px solid rgba(255,80,80,0.4)",borderRadius:999,padding:"13px 22px",color:"#fff",fontSize:11,fontWeight:700,letterSpacing:1.5,textTransform:"uppercase",boxShadow:"0 0 28px rgba(255,30,30,0.4),0 8px 32px rgba(0,0,0,0.5)",cursor:"none",display:"flex",alignItems:"center",gap:9,transition:"all .3s",fontFamily:"'Orbitron',sans-serif"}}>
-              <span style={{fontSize:15}}>🆘</span> I'm Struggling
+            <button onClick={()=>setEmergency(true)} style={{position:"fixed",bottom:"clamp(16px,4vw,32px)",right:"clamp(12px,4vw,28px)",zIndex:800,background:"linear-gradient(135deg,#cc1111,#8b0000)",border:"1px solid rgba(255,80,80,0.4)",borderRadius:999,padding:"clamp(10px,2vw,13px) clamp(14px,3vw,22px)",color:"#fff",fontSize:"clamp(9px,2vw,11px)",fontWeight:700,letterSpacing:1.5,textTransform:"uppercase",boxShadow:"0 0 28px rgba(255,30,30,0.4),0 8px 32px rgba(0,0,0,0.5)",cursor:"none",display:"flex",alignItems:"center",gap:8,transition:"all .3s",fontFamily:"'Orbitron',sans-serif"}}>
+              <span style={{fontSize:"clamp(12px,3vw,15px)"}}>🆘</span>
+              <span style={{display:"clamp(none,1px,inline)"}}>I'm Struggling</span>
             </button>
           )}
           {emergency&&<EmergencyOverlay savedPlan={savedPlan} streak={streak} onClose={()=>setEmergency(false)}/>}
