@@ -1358,7 +1358,7 @@ function BattlePlanAccordion({plan}) {
 }
 
 /* ─── CHECKIN ────────────────────────────────────────────────────────────── */
-function Checkin({streak,savedPlan,lastCheckin,onCheckin}) {
+function Checkin({streak,savedPlan,lastCheckin,onCheckin,onGoChat}) {
   const [msg,setMsg]=useState("");
   const [reply,setReply]=useState("");
   // Restore today's status if user revisits checkin screen same day
@@ -1485,13 +1485,23 @@ function Checkin({streak,savedPlan,lastCheckin,onCheckin}) {
             )}
             {/* Share Card — only on WIN/MID days */}
             {done && status !== "SLIP" && streak > 0 && (
-              <div style={{marginTop:24,animation:"fadeUp .6s ease .3s both"}}>
+              <div style={{marginTop:24,display:"flex",flexDirection:"column",gap:10,animation:"fadeUp .6s ease .3s both"}}>
                 <button
                   onClick={()=>doShare(streak,lv,setSharing)}
                   disabled={sharing}
                   style={{width:"100%",background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.1)",color:"rgba(255,255,255,0.45)",padding:"15px 28px",borderRadius:12,fontFamily:"'Inter',sans-serif",fontSize:13,fontWeight:500,letterSpacing:.3,cursor:"none",display:"flex",alignItems:"center",justifyContent:"center",gap:10,transition:"all .3s"}}>
                   <span style={{fontSize:16}}>{sharing?"⏳":"📤"}</span>
                   {sharing ? "Generating card..." : `Share Day ${streak} 🔥`}
+                </button>
+                <button onClick={()=>onGoChat&&onGoChat()} style={{width:"100%",background:"rgba(255,140,0,.06)",border:"1px solid rgba(255,140,0,.2)",borderRadius:12,padding:"14px",color:"rgba(255,180,80,.7)",fontSize:12,fontWeight:600,letterSpacing:1,textTransform:"uppercase",cursor:"none",fontFamily:"'Orbitron',sans-serif"}}>
+                  ⚡ Talk to Coach
+                </button>
+              </div>
+            )}
+            {done && status === "SLIP" && (
+              <div style={{marginTop:24,animation:"fadeUp .6s ease .3s both"}}>
+                <button onClick={()=>onGoChat&&onGoChat()} style={{width:"100%",background:"rgba(255,140,0,.06)",border:"1px solid rgba(255,140,0,.2)",borderRadius:12,padding:"14px",color:"rgba(255,180,80,.7)",fontSize:12,fontWeight:600,letterSpacing:1,textTransform:"uppercase",cursor:"none",fontFamily:"'Orbitron',sans-serif"}}>
+                  ⚡ Talk to Coach — I need help
                 </button>
               </div>
             )}
@@ -1730,18 +1740,19 @@ function Chat({streak,savedPlan}){
 
   return(
     <div style={{minHeight:"100vh",display:"flex",flexDirection:"column",opacity:vis?1:0,transition:"opacity .6s ease"}}>
-      {/* Header */}
-      <div style={{padding:"clamp(90px,12vw,120px) clamp(16px,6vw,64px) 24px"}}>
+
+      {/* Header — same max-width as messages */}
+      <div style={{maxWidth:760,width:"100%",margin:"0 auto",padding:"clamp(90px,12vw,120px) clamp(16px,5vw,48px) 24px",boxSizing:"border-box"}}>
         <div style={{display:"inline-flex",alignItems:"center",gap:8,background:"rgba(255,140,0,.07)",border:"1px solid rgba(255,140,0,.2)",borderRadius:999,padding:"7px 18px",marginBottom:20}}>
           <div style={{width:6,height:6,borderRadius:"50%",background:"#ff8c00",boxShadow:"0 0 10px #ff8c00",animation:"pulse 1.5s ease-in-out infinite"}}/>
           <span style={{fontSize:10,fontWeight:600,letterSpacing:2.5,color:"rgba(255,180,80,.65)",textTransform:"uppercase"}}>SYNAPSE Coach — Live</span>
         </div>
-        <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(24px,5.5vw,52px)",fontWeight:900,letterSpacing:-2,background:"linear-gradient(135deg,#fff,rgba(255,180,80,.7))",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",lineHeight:.95,marginBottom:12}}>TALK TO<br/>SYNAPSE</div>
-        <p style={{fontSize:13,color:"rgba(255,255,255,.25)",lineHeight:1.8,maxWidth:480}}>Ask about urges, relapses, your plan, or anything on your recovery journey. I stay on topic — recovery only.</p>
+        <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(24px,5.5vw,52px)",fontWeight:900,letterSpacing:-2,background:"linear-gradient(135deg,#fff,rgba(255,180,80,.7))",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",lineHeight:.95,marginBottom:14}}>TALK TO<br/>SYNAPSE</div>
+        <p style={{fontSize:13,color:"rgba(255,255,255,.25)",lineHeight:1.8,maxWidth:"100%",margin:0}}>Ask anything about your recovery — urges, relapses, streaks, cravings, your battle plan. I stay on topic.</p>
       </div>
 
       {/* Messages */}
-      <div style={{flex:1,padding:"0 clamp(16px,6vw,64px)",paddingBottom:160,maxWidth:760,width:"100%",margin:"0 auto",boxSizing:"border-box"}}>
+      <div style={{flex:1,maxWidth:760,width:"100%",margin:"0 auto",padding:"0 clamp(16px,5vw,48px) 160px",boxSizing:"border-box"}}>
         {msgs.map((m,i)=><ChatBubble key={i} msg={m} idx={i}/>)}
         {loading&&(
           <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:16}}>
@@ -1755,7 +1766,7 @@ function Chat({streak,savedPlan}){
       </div>
 
       {/* Input bar — fixed at bottom */}
-      <div style={{position:"fixed",bottom:0,left:0,right:0,padding:"16px clamp(16px,6vw,64px)",background:"linear-gradient(0deg,rgba(7,4,10,1) 70%,rgba(7,4,10,0) 100%)",zIndex:100}}>
+      <div style={{position:"fixed",bottom:0,left:0,right:0,padding:"16px clamp(16px,5vw,48px)",background:"linear-gradient(0deg,rgba(7,4,10,1) 70%,rgba(7,4,10,0) 100%)",zIndex:100}}>
         <div style={{maxWidth:760,margin:"0 auto",display:"flex",gap:12,alignItems:"flex-end"}}>
           <textarea
             value={input}
@@ -1830,7 +1841,7 @@ function MilestoneCelebration({day,onClose}){
 }
 
 /* ─── EMERGENCY OVERLAY ──────────────────────────────────────────────────── */
-function EmergencyOverlay({savedPlan,streak,onClose}){
+function EmergencyOverlay({savedPlan,streak,onClose,onCoach}){
   const [reply,setReply]=useState("");
   const [loading,setLoading]=useState(true);
   const {displayed,done:twDone}=useTypewriter(reply,9);
@@ -1866,9 +1877,14 @@ function EmergencyOverlay({savedPlan,streak,onClose}){
           </div>
         }
         {!loading&&twDone&&(
-          <button className="btn-primary" onClick={onClose} style={{marginTop:32,width:"100%",padding:"15px",fontSize:13,background:"linear-gradient(135deg,#cc2222,#992222)",boxShadow:"0 0 30px rgba(200,30,30,.4),0 6px 24px rgba(0,0,0,.5)"}}>
-            I'm back. Keep going. →
-          </button>
+          <div style={{display:"flex",flexDirection:"column",gap:10,marginTop:32}}>
+            <button className="btn-primary" onClick={onClose} style={{width:"100%",padding:"15px",fontSize:13,background:"linear-gradient(135deg,#cc2222,#992222)",boxShadow:"0 0 30px rgba(200,30,30,.4),0 6px 24px rgba(0,0,0,.5)"}}>
+              I'm back. Keep going. →
+            </button>
+            <button onClick={()=>{onClose();onCoach();}} style={{width:"100%",padding:"13px",fontSize:12,background:"rgba(255,140,0,.06)",border:"1px solid rgba(255,140,0,.2)",borderRadius:12,color:"rgba(255,180,80,.7)",cursor:"none",fontFamily:"'Orbitron',sans-serif",fontWeight:600,letterSpacing:1,textTransform:"uppercase"}}>
+              ⚡ Talk to Coach
+            </button>
+          </div>
         )}
       </div>
     </div>
@@ -2043,7 +2059,7 @@ export default function App() {
             {screen==="boot"    &&<Boot onBegin={handleBegin} hasPlan={!!savedPlan}/>}
             {screen==="confess" &&<Confess onSubmit={handleConfess} loading={planLoading}/>}
             {screen==="plan"    &&<Plan plan={plan||savedPlan} loading={planLoading} onBegin={handleBeginDay1}/>}
-            {screen==="checkin" &&<Checkin streak={streak} savedPlan={savedPlan} lastCheckin={lastCI} onCheckin={handleCheckin}/>}
+            {screen==="checkin" &&<Checkin streak={streak} savedPlan={savedPlan} lastCheckin={lastCI} onCheckin={handleCheckin} onGoChat={()=>goTo("chat")}/>}
             {screen==="history" &&<History history={history}/>}
             {screen==="chat"    &&<Chat streak={streak} savedPlan={savedPlan}/>}
             {screen==="report"  &&<Report history={history} savedPlan={savedPlan} streak={streak} planHistory={planHistory}/>}
@@ -2056,7 +2072,7 @@ export default function App() {
               <span>I'm Struggling</span>
             </button>
           )}
-          {emergency&&<EmergencyOverlay savedPlan={savedPlan} streak={streak} onClose={()=>setEmergency(false)}/>}
+          {emergency&&<EmergencyOverlay savedPlan={savedPlan} streak={streak} onClose={()=>setEmergency(false)} onCoach={()=>{setEmergency(false);goTo("chat");}}/>}
           {milestone&&<MilestoneCelebration day={milestone} onClose={()=>setMilestone(null)}/>}
           <div className="footer-wrap" style={{position:"relative",zIndex:2,borderTop:"1px solid rgba(255,140,0,0.06)",padding:"28px clamp(16px,4vw,48px)",display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:16,background:"rgba(255,140,0,0.01)",boxSizing:"border-box",width:"100%"}}>
             <div style={{display:"flex",alignItems:"center",gap:12}}>
