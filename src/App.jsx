@@ -1910,7 +1910,14 @@ export default function App() {
     return unsub;
   },[]);
 
-  const goTo=useCallback(s=>{setTr(true);setTimeout(()=>{setScreen(s);setTr(false);window.scrollTo({top:0,behavior:"instant"});document.documentElement.scrollTop=0;document.body.scrollTop=0;},260);},[]);
+  const goTo=useCallback(s=>{setTr(true);setTimeout(()=>{setScreen(s);setTr(false);},260);},[]);
+
+  // Scroll to top AFTER React renders the new screen
+  useEffect(()=>{
+    window.scrollTo({top:0,behavior:"instant"});
+    document.documentElement.scrollTop=0;
+    document.body.scrollTop=0;
+  },[screen]);
 
   const handleAuth=(u)=>{
     ls.set("syn_user",JSON.stringify(u));
