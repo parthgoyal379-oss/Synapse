@@ -1928,12 +1928,15 @@ export default function App() {
   const topRef=useRef(null);
   const goTo=useCallback(s=>{setTr(true);setTimeout(()=>{setScreen(s);setTr(false);},260);},[]);
 
-  // Scroll to top BEFORE browser paints new screen — 3 methods for max compatibility
+  // Bulletproof scroll to top — all possible scroll containers
   useLayoutEffect(()=>{
-    window.scrollTo(0,0);
-    document.documentElement.scrollTop=0;
-    document.body.scrollTop=0;
-    if(topRef.current) topRef.current.scrollTop=0;
+    try{
+      window.scrollTo(0,0);
+      document.documentElement.scrollTop=0;
+      document.body.scrollTop=0;
+      if(document.scrollingElement) document.scrollingElement.scrollTop=0;
+      if(topRef.current) topRef.current.scrollTop=0;
+    }catch{}
   },[screen]);
 
   const handleAuth=(u)=>{
@@ -2057,7 +2060,7 @@ export default function App() {
       ) : (
         <>
           {screen!=="boot"&&<Nav screen={screen} goTo={goTo} savedPlan={savedPlan} onReset={handleReset}/>}
-          <div ref={topRef} style={{position:"relative",zIndex:2,opacity:tr?0:1,transition:"opacity .26s ease"}}>
+          <div key={screen} ref={topRef} style={{position:"relative",zIndex:2,opacity:tr?0:1,transition:"opacity .26s ease"}}>
             {screen==="boot"    &&<Boot onBegin={handleBegin} hasPlan={!!savedPlan}/>}
             {screen==="confess" &&<Confess onSubmit={handleConfess} loading={planLoading}/>}
             {screen==="plan"    &&<Plan plan={plan||savedPlan} loading={planLoading} onBegin={handleBeginDay1}/>}
