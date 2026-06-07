@@ -444,18 +444,18 @@ input[type=range]{-webkit-appearance:none;appearance:none;background:transparent
 
 @media(max-width:768px){
   /* ── Nav ── */
-  nav{padding:10px 16px !important;}
   nav .nav-pill{padding:5px 10px !important;font-size:9px !important;letter-spacing:.3px !important;}
+  .nav-logo-text div:last-child{display:none !important;} /* hide "RESET · REWIRE · RISE" */
 
   /* ── Global heading scale ── */
   /* Force all Orbitron giant headings to scale down */
   [style*="font-size:clamp"]{font-size:clamp(28px,8vw,48px);}
 
   /* ── Boot page ── */
-  .boot-inner{padding:90px 5vw 60px !important;}
+  .boot-inner{padding:110px 5vw 60px !important;}
 
   /* ── Confess steps ── */
-  .step-inner{padding:90px 5vw 60px !important;}
+  .step-inner{padding:110px 5vw 60px !important;}
   .step-bar{padding:0 4vw !important;}
   .step-label{display:none !important;}
 
@@ -464,8 +464,8 @@ input[type=range]{-webkit-appearance:none;appearance:none;background:transparent
   .addiction-grid{grid-template-columns:1fr 1fr !important;gap:8px !important;}
 
   /* ── Content pads ── */
-  .content-pad{padding:72px 5vw 80px !important;}
-  .hero-pad{padding:56px 5vw 32px !important;}
+  .content-pad{padding:100px 5vw 80px !important;}
+  .hero-pad{padding:84px 5vw 32px !important;}
 
   /* ── Streak number ── */
   .streak-num{font-size:clamp(72px,20vw,120px) !important;}
@@ -516,20 +516,24 @@ function Nav({screen,goTo,savedPlan,onReset}) {
   const [scrolled,setScrolled]=useState(false);
   useEffect(()=>{const h=()=>setScrolled(window.scrollY>40);window.addEventListener("scroll",h);return()=>window.removeEventListener("scroll",h);},[]);
   return(
-    <nav style={{position:"fixed",top:0,left:0,right:0,zIndex:500,display:"flex",alignItems:"center",justifyContent:"space-between",padding:"16px clamp(16px,4vw,48px)",background:scrolled?"rgba(7,4,10,0.88)":"transparent",backdropFilter:scrolled?"blur(24px)":"none",borderBottom:scrolled?"1px solid rgba(255,140,0,0.07)":"1px solid transparent",transition:"all .5s ease"}}>
-      <div onClick={()=>goTo("boot")} style={{cursor:"none",display:"flex",alignItems:"center",gap:10}}>
-        <NeuralMark size={38}/>
-        <div>
-          <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:15,fontWeight:800,letterSpacing:3,color:"#fff",lineHeight:1}}>SYNAPSE</div>
-          <div style={{fontSize:8,letterSpacing:3,color:"rgba(255,140,0,0.35)",marginTop:2}}>RESET · REWIRE · RISE</div>
+    <nav style={{position:"fixed",top:0,left:0,right:0,zIndex:500,background:scrolled?"rgba(7,4,10,0.92)":"rgba(7,4,10,0.75)",backdropFilter:"blur(20px)",borderBottom:"1px solid rgba(255,140,0,0.07)",transition:"all .5s ease"}}>
+      {/* Row 1 — Logo + Reset */}
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px clamp(12px,4vw,48px)"}}>
+        <div onClick={()=>goTo("boot")} style={{cursor:"none",display:"flex",alignItems:"center",gap:8,flexShrink:0}}>
+          <NeuralMark size={32}/>
+          <div className="nav-logo-text">
+            <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:13,fontWeight:800,letterSpacing:2.5,color:"#fff",lineHeight:1}}>SYNAPSE</div>
+            <div style={{fontSize:7,letterSpacing:2.5,color:"rgba(255,140,0,0.35)",marginTop:2}}>RESET · REWIRE · RISE</div>
+          </div>
         </div>
+        <button className="nav-pill danger" onClick={onReset} style={{flexShrink:0}}>Reset</button>
       </div>
-      <div style={{display:"flex",gap:8,alignItems:"center"}}>
+      {/* Row 2 — Screen tabs (scrollable on mobile) */}
+      <div style={{display:"flex",gap:6,alignItems:"center",padding:"0 clamp(12px,4vw,48px) 10px",overflowX:"auto",WebkitOverflowScrolling:"touch",scrollbarWidth:"none",msOverflowStyle:"none",whiteSpace:"nowrap"}}>
         {savedPlan&&[["checkin","Check-In"],["plan","My Plan"],["chat","Coach"],["report","Report"],["history","Log"]].map(([s,l])=>(
-          <button key={s} className={`nav-pill${screen===s?" active":""}`} onClick={()=>goTo(s)}>{l}</button>
+          <button key={s} className={`nav-pill${screen===s?" active":""}`} onClick={()=>goTo(s)} style={{flexShrink:0}}>{l}</button>
         ))}
-        <button className={`nav-pill${screen==="confess"?" active":""}`} onClick={()=>goTo("confess")}>Confess</button>
-        <button className="nav-pill danger" onClick={onReset}>Reset</button>
+        <button className={`nav-pill${screen==="confess"?" active":""}`} onClick={()=>goTo("confess")} style={{flexShrink:0}}>Confess</button>
       </div>
     </nav>
   );
