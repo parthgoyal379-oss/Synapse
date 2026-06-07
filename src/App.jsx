@@ -480,11 +480,10 @@ input[type=range]{-webkit-appearance:none;appearance:none;background:transparent
   /* ── Footer ── */
   .footer-wrap{padding:20px 5vw !important;flex-direction:column !important;gap:10px !important;}
 
-  /* ── Glass cards ── */
-  .glass{padding:18px !important;}
-
-  /* ── Chat input bar ── */
-  .chat-bar{padding:12px 16px !important;}
+  /* ── Emergency button — keep small on mobile ── */
+  button[style*="I'm Struggling"],button[style*="Struggling"]{
+    padding:8px 14px !important;font-size:8px !important;letter-spacing:0.5px !important;gap:5px !important;
+  }
 }
 
 @media(max-width:480px){
@@ -1313,7 +1312,7 @@ function Confess({onSubmit,loading}) {
 function Plan({plan,loading,onBegin}) {
   const {displayed,done}=useTypewriter(plan,11);
   return(
-    <div style={{minHeight:"100vh",paddingTop:80,position:"relative",overflow:"hidden"}}>
+    <div style={{minHeight:"100vh",paddingTop:80,position:"relative",overflowX:"hidden"}}>
       <div className="hero-pad" className="hero-pad" style={{padding:"clamp(60px,8vw,80px) clamp(20px,8vw,100px) clamp(40px,5vw,64px)",borderBottom:"1px solid rgba(255,140,0,0.07)",position:"relative",zIndex:1}}>
         <div style={{position:"absolute",inset:0,background:"radial-gradient(ellipse at 30% 60%, rgba(255,100,0,0.06) 0%, transparent 60%)",pointerEvents:"none"}}/>
         <div className="tag s1" style={{marginBottom:24}}><span className="d"/>Recovery Protocol</div>
@@ -1393,7 +1392,7 @@ function Checkin({streak,savedPlan,lastCheckin,onCheckin}) {
     setMsg("");
   };
   return(
-    <div style={{minHeight:"100vh",paddingTop:80,position:"relative",overflow:"hidden"}}>
+    <div style={{minHeight:"100vh",paddingTop:80,position:"relative",overflowX:"hidden"}}>
       <div className="hero-pad" style={{padding:"clamp(60px,8vw,80px) clamp(20px,8vw,100px) clamp(40px,5vw,64px)",borderBottom:"1px solid rgba(255,140,0,0.07)",position:"relative",zIndex:1,minHeight:"52vh",display:"flex",flexDirection:"column",justifyContent:"flex-end"}}>
         <div style={{position:"absolute",inset:0,background:`radial-gradient(ellipse at 65% 55%, rgba(${lv.hex},0.12) 0%, transparent 60%)`,pointerEvents:"none",transition:"background 1s"}}/>
         {[100,180,260].map((s,i)=><div key={i} style={{position:"absolute",top:"45%",right:"30%",width:s,height:s,borderRadius:"50%",border:`1px solid rgba(${lv.hex},0.2)`,animation:`ringOut ${3.5+i*.8}s ease-out ${i*.6}s infinite`,pointerEvents:"none"}}/>)}
@@ -1520,7 +1519,7 @@ function Checkin({streak,savedPlan,lastCheckin,onCheckin}) {
 /* ─── HISTORY ────────────────────────────────────────────────────────────── */
 function History({history}) {
   return(
-    <div style={{minHeight:"100vh",paddingTop:80,position:"relative",overflow:"hidden"}}>
+    <div style={{minHeight:"100vh",paddingTop:80,position:"relative",overflowX:"hidden"}}>
       <div style={{padding:"clamp(60px,8vw,80px) clamp(20px,8vw,100px) clamp(40px,5vw,64px)",borderBottom:"1px solid rgba(255,140,0,0.07)",position:"relative",zIndex:1}}>
         <div style={{position:"absolute",inset:0,background:"radial-gradient(ellipse at 80% 40%, rgba(255,100,0,0.06) 0%, transparent 60%)",pointerEvents:"none"}}/>
         <div className="tag s1" style={{marginBottom:24}}><span className="d"/>Mission Log</div>
@@ -1574,7 +1573,7 @@ function Report({history,savedPlan,streak,planHistory}) {
   const [entered,setEntered]=useState(false);
   useEffect(()=>{setTimeout(()=>setEntered(true),60);},[]);
   return(
-    <div style={{minHeight:"100vh",paddingTop:80,position:"relative",overflow:"hidden",opacity:entered?1:0,transform:entered?"translateY(0)":"translateY(24px)",transition:"all .8s cubic-bezier(.16,1,.3,1)"}}>
+    <div style={{minHeight:"100vh",paddingTop:80,position:"relative",overflowX:"hidden",opacity:entered?1:0,transform:entered?"translateY(0)":"translateY(24px)",transition:"all .8s cubic-bezier(.16,1,.3,1)"}}>
       <div style={{padding:"clamp(60px,8vw,80px) clamp(20px,8vw,100px) clamp(40px,5vw,64px)",borderBottom:"1px solid rgba(255,140,0,0.07)",position:"relative",zIndex:1}}>
         <div style={{position:"absolute",inset:0,background:"radial-gradient(ellipse at 60% 40%, rgba(255,100,0,0.07) 0%, transparent 60%)",pointerEvents:"none"}}/>
         <div className="tag s1" style={{marginBottom:24}}><span className="d"/>Neural Report</div>
@@ -2052,9 +2051,9 @@ export default function App() {
           {screen!=="boot"&&<div style={{position:"relative",zIndex:2,marginTop:80,overflow:"hidden",width:"100%",maxWidth:"100%"}}><Marquee/></div>}
           {/* Emergency floating button — only on checkin screen */}
           {screen==="checkin"&&(
-            <button onClick={()=>setEmergency(true)} style={{position:"fixed",bottom:"clamp(16px,4vw,32px)",right:"clamp(12px,4vw,28px)",zIndex:800,background:"linear-gradient(135deg,#cc1111,#8b0000)",border:"1px solid rgba(255,80,80,0.4)",borderRadius:999,padding:"clamp(10px,2vw,13px) clamp(14px,3vw,22px)",color:"#fff",fontSize:"clamp(9px,2vw,11px)",fontWeight:700,letterSpacing:1.5,textTransform:"uppercase",boxShadow:"0 0 28px rgba(255,30,30,0.4),0 8px 32px rgba(0,0,0,0.5)",cursor:"none",display:"flex",alignItems:"center",gap:8,transition:"all .3s",fontFamily:"'Orbitron',sans-serif"}}>
-              <span style={{fontSize:"clamp(12px,3vw,15px)"}}>🆘</span>
-              <span style={{display:"clamp(none,1px,inline)"}}>I'm Struggling</span>
+            <button onClick={()=>setEmergency(true)} style={{position:"fixed",bottom:"clamp(20px,4vw,32px)",right:"clamp(12px,4vw,28px)",zIndex:800,background:"linear-gradient(135deg,#cc1111,#8b0000)",border:"1px solid rgba(255,80,80,0.4)",borderRadius:999,padding:"clamp(8px,1.5vw,13px) clamp(12px,2.5vw,22px)",color:"#fff",fontSize:"clamp(8px,1.8vw,11px)",fontWeight:700,letterSpacing:"clamp(0.5px,0.3vw,1.5px)",textTransform:"uppercase",boxShadow:"0 0 20px rgba(255,30,30,0.35),0 6px 20px rgba(0,0,0,0.5)",cursor:"none",display:"flex",alignItems:"center",gap:"clamp(5px,1vw,9px)",fontFamily:"'Orbitron',sans-serif"}}>
+              <span style={{fontSize:"clamp(11px,2.5vw,15px)"}}>🆘</span>
+              <span>I'm Struggling</span>
             </button>
           )}
           {emergency&&<EmergencyOverlay savedPlan={savedPlan} streak={streak} onClose={()=>setEmergency(false)}/>}
