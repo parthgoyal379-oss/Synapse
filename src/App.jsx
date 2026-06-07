@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useLayoutEffect, useRef, useCallback } from "react";
 import { auth, googleProvider } from "./firebase";
 import {
   signInWithEmailAndPassword, createUserWithEmailAndPassword,
@@ -1925,13 +1925,15 @@ export default function App() {
     return unsub;
   },[]);
 
+  const topRef=useRef(null);
   const goTo=useCallback(s=>{setTr(true);setTimeout(()=>{setScreen(s);setTr(false);},260);},[]);
 
-  // Scroll to top AFTER React renders the new screen
-  useEffect(()=>{
-    window.scrollTo({top:0,behavior:"instant"});
+  // Scroll to top BEFORE browser paints new screen — 3 methods for max compatibility
+  useLayoutEffect(()=>{
+    window.scrollTo(0,0);
     document.documentElement.scrollTop=0;
     document.body.scrollTop=0;
+    if(topRef.current) topRef.current.scrollTop=0;
   },[screen]);
 
   const handleAuth=(u)=>{
@@ -2055,7 +2057,7 @@ export default function App() {
       ) : (
         <>
           {screen!=="boot"&&<Nav screen={screen} goTo={goTo} savedPlan={savedPlan} onReset={handleReset}/>}
-          <div style={{position:"relative",zIndex:2,opacity:tr?0:1,transition:"opacity .26s ease"}}>
+          <div ref={topRef} style={{position:"relative",zIndex:2,opacity:tr?0:1,transition:"opacity .26s ease"}}>
             {screen==="boot"    &&<Boot onBegin={handleBegin} hasPlan={!!savedPlan}/>}
             {screen==="confess" &&<Confess onSubmit={handleConfess} loading={planLoading}/>}
             {screen==="plan"    &&<Plan plan={plan||savedPlan} loading={planLoading} onBegin={handleBeginDay1}/>}
