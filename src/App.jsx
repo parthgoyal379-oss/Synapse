@@ -1926,18 +1926,22 @@ export default function App() {
   },[]);
 
   const topRef=useRef(null);
-  const goTo=useCallback(s=>{setTr(true);setTimeout(()=>{setScreen(s);setTr(false);},260);},[]);
-
-  // Bulletproof scroll to top — all possible scroll containers
-  useLayoutEffect(()=>{
-    try{
-      window.scrollTo(0,0);
-      document.documentElement.scrollTop=0;
-      document.body.scrollTop=0;
-      if(document.scrollingElement) document.scrollingElement.scrollTop=0;
-      if(topRef.current) topRef.current.scrollTop=0;
-    }catch{}
-  },[screen]);
+  const goTo=useCallback(s=>{
+    setTr(true);
+    setTimeout(()=>{
+      setScreen(s);
+      setTr(false);
+      // rAF ensures scroll happens after browser renders new screen
+      requestAnimationFrame(()=>{
+        requestAnimationFrame(()=>{
+          window.scrollTo(0,0);
+          document.documentElement.scrollTop=0;
+          document.body.scrollTop=0;
+          if(document.scrollingElement) document.scrollingElement.scrollTop=0;
+        });
+      });
+    },260);
+  },[]);
 
   const handleAuth=(u)=>{
     ls.set("syn_user",JSON.stringify(u));
