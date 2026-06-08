@@ -1931,14 +1931,14 @@ export default function App() {
     setTimeout(()=>{
       setScreen(s);
       setTr(false);
-      // rAF ensures scroll happens after browser renders new screen
+      // Unlock body scroll, reset, then let CSS take over
+      document.body.style.overflow="auto";
+      document.body.style.overflowX="hidden";
       requestAnimationFrame(()=>{
-        requestAnimationFrame(()=>{
-          window.scrollTo(0,0);
-          document.documentElement.scrollTop=0;
-          document.body.scrollTop=0;
-          if(document.scrollingElement) document.scrollingElement.scrollTop=0;
-        });
+        window.scrollTo(0,0);
+        document.documentElement.scrollTop=0;
+        document.body.scrollTop=0;
+        if(document.scrollingElement) document.scrollingElement.scrollTop=0;
       });
     },260);
   },[]);
