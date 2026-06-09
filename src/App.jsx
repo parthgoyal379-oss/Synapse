@@ -652,7 +652,7 @@ function getErrorMsg(code) {
   return map[code] || "Something went wrong. Try again.";
 }
 
-function Auth({ onAuth }) {
+function Auth({ onAuth, context="" }) {
   const [mode, setMode]           = useState("signin");
   const [email, setEmail]         = useState("");
   const [password, setPassword]   = useState("");
@@ -724,8 +724,12 @@ function Auth({ onAuth }) {
       <div className="auth-wrap" style={{width:"100%",maxWidth:460,position:"relative",zIndex:2,opacity:ready?1:0,transform:ready?"translateY(0)":"translateY(24px)",transition:"all .8s cubic-bezier(.16,1,.3,1)",animation:shake?"shakeX .5s ease":"none"}}>
         <div style={{textAlign:"center",marginBottom:36}}>
           <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:14,marginBottom:20}}><NeuralMark size={52}/></div>
-          <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:26,fontWeight:900,letterSpacing:-1,background:"linear-gradient(145deg,#fff 30%,rgba(255,180,80,.75) 100%)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",marginBottom:8}}>SYNAPSE</div>
-          <div style={{fontSize:12,color:"rgba(255,255,255,0.2)",letterSpacing:2,textTransform:"uppercase"}}>{mode==="signin"?"Welcome back, soldier":"Initialize your protocol"}</div>
+          <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:26,fontWeight:900,letterSpacing:-1,background:"linear-gradient(145deg,#fff 30%,rgba(255,180,80,.75) 100%)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",marginBottom:8}}>
+            {context==="lock"?"LOCK IN YOUR":"SYNAPSE"}
+          </div>
+          <div style={{fontSize:12,color:"rgba(255,255,255,0.2)",letterSpacing:2,textTransform:"uppercase"}}>
+            {context==="lock"?"Protocol. Begin Day 1.":mode==="signin"?"Welcome back, soldier":"Initialize your protocol"}
+          </div>
         </div>
         <div className="glass" style={{padding:36,boxShadow:"0 0 60px rgba(255,140,0,0.08),0 32px 64px rgba(0,0,0,0.4)",animation:"borderGlow 5s ease-in-out infinite"}}>
           <div style={{display:"flex",background:"rgba(255,255,255,0.03)",borderRadius:10,padding:4,marginBottom:28,border:"1px solid rgba(255,140,0,0.08)"}}>
@@ -1253,7 +1257,7 @@ function ConfessStep4({selected, hours, onSubmit, loading, onBack}) {
           <div style={{fontSize:11,color:"rgba(255,255,255,.12)",fontFamily:"'JetBrains Mono',monospace",letterSpacing:.5,lineHeight:1.7,display:"flex",alignItems:"center"}}>🔒 Never stored or shared</div>
         </div>
         <button onClick={()=>onSubmit(buildPrompt())} disabled={loading} style={{background:"linear-gradient(135deg,#ff9500,#ff5000)",border:"none",color:"#fff",padding:"16px 48px",borderRadius:14,fontFamily:"'Inter',sans-serif",fontSize:14,fontWeight:800,letterSpacing:.5,transition:"all .3s cubic-bezier(.16,1,.3,1)",boxShadow:"0 0 50px rgba(255,140,0,.5),0 0 100px rgba(255,80,0,.2),0 8px 28px rgba(0,0,0,.5)",cursor:"none"}}>
-          {loading?"Building Your Battle Plan...":"Generate My Battle Plan 🔥"}
+          {loading?"Building Your Battle Plan...":preAuth?"Preview My Battle Plan 🔥":"Generate My Battle Plan 🔥"}
         </button>
       </div>
       {loading&&<div style={{marginTop:16,height:2,background:"rgba(255,140,0,.05)",borderRadius:1,overflow:"hidden",position:"relative"}}><div style={{position:"absolute",inset:0,background:"linear-gradient(90deg,transparent,rgba(255,140,0,.6),transparent)",animation:"shimmer 1.6s ease-in-out infinite"}}/></div>}
@@ -1261,7 +1265,7 @@ function ConfessStep4({selected, hours, onSubmit, loading, onBack}) {
   );
 }
 
-function Confess({onSubmit,loading}) {
+function Confess({onSubmit,loading,preAuth=false}) {
   const [step,setStep]=useState(0);
   const [archetype,setArchetype]=useState(null);
   const [selected,setSelected]=useState([]);
@@ -1274,17 +1278,15 @@ function Confess({onSubmit,loading}) {
     if(proceed) setStep(1);
   };
 
-  // Inject archetype into submit prompt
   const handleSubmitWithArchetype=(prompt)=>{
     const arch = ARCHETYPES.find(a=>a.id===archetype);
-    if(arch) ls.set("syn_archetype", JSON.stringify({id:arch.id, title:arch.title, sub:arch.sub}));
-    const enriched = arch
-      ? `User Archetype: ${arch.title} (${arch.sub})\n\n${prompt}`
-      : prompt;
-    onSubmit(enriched);
+    const archData = arch ? {id:arch.id,title:arch.title,sub:arch.sub} : null;
+    if(!preAuth && arch) ls.set("syn_archetype", JSON.stringify(archData));
+    const enriched = arch ? `User Archetype: ${arch.title} (${arch.sub})\n\n${prompt}` : prompt;
+    onSubmit(enriched, archData); // pass archData for pre-auth flow
   };
 
-  const steps=["Archetype","Poisons","Damage","Cost","Confess"];
+  const steps=["Archetype","Poisons","Damage","Cost","Plan"];
   return(
     <div style={{minHeight:"100vh",background:"#07040a",position:"relative",overflowX:"hidden",width:"100%"}}>
       {/* Full-screen background - no gaps */}
@@ -1789,6 +1791,61 @@ function Chat({streak,savedPlan}){
   );
 }
 
+/* ─── BATTLE PLAN PREVIEW ────────────────────────────────────────────────── */
+function BattlePlanPreview({plan,loading,onAuth,onBack}){
+  const [vis,setVis]=useState(false);
+  const {displayed,done:twDone}=useTypewriter(plan,6);
+  useEffect(()=>{setTimeout(()=>setVis(true),60);},[]);
+  return(
+    <div style={{minHeight:"100vh",display:"flex",flexDirection:"column",opacity:vis?1:0,transition:"opacity .7s ease"}}>
+      {/* Header */}
+      <div style={{padding:"clamp(60px,10vw,100px) clamp(20px,6vw,80px) 32px"}}>
+        <div style={{display:"inline-flex",alignItems:"center",gap:8,background:"rgba(255,140,0,.07)",border:"1px solid rgba(255,140,0,.2)",borderRadius:999,padding:"7px 18px",marginBottom:24}}>
+          <div style={{width:6,height:6,borderRadius:"50%",background:"#ff8c00",boxShadow:"0 0 10px #ff8c00",animation:"pulse 1.5s ease-in-out infinite"}}/>
+          <span style={{fontSize:10,fontWeight:600,letterSpacing:2.5,color:"rgba(255,180,80,.65)",textTransform:"uppercase"}}>Your Battle Plan — Preview</span>
+        </div>
+        <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(28px,6vw,64px)",fontWeight:900,letterSpacing:-2,background:"linear-gradient(135deg,#fff,rgba(255,180,80,.7))",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",lineHeight:.92,marginBottom:16}}>YOUR PLAN<br/>IS READY.</div>
+        <p style={{fontSize:14,color:"rgba(255,255,255,.3)",lineHeight:1.8,maxWidth:480}}>SYNAPSE has built your personalized recovery protocol. Create an account to lock it in and begin Day 1.</p>
+      </div>
+
+      {/* Plan preview with fade lock */}
+      <div style={{flex:1,position:"relative",padding:"0 clamp(20px,6vw,80px)",maxWidth:860,width:"100%",boxSizing:"border-box"}}>
+        {loading?(
+          <div style={{padding:"48px 0",display:"flex",alignItems:"center",gap:16}}>
+            <div style={{display:"flex",gap:6}}>{[0,1,2].map(i=><div key={i} style={{width:6,height:6,borderRadius:"50%",background:"#ff9500",animation:`dotBlink 1s ${i*.18}s infinite`}}/>)}</div>
+            <span style={{fontSize:13,color:"rgba(255,255,255,.3)"}}>Building your battle plan...</span>
+          </div>
+        ):(
+          <div style={{position:"relative"}}>
+            <div className="glass" style={{padding:"clamp(24px,4vw,40px)",borderRadius:16,border:"1px solid rgba(255,140,0,.15)",maxHeight:340,overflow:"hidden",position:"relative"}}>
+              <div style={{fontSize:13,lineHeight:2.1,color:"rgba(255,255,255,.6)",fontWeight:300,whiteSpace:"pre-wrap"}}>
+                {parseBold(displayed)}{!twDone&&<span style={{color:"#ff8c00",animation:"blink 1s infinite"}}>|</span>}
+              </div>
+              {/* Gradient lock overlay */}
+              <div style={{position:"absolute",bottom:0,left:0,right:0,height:200,background:"linear-gradient(0deg,rgba(7,4,10,1) 0%,rgba(7,4,10,.9) 40%,rgba(7,4,10,0) 100%)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"flex-end",paddingBottom:24}}>
+                <div style={{fontSize:22,marginBottom:8}}>🔒</div>
+                <div style={{fontSize:11,color:"rgba(255,255,255,.3)",letterSpacing:2,textTransform:"uppercase",fontFamily:"'JetBrains Mono',monospace"}}>Create account to unlock full plan</div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* CTA */}
+      <div style={{padding:"32px clamp(20px,6vw,80px) 48px",display:"flex",flexDirection:"column",gap:12,maxWidth:860,width:"100%",boxSizing:"border-box"}}>
+        <button className="btn-primary" onClick={onAuth}
+          style={{width:"100%",padding:"18px",fontSize:14,letterSpacing:.5,justifyContent:"center",display:"flex",alignItems:"center",gap:10,boxShadow:"0 0 50px rgba(255,140,0,.35),0 8px 32px rgba(0,0,0,.5)"}}>
+          🔥 Lock In My Protocol — Create Account
+        </button>
+        <button onClick={onBack}
+          style={{width:"100%",padding:"13px",fontSize:12,background:"transparent",border:"1px solid rgba(255,255,255,.08)",borderRadius:12,color:"rgba(255,255,255,.25)",cursor:"none"}}>
+          ← Edit My Answers
+        </button>
+      </div>
+    </div>
+  );
+}
+
 /* ─── MILESTONE CELEBRATION ─────────────────────────────────────────────── */
 function MilestoneCelebration({day,onClose}){
   const m=MILESTONE_DATA[day];
@@ -1899,6 +1956,8 @@ export default function App() {
   const [showAuth,setShowAuth]=useState(false);
   const [plan,setPlan]      =useState("");
   const [planLoading,setPL] =useState(false);
+  const [pendingPlan,setPendingPlan]=useState("");
+  const [pendingArch,setPendingArch]=useState(null);
   const [streak,setStreak]  =useState(()=>parseInt(ls.get("syn_streak","0")));
   const [lastCI,setLastCI]  =useState(()=>ls.get("syn_last",null));
   const [savedPlan,setSP]   =useState(()=>ls.get("syn_plan",""));
@@ -1945,17 +2004,38 @@ export default function App() {
 
   const handleAuth=(u)=>{
     ls.set("syn_user",JSON.stringify(u));
-    setAuthed(true);
-    setShowAuth(false);
-    goTo(savedPlan?"checkin":"confess");
+    // Apply pre-auth onboard data if exists
+    if(pendingPlan){
+      setSP(pendingPlan);ls.set("syn_plan",pendingPlan);
+    }
+    if(pendingArch){
+      ls.set("syn_archetype",JSON.stringify(pendingArch));
+    }
+    setAuthed(true);setShowAuth(false);
+    goTo("checkin");
   };
 
   const handleBegin=()=>{
     if(authed){ goTo(savedPlan?"checkin":"confess"); }
-    else { setShowAuth(true); }
+    else if(savedPlan){ setShowAuth(true); } // Returning user — just needs to re-login
+    else { goTo("confess"); } // New user — full onboard flow
   };
 
-  const handleConfess=async text=>{
+  // Pre-auth confess: generate plan → store as pending → show preview
+  const handlePreAuthConfess=async(text,archData)=>{
+    if(archData) setPendingArch(archData);
+    setPL(true);
+    goTo("preview"); // use goTo for proper transition
+    try{
+      const reply=await callAI([{role:"user",content:text}],SYSTEM_CONFESS);
+      setPendingPlan(reply);
+    }catch(e){
+      setPendingPlan(`Your mission stands. ${e.message||"Show up every day."}`);
+    }
+    setPL(false);
+  };
+
+  const handleConfess=async(text,archData)=>{
     // Archive old plan before generating new one
     const oldPlan=ls.get("syn_plan","");
     if(oldPlan){
@@ -1965,6 +2045,7 @@ export default function App() {
       ls.set("syn_plan_history",JSON.stringify(trimmed));
       setPlanHist(trimmed);
     }
+    if(archData) ls.set("syn_archetype",JSON.stringify(archData));
     setPL(true);setPlan("");goTo("plan");
     try{
       const reply=await callAI([{role:"user",content:text}],SYSTEM_CONFESS);
@@ -2032,7 +2113,9 @@ export default function App() {
   const handleReset=()=>{
     if(!confirm("Reset all progress? This cannot be undone."))return;
     ["syn_streak","syn_last","syn_plan","syn_plan_history","syn_history","syn_user","syn_archetype","syn_milestones"].forEach(k=>ls.remove(k));
-    setStreak(0);setLastCI(null);setSP("");setPlanHist([]);setHistory([]);setPlan("");setAuthed(false);setShowAuth(false);
+    setStreak(0);setLastCI(null);setSP("");setPlanHist([]);setHistory([]);setPlan("");
+    setPendingPlan("");setPendingArch(null);
+    setAuthed(false);setShowAuth(false);
     signOut(auth).catch(()=>{});
     setScreen("boot");setTr(false);window.scrollTo({top:0,behavior:"instant"});
   };
@@ -2051,15 +2134,29 @@ export default function App() {
             <div style={{display:"flex",gap:6}}>{[0,1,2].map(i=><div key={i} style={{width:6,height:6,borderRadius:"50%",background:"#ff9500",animation:`dotBlink 1s ${i*.2}s infinite`}}/>)}</div>
           </div>
         </div>
-      ) : !authed && !showAuth ? (
-        /* ── STEP 1: BOOT ── */
+
+      ) : !authed && showAuth ? (
+        /* ── AUTH — after seeing their plan, or returning user ── */
+        <div style={{position:"relative",zIndex:2}}>
+          <Auth onAuth={handleAuth} context={pendingPlan?"lock":""}/>
+        </div>
+
+      ) : !authed && screen==="boot" ? (
+        /* ── LANDING ── */
         <div style={{position:"relative",zIndex:2}}>
           <Boot onBegin={handleBegin} hasPlan={!!savedPlan}/>
         </div>
-      ) : !authed && showAuth ? (
-        /* ── STEP 2: AUTH ── */
+
+      ) : !authed && screen==="confess" ? (
+        /* ── ONBOARD FLOW: Archetype → Poisons → Sliders → Damage ── */
         <div style={{position:"relative",zIndex:2}}>
-          <Auth onAuth={handleAuth}/>
+          <Confess onSubmit={handlePreAuthConfess} loading={planLoading} preAuth/>
+        </div>
+
+      ) : !authed && screen==="preview" ? (
+        /* ── BATTLE PLAN PREVIEW ── */
+        <div style={{position:"relative",zIndex:2}}>
+          <BattlePlanPreview plan={pendingPlan} loading={planLoading} onAuth={()=>setShowAuth(true)} onBack={()=>goTo("confess")}/>
         </div>
       ) : (
         <>
