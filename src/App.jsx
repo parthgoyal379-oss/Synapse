@@ -1006,7 +1006,7 @@ function ConfessStep1({selected, onToggle, onNext}) {
   const [vis,setVis]=useState(false);
   useEffect(()=>{setTimeout(()=>setVis(true),60);},[]);
   return(
-    <div className="step-inner" className="step-inner" style={{minHeight:"100vh",padding:"clamp(80px,12vw,120px) 6vw 80px",width:"100%",boxSizing:"border-box",position:"relative",zIndex:2,opacity:vis?1:0,transform:vis?"translateY(0)":"translateY(24px)",transition:"all .8s cubic-bezier(.16,1,.3,1)",textAlign:"center"}}>
+    <div className="step-inner" style={{minHeight:"100vh",padding:"clamp(80px,12vw,120px) 6vw 80px",width:"100%",boxSizing:"border-box",position:"relative",zIndex:2,opacity:vis?1:0,transform:vis?"translateY(0)":"translateY(24px)",transition:"all .8s cubic-bezier(.16,1,.3,1)",textAlign:"center"}}>
       <div style={{display:"inline-flex",alignItems:"center",gap:8,background:"rgba(255,140,0,.07)",border:"1px solid rgba(255,140,0,.2)",borderRadius:999,padding:"7px 18px",marginBottom:28,animation:"tagGlow 3s ease-in-out infinite"}}>
         <div style={{width:6,height:6,borderRadius:"50%",background:"#ff8c00",boxShadow:"0 0 10px #ff8c00"}}/>
         <span style={{fontSize:10,fontWeight:600,letterSpacing:2.5,color:"rgba(255,180,80,.65)",textTransform:"uppercase"}}>Step 02 of 05 — Select Your Poisons</span>
@@ -1315,7 +1315,7 @@ function Plan({plan,loading,onBegin}) {
   const {displayed,done}=useTypewriter(plan,11);
   return(
     <div style={{minHeight:"100vh",paddingTop:80,position:"relative",overflowX:"hidden"}}>
-      <div className="hero-pad" className="hero-pad" style={{padding:"clamp(60px,8vw,80px) clamp(20px,8vw,100px) clamp(40px,5vw,64px)",borderBottom:"1px solid rgba(255,140,0,0.07)",position:"relative",zIndex:1}}>
+      <div className="hero-pad" style={{padding:"clamp(60px,8vw,80px) clamp(20px,8vw,100px) clamp(40px,5vw,64px)",borderBottom:"1px solid rgba(255,140,0,0.07)",position:"relative",zIndex:1}}>
         <div style={{position:"absolute",inset:0,background:"radial-gradient(ellipse at 30% 60%, rgba(255,100,0,0.06) 0%, transparent 60%)",pointerEvents:"none"}}/>
         <div className="tag s1" style={{marginBottom:24}}><span className="d"/>Recovery Protocol</div>
         <h2 className="s2" style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(32px,8vw,104px)",fontWeight:800,lineHeight:.88,letterSpacing:-3,background:"linear-gradient(145deg,#fff 40%,rgba(255,180,80,0.65) 100%)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent"}}>YOUR<br/>MISSION.</h2>
