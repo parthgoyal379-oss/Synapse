@@ -1257,7 +1257,7 @@ function ConfessStep4({selected, hours, onSubmit, loading, onBack}) {
           <div style={{fontSize:11,color:"rgba(255,255,255,.12)",fontFamily:"'JetBrains Mono',monospace",letterSpacing:.5,lineHeight:1.7,display:"flex",alignItems:"center"}}>🔒 Never stored or shared</div>
         </div>
         <button onClick={()=>onSubmit(buildPrompt())} disabled={loading} style={{background:"linear-gradient(135deg,#ff9500,#ff5000)",border:"none",color:"#fff",padding:"16px 48px",borderRadius:14,fontFamily:"'Inter',sans-serif",fontSize:14,fontWeight:800,letterSpacing:.5,transition:"all .3s cubic-bezier(.16,1,.3,1)",boxShadow:"0 0 50px rgba(255,140,0,.5),0 0 100px rgba(255,80,0,.2),0 8px 28px rgba(0,0,0,.5)",cursor:"none"}}>
-          {loading?"Building Your Battle Plan...":preAuth?"Preview My Battle Plan 🔥":"Generate My Battle Plan 🔥"}
+          {loading?"Building Your Battle Plan...":"Generate My Battle Plan 🔥"}
         </button>
       </div>
       {loading&&<div style={{marginTop:16,height:2,background:"rgba(255,140,0,.05)",borderRadius:1,overflow:"hidden",position:"relative"}}><div style={{position:"absolute",inset:0,background:"linear-gradient(90deg,transparent,rgba(255,140,0,.6),transparent)",animation:"shimmer 1.6s ease-in-out infinite"}}/></div>}
@@ -1265,7 +1265,7 @@ function ConfessStep4({selected, hours, onSubmit, loading, onBack}) {
   );
 }
 
-function Confess({onSubmit,loading,preAuth=false}) {
+function Confess({onSubmit,loading}) {
   const [step,setStep]=useState(0);
   const [archetype,setArchetype]=useState(null);
   const [selected,setSelected]=useState([]);
@@ -1281,9 +1281,9 @@ function Confess({onSubmit,loading,preAuth=false}) {
   const handleSubmitWithArchetype=(prompt)=>{
     const arch = ARCHETYPES.find(a=>a.id===archetype);
     const archData = arch ? {id:arch.id,title:arch.title,sub:arch.sub} : null;
-    if(!preAuth && arch) ls.set("syn_archetype", JSON.stringify(archData));
+    if(arch) ls.set("syn_archetype", JSON.stringify(archData));
     const enriched = arch ? `User Archetype: ${arch.title} (${arch.sub})\n\n${prompt}` : prompt;
-    onSubmit(enriched, archData); // pass archData for pre-auth flow
+    onSubmit(enriched, archData);
   };
 
   const steps=["Archetype","Poisons","Damage","Cost","Plan"];
@@ -2004,39 +2004,18 @@ export default function App() {
 
   const handleAuth=(u)=>{
     ls.set("syn_user",JSON.stringify(u));
-    // Apply pre-auth onboard data if exists
-    if(pendingPlan){
-      setSP(pendingPlan);ls.set("syn_plan",pendingPlan);
-    }
-    if(pendingArch){
-      ls.set("syn_archetype",JSON.stringify(pendingArch));
-    }
+    if(pendingPlan){setSP(pendingPlan);ls.set("syn_plan",pendingPlan);}
+    if(pendingArch){ls.set("syn_archetype",JSON.stringify(pendingArch));}
     setAuthed(true);setShowAuth(false);
-    goTo("checkin");
+    goTo(pendingPlan?"checkin":savedPlan?"checkin":"confess");
   };
 
   const handleBegin=()=>{
     if(authed){ goTo(savedPlan?"checkin":"confess"); }
-    else if(savedPlan){ setShowAuth(true); } // Returning user — just needs to re-login
-    else { goTo("confess"); } // New user — full onboard flow
-  };
-
-  // Pre-auth confess: generate plan → store as pending → show preview
-  const handlePreAuthConfess=async(text,archData)=>{
-    if(archData) setPendingArch(archData);
-    setPL(true);
-    goTo("preview"); // use goTo for proper transition
-    try{
-      const reply=await callAI([{role:"user",content:text}],SYSTEM_CONFESS);
-      setPendingPlan(reply);
-    }catch(e){
-      setPendingPlan(`Your mission stands. ${e.message||"Show up every day."}`);
-    }
-    setPL(false);
+    else { setShowAuth(true); }
   };
 
   const handleConfess=async(text,archData)=>{
-    // Archive old plan before generating new one
     const oldPlan=ls.get("syn_plan","");
     if(oldPlan){
       const ph=JSON.parse(ls.get("syn_plan_history","[]"));
@@ -2135,28 +2114,14 @@ export default function App() {
           </div>
         </div>
 
-      ) : !authed && showAuth ? (
-        /* ── AUTH — after seeing their plan, or returning user ── */
-        <div style={{position:"relative",zIndex:2}}>
-          <Auth onAuth={handleAuth} context={pendingPlan?"lock":""}/>
-        </div>
-
-      ) : !authed && screen==="boot" ? (
-        /* ── LANDING ── */
+      ) : !authed && !showAuth ? (
         <div style={{position:"relative",zIndex:2}}>
           <Boot onBegin={handleBegin} hasPlan={!!savedPlan}/>
         </div>
 
-      ) : !authed && screen==="confess" ? (
-        /* ── ONBOARD FLOW: Archetype → Poisons → Sliders → Damage ── */
+      ) : !authed && showAuth ? (
         <div style={{position:"relative",zIndex:2}}>
-          <Confess onSubmit={handlePreAuthConfess} loading={planLoading} preAuth/>
-        </div>
-
-      ) : !authed && screen==="preview" ? (
-        /* ── BATTLE PLAN PREVIEW ── */
-        <div style={{position:"relative",zIndex:2}}>
-          <BattlePlanPreview plan={pendingPlan} loading={planLoading} onAuth={()=>setShowAuth(true)} onBack={()=>goTo("confess")}/>
+          <Auth onAuth={handleAuth} context={pendingPlan?"lock":""}/>
         </div>
       ) : (
         <>
