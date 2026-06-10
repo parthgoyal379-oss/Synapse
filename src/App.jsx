@@ -444,7 +444,7 @@ input[type=range]{-webkit-appearance:none;appearance:none;background:transparent
 
 @media(max-width:768px){
   /* ── Nav ── */
-  nav .nav-pill{padding:5px 10px !important;font-size:9px !important;letter-spacing:.3px !important;}
+  nav .nav-pill{padding:6px 12px !important;font-size:10px !important;letter-spacing:.3px !important;}
   .nav-logo-text div:last-child{display:none !important;} /* hide "RESET · REWIRE · RISE" */
 
   /* ── Global heading scale ── */
@@ -492,7 +492,7 @@ input[type=range]{-webkit-appearance:none;appearance:none;background:transparent
   .addiction-grid{grid-template-columns:1fr !important;}
 
   /* ── Nav pills — shorter ── */
-  nav .nav-pill{padding:4px 8px !important;font-size:8px !important;}
+  nav .nav-pill{padding:6px 11px !important;font-size:10px !important;}
 
   /* ── Body text — enforce readable sizes ── */
   p{font-size:13px !important;line-height:1.75 !important;}
@@ -506,7 +506,7 @@ input[type=range]{-webkit-appearance:none;appearance:none;background:transparent
 }
 
 @media(max-width:380px){
-  nav .nav-pill{padding:4px 6px !important;font-size:7px !important;letter-spacing:0 !important;}
+  nav .nav-pill{padding:5px 9px !important;font-size:9px !important;letter-spacing:0 !important;}
 }
 `;
 
@@ -1987,14 +1987,19 @@ export default function App() {
   const topRef=useRef(null);
   const goTo=useCallback(s=>{
     setTr(true);
+    // Scroll to top immediately on navigate
+    window.scrollTo({top:0,behavior:"instant"});
+    document.documentElement.scrollTop=0;
+    document.body.scrollTop=0;
+    if(document.scrollingElement) document.scrollingElement.scrollTop=0;
     setTimeout(()=>{
       setScreen(s);
       setTr(false);
-      // Unlock body scroll, reset, then let CSS take over
       document.body.style.overflow="auto";
       document.body.style.overflowX="hidden";
+      // Double-fire after render to catch PWA scroll containers
       requestAnimationFrame(()=>{
-        window.scrollTo(0,0);
+        window.scrollTo({top:0,behavior:"instant"});
         document.documentElement.scrollTop=0;
         document.body.scrollTop=0;
         if(document.scrollingElement) document.scrollingElement.scrollTop=0;
@@ -2012,7 +2017,7 @@ export default function App() {
 
   const handleBegin=()=>{
     if(authed){ goTo(savedPlan?"checkin":"confess"); }
-    else { goTo("confess"); }
+    else { setShowAuth(true); }
   };
 
   const handleConfess=async(text,archData)=>{
@@ -2024,15 +2029,11 @@ export default function App() {
       ls.set("syn_plan_history",JSON.stringify(trimmed));
       setPlanHist(trimmed);
     }
-    if(archData){ls.set("syn_archetype",JSON.stringify(archData));setPendingArch(archData);}
-    setPL(true);setPlan("");
-    // Unauthenticated users see preview first, then auth — authed users go straight to plan
-    if(authed){ goTo("plan"); } else { goTo("preview"); }
+    if(archData) ls.set("syn_archetype",JSON.stringify(archData));
+    setPL(true);setPlan("");goTo("plan");
     try{
       const reply=await callAI([{role:"user",content:text}],SYSTEM_CONFESS);
-      setPlan(reply);
-      if(authed){setSP(reply);ls.set("syn_plan",reply);}
-      else{setPendingPlan(reply);}
+      setPlan(reply);setSP(reply);ls.set("syn_plan",reply);
     }catch(e){
       setPlan(`Connection error: ${e.message}\n\nYour mission still stands. Show up every day.`);
     }
@@ -2118,22 +2119,15 @@ export default function App() {
           </div>
         </div>
 
-      ) : screen==="boot" ? (
+      ) : !authed && !showAuth ? (
         <div style={{position:"relative",zIndex:2}}>
-          <Boot onBegin={handleBegin} hasPlan={!!savedPlan&&authed}/>
+          <Boot onBegin={handleBegin} hasPlan={!!savedPlan}/>
         </div>
 
-      ) : !authed && screen==="confess" ? (
+      ) : !authed && showAuth ? (
         <div style={{position:"relative",zIndex:2}}>
-          <Confess onSubmit={handleConfess} loading={planLoading}/>
+          <Auth onAuth={handleAuth} context={pendingPlan?"lock":""}/>
         </div>
-
-      ) : !authed && screen==="preview" ? (
-        <div style={{position:"relative",zIndex:2}}>
-          <BattlePlanPreview plan={plan} loading={planLoading} onAuth={()=>setShowAuth(true)} onBack={()=>goTo("confess")}/>
-          {showAuth&&<div style={{position:"fixed",inset:0,zIndex:50,background:"rgba(7,4,10,0.92)",display:"flex",alignItems:"center",justifyContent:"center",padding:"clamp(16px,4vw,40px)"}}><Auth onAuth={handleAuth} context="lock"/></div>}
-        </div>
-
       ) : (
         <>
           {screen!=="boot"&&<Nav screen={screen} goTo={goTo} savedPlan={savedPlan} onReset={handleReset}/>}
