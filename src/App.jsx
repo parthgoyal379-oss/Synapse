@@ -444,8 +444,9 @@ input[type=range]{-webkit-appearance:none;appearance:none;background:transparent
 
 @media(max-width:768px){
   /* ── Nav ── */
-  nav .nav-pill{padding:5px 10px !important;font-size:9px !important;letter-spacing:.3px !important;}
-  .nav-logo-text div:last-child{display:none !important;} /* hide "RESET · REWIRE · RISE" */
+  nav .nav-pill{padding:8px 14px !important;font-size:11px !important;letter-spacing:.3px !important;}
+  .nav-tabs-row{gap:8px !important;padding-bottom:12px !important;}
+  .nav-logo-text div:last-child{display:none !important;}
 
   /* ── Global heading scale ── */
   /* Force all Orbitron giant headings to scale down */
@@ -528,7 +529,7 @@ function Nav({screen,goTo,savedPlan,onReset}) {
         <button className="nav-pill danger" onClick={onReset} style={{flexShrink:0}}>Reset</button>
       </div>
       {/* Row 2 — Screen tabs (scrollable on mobile) */}
-      <div style={{display:"flex",gap:6,alignItems:"center",padding:"0 clamp(12px,4vw,48px) 10px",overflowX:"auto",WebkitOverflowScrolling:"touch",scrollbarWidth:"none",msOverflowStyle:"none",whiteSpace:"nowrap"}}>
+      <div style={{display:"flex",gap:6,alignItems:"center",padding:"0 clamp(12px,4vw,48px) 10px",overflowX:"auto",WebkitOverflowScrolling:"touch",scrollbarWidth:"none",msOverflowStyle:"none",whiteSpace:"nowrap",msScrollSnapType:"none"}} className="nav-tabs-row">
         {savedPlan&&[["checkin","Check-In"],["plan","My Plan"],["chat","Coach"],["report","Report"],["history","Log"]].map(([s,l])=>(
           <button key={s} className={`nav-pill${screen===s?" active":""}`} onClick={()=>goTo(s)} style={{flexShrink:0}}>{l}</button>
         ))}
@@ -1418,7 +1419,7 @@ function Checkin({streak,savedPlan,lastCheckin,onCheckin,onGoChat}) {
               }catch{return null;}
             })()}
           </div>
-          <div className="streak-num" style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(72px,16vw,200px)",fontWeight:800,lineHeight:.85,color:"#fff",marginBottom:12,textShadow:`0 0 80px rgba(${lv.hex},0.25)`,transition:"text-shadow 1s"}}><AnimatedNumber target={streak}/></div>
+          <div className="streak-num" style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(72px,16vw,200px)",fontWeight:800,lineHeight:.85,color:"#fff",marginBottom:12,textShadow:`0 0 80px rgba(${lv.hex},0.25)`,transition:"text-shadow 1s"}}>{streak}</div>
           <div style={{fontSize:11,letterSpacing:5,color:"rgba(255,255,255,0.25)",textTransform:"uppercase",marginBottom:24}}>Days Clean</div>
           <div style={{display:"inline-flex",alignItems:"center",gap:9,background:`rgba(${lv.hex},0.09)`,border:`1px solid rgba(${lv.hex},0.3)`,borderRadius:999,padding:"9px 22px",marginBottom:32,transition:"all .8s"}}>
             <div style={{width:7,height:7,borderRadius:"50%",background:lv.color,boxShadow:`0 0 12px ${lv.color}`,transition:"all .8s"}}/>
