@@ -2012,7 +2012,7 @@ export default function App() {
 
   const handleBegin=()=>{
     if(authed){ goTo(savedPlan?"checkin":"confess"); }
-    else { setShowAuth(true); }
+    else { goTo("confess"); }
   };
 
   const handleConfess=async(text,archData)=>{
@@ -2024,11 +2024,15 @@ export default function App() {
       ls.set("syn_plan_history",JSON.stringify(trimmed));
       setPlanHist(trimmed);
     }
-    if(archData) ls.set("syn_archetype",JSON.stringify(archData));
-    setPL(true);setPlan("");goTo("plan");
+    if(archData){ls.set("syn_archetype",JSON.stringify(archData));setPendingArch(archData);}
+    setPL(true);setPlan("");
+    // Unauthenticated users see preview first, then auth — authed users go straight to plan
+    if(authed){ goTo("plan"); } else { goTo("preview"); }
     try{
       const reply=await callAI([{role:"user",content:text}],SYSTEM_CONFESS);
-      setPlan(reply);setSP(reply);ls.set("syn_plan",reply);
+      setPlan(reply);
+      if(authed){setSP(reply);ls.set("syn_plan",reply);}
+      else{setPendingPlan(reply);}
     }catch(e){
       setPlan(`Connection error: ${e.message}\n\nYour mission still stands. Show up every day.`);
     }
@@ -2114,15 +2118,22 @@ export default function App() {
           </div>
         </div>
 
-      ) : !authed && !showAuth ? (
+      ) : screen==="boot" ? (
         <div style={{position:"relative",zIndex:2}}>
-          <Boot onBegin={handleBegin} hasPlan={!!savedPlan}/>
+          <Boot onBegin={handleBegin} hasPlan={!!savedPlan&&authed}/>
         </div>
 
-      ) : !authed && showAuth ? (
+      ) : !authed && screen==="confess" ? (
         <div style={{position:"relative",zIndex:2}}>
-          <Auth onAuth={handleAuth} context={pendingPlan?"lock":""}/>
+          <Confess onSubmit={handleConfess} loading={planLoading}/>
         </div>
+
+      ) : !authed && screen==="preview" ? (
+        <div style={{position:"relative",zIndex:2}}>
+          <BattlePlanPreview plan={plan} loading={planLoading} onAuth={()=>setShowAuth(true)} onBack={()=>goTo("confess")}/>
+          {showAuth&&<div style={{position:"fixed",inset:0,zIndex:50,background:"rgba(7,4,10,0.92)",display:"flex",alignItems:"center",justifyContent:"center",padding:"clamp(16px,4vw,40px)"}}><Auth onAuth={handleAuth} context="lock"/></div>}
+        </div>
+
       ) : (
         <>
           {screen!=="boot"&&<Nav screen={screen} goTo={goTo} savedPlan={savedPlan} onReset={handleReset}/>}
