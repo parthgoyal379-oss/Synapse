@@ -356,6 +356,174 @@ function NeuralMark({size=36}) {
   return <canvas ref={ref} style={{display:"block",flexShrink:0}}/>;
 }
 
+/* ─── AMBIENT AUDIO TOGGLE ───────────────────────────────────────────────── */
+function AmbientAudio() {
+  const audioRef = useRef(null);
+  const [playing, setPlaying] = useState(false);
+  const [vol, setVol] = useState(false);
+
+  useEffect(() => {
+    const a = new Audio("/ambient.mp3");
+    a.loop = true; a.volume = 0.18; a.preload = "none";
+    audioRef.current = a;
+    return () => { a.pause(); a.src = ""; };
+  }, []);
+
+  const toggle = () => {
+    const a = audioRef.current; if (!a) return;
+    if (playing) { a.pause(); setPlaying(false); }
+    else { a.play().then(() => setPlaying(true)).catch(() => {}); }
+  };
+
+  return (
+    <div style={{ position:"fixed", bottom:20, right:20, zIndex:800, display:"flex", alignItems:"center", gap:8 }}>
+      {vol && playing && (
+        <div style={{ background:"rgba(7,4,10,0.88)", border:"1px solid rgba(255,140,0,0.18)", borderRadius:999, padding:"6px 12px", backdropFilter:"blur(12px)", display:"flex", alignItems:"center", gap:8 }}>
+          <span style={{ fontSize:9, color:"rgba(255,180,80,0.5)", letterSpacing:1.5, textTransform:"uppercase" }}>VOL</span>
+          <input type="range" min="0" max="0.5" step="0.01" defaultValue="0.18"
+            onChange={e=>{ if(audioRef.current) audioRef.current.volume=parseFloat(e.target.value); }}
+            style={{ width:64, accentColor:"#ff8c00", cursor:"pointer", background:"transparent", height:3 }}/>
+        </div>
+      )}
+      <button onClick={toggle} onMouseEnter={()=>setVol(true)} onMouseLeave={()=>setVol(false)}
+        title={playing?"Mute ambient":"Play ambient sound"}
+        style={{ width:38, height:38, borderRadius:"50%",
+          background: playing?"rgba(255,140,0,0.12)":"rgba(255,255,255,0.04)",
+          border:`1px solid ${playing?"rgba(255,140,0,0.35)":"rgba(255,255,255,0.1)"}`,
+          color: playing?"#ffb347":"rgba(255,255,255,0.25)",
+          display:"flex", alignItems:"center", justifyContent:"center",
+          cursor:"pointer", transition:"all .25s", backdropFilter:"blur(12px)",
+          boxShadow: playing?"0 0 18px rgba(255,140,0,0.2)":"none", fontSize:14, flexShrink:0 }}>
+        {playing ? (
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <rect x="1" y="5" width="2" height="6" rx="1" fill="currentColor" opacity="0.6"/>
+            <rect x="4.5" y="3" width="2" height="10" rx="1" fill="currentColor" opacity="0.8"/>
+            <rect x="8" y="1" width="2" height="14" rx="1" fill="currentColor"/>
+            <rect x="11.5" y="3" width="2" height="10" rx="1" fill="currentColor" opacity="0.8"/>
+          </svg>
+        ) : (
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <rect x="1" y="6" width="2" height="4" rx="1" fill="currentColor" opacity="0.3"/>
+            <rect x="4.5" y="5" width="2" height="6" rx="1" fill="currentColor" opacity="0.3"/>
+            <rect x="8" y="4" width="2" height="8" rx="1" fill="currentColor" opacity="0.3"/>
+            <rect x="11.5" y="5" width="2" height="6" rx="1" fill="currentColor" opacity="0.3"/>
+            <line x1="2" y1="14" x2="14" y2="2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" opacity="0.4"/>
+          </svg>
+        )}
+      </button>
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   ONBOARDING TOUR — shown once on first visit
+══════════════════════════════════════════════════════════════════════════ */
+const TOUR_SLIDES = [
+  { icon:"◈", tag:"WELCOME, SOLDIER", title:"SYNAPSE\nPROTOCOL", sub:"Your brain has been hijacked by dopamine traps. SYNAPSE is your command center to reclaim it — one day at a time.", accent:"#ff8c00" },
+  { icon:"⬡", tag:"STEP 1 — CONFESS", title:"CONFESS\nYOUR\nBATTLE", sub:"Tell SYNAPSE exactly what you're fighting — porn, reels, social media, games, anything. Be brutal. Be honest. The AI will forge your personal battle plan from it.", accent:"#ff6030" },
+  { icon:"▣", tag:"STEP 2 — YOUR PLAN", title:"YOUR\nBATTLE\nPLAN", sub:"A custom AI-generated mission plan built around YOUR addictions and YOUR archetype identity. No generic advice. No therapy talk. Just orders.", accent:"#ff9500" },
+  { icon:"◉", tag:"STEP 3 — DAILY CHECK-IN", title:"CHECK IN\nEVERY\nDAY", sub:"WIN, MID, or SLIP — log your day every 24 hours. Your streak grows, your brain rewires. Miss a day and the streak resets. No mercy.", accent:"#ffb347" },
+  { icon:"⬟", tag:"STEP 4 — AI COACH", title:"YOUR\nCOMMANDER\nON CALL", sub:"Struggling at 2 AM? The AI Coach knows your plan, your streak, your archetype. Talk to it. It will not coddle you — it will reload your weapons.", accent:"#ff7020" },
+  { icon:"◈", tag:"STEP 5 — REPORT", title:"TRACK YOUR\nREWIRING", sub:"The Report screen shows your brain rewiring progress, streak history, archetype evolution, and past battle plans. Watch yourself become the operator.", accent:"#ff8c00" },
+  { icon:"✦", tag:"YOU ARE READY", title:"BEGIN\nYOUR\nMISSION", sub:"The soldier who shows up every day, even broken, even tired — that soldier wins. SYNAPSE is your witness. Now go confess and get your orders.", accent:"#ff9500", final:true },
+];
+
+function OnboardingTour({ onComplete }) {
+  const [idx, setIdx] = useState(0);
+  const [anim, setAnim] = useState(true);
+  const slide = TOUR_SLIDES[idx];
+  const total = TOUR_SLIDES.length;
+
+  const go = (next) => {
+    setAnim(false);
+    setTimeout(() => { setIdx(next); setAnim(true); }, 220);
+  };
+
+  const finish = () => { ls.set("syn_toured","1"); onComplete(); };
+
+  return (
+    <div style={{ position:"fixed", inset:0, zIndex:9999,
+      background:"radial-gradient(ellipse at 30% 20%, rgba(255,140,0,0.07) 0%, transparent 60%), #07040a",
+      display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center",
+      padding:"clamp(20px,5vw,60px)", fontFamily:"'Inter',sans-serif" }}>
+
+      {/* Stars */}
+      <div style={{ position:"absolute", inset:0, overflow:"hidden", pointerEvents:"none" }}>
+        {Array.from({length:40},(_,i)=>(
+          <div key={i} style={{ position:"absolute", width:i%5===0?2:1, height:i%5===0?2:1, borderRadius:"50%",
+            background:`rgba(255,${140+(i%60)},0,${0.15+(i%4)*0.1})`,
+            top:`${(i*37+11)%100}%`, left:`${(i*53+7)%100}%`,
+            animation:`dotBlink ${2+(i%3)}s ${(i%10)*0.3}s ease-in-out infinite` }}/>
+        ))}
+      </div>
+
+      {/* Progress dots */}
+      <div style={{ display:"flex", gap:6, marginBottom:32, position:"relative", zIndex:2 }}>
+        {TOUR_SLIDES.map((_,i)=>(
+          <div key={i} onClick={()=>go(i)} style={{
+            width:i===idx?22:6, height:6, borderRadius:999, cursor:"pointer",
+            background:i===idx?slide.accent:i<idx?"rgba(255,140,0,0.35)":"rgba(255,255,255,0.08)",
+            transition:"all .35s cubic-bezier(.16,1,.3,1)",
+            boxShadow:i===idx?`0 0 12px ${slide.accent}88`:"none" }}/>
+        ))}
+      </div>
+
+      {/* Card */}
+      <div style={{ maxWidth:480, width:"100%", position:"relative", zIndex:2,
+        opacity:anim?1:0, transform:anim?"translateY(0) scale(1)":"translateY(18px) scale(0.97)",
+        transition:"opacity .22s ease, transform .22s ease" }}>
+
+        <div style={{ display:"inline-flex", alignItems:"center", gap:8,
+          background:"rgba(255,140,0,0.07)", border:"1px solid rgba(255,140,0,0.2)",
+          borderRadius:999, padding:"5px 14px", marginBottom:24,
+          fontSize:10, letterSpacing:2.5, color:"rgba(255,180,80,0.6)", textTransform:"uppercase" }}>
+          <span style={{ color:slide.accent, fontSize:8 }}>◆</span>{slide.tag}
+        </div>
+
+        <div style={{ fontSize:"clamp(48px,12vw,80px)", lineHeight:1, marginBottom:16,
+          color:slide.accent, filter:`drop-shadow(0 0 24px ${slide.accent}66)`, fontFamily:"monospace" }}>
+          {slide.icon}
+        </div>
+
+        <h1 style={{ fontFamily:"'Orbitron',sans-serif", fontSize:"clamp(28px,8vw,52px)",
+          fontWeight:900, lineHeight:1.05, color:"#fff", marginBottom:20,
+          whiteSpace:"pre-line", textShadow:`0 0 60px ${slide.accent}44` }}>{slide.title}</h1>
+
+        <div style={{ width:40, height:2, background:`linear-gradient(90deg,${slide.accent},transparent)`,
+          borderRadius:999, marginBottom:20 }}/>
+
+        <p style={{ fontSize:"clamp(13px,3.5vw,16px)", lineHeight:1.75,
+          color:"rgba(255,255,255,0.45)", fontWeight:300, marginBottom:36 }}>{slide.sub}</p>
+
+        <div style={{ display:"flex", gap:12, alignItems:"center", flexWrap:"wrap" }}>
+          {slide.final ? (
+            <button className="btn-primary" onClick={finish} style={{ fontSize:13, padding:"14px 36px" }}>
+              BEGIN MISSION →
+            </button>
+          ) : (
+            <>
+              <button className="btn-primary" onClick={()=>go(idx+1)} style={{ fontSize:13, padding:"14px 36px" }}>
+                NEXT →
+              </button>
+              <button onClick={finish} style={{ background:"none", border:"none",
+                color:"rgba(255,255,255,0.2)", fontSize:11, letterSpacing:1.5,
+                cursor:"pointer", textTransform:"uppercase", padding:"14px 0" }}>
+                Skip Tour
+              </button>
+            </>
+          )}
+        </div>
+
+        <div style={{ marginTop:24, fontSize:10, letterSpacing:2,
+          color:"rgba(255,255,255,0.15)", textTransform:"uppercase" }}>
+          {idx+1} / {total}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
 /* ─── CUSTOM CURSOR ──────────────────────────────────────────────────────── */
 function CustomCursor() {
   // Don't render on touch devices — cursor:none breaks UX on mobile
@@ -2223,6 +2391,7 @@ export default function App() {
   const [tr,setTr]          =useState(false);
   const [emergency,setEmergency]=useState(false);
   const [milestone,setMilestone]=useState(null);
+  const [toured,setToured]  =useState(()=>ls.get("syn_toured","")!=="1");
 
   useEffect(()=>{const s=document.createElement("style");s.textContent=G;document.head.appendChild(s);return()=>document.head.removeChild(s);},[]);
   useEffect(()=>{"serviceWorker" in navigator&&navigator.serviceWorker.register("/sw.js",{scope:"/"}).catch(()=>{});},[]);
@@ -2358,6 +2527,8 @@ export default function App() {
 
   return(
     <div style={{background:"#07040a",minHeight:"100vh",width:"100%",overflowX:"hidden",color:"#fff",position:"relative"}}>
+      {toured&&<OnboardingTour onComplete={()=>setToured(false)}/>}
+      <AmbientAudio/>
       <CustomCursor/>
       <SynapseBackground intensity={screen==="checkin"?"heavy":"normal"}/>
       <FloatingNeurons/>
