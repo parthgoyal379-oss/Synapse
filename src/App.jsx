@@ -357,22 +357,40 @@ function NeuralMark({size=36}) {
 }
 
 /* ─── AMBIENT AUDIO TOGGLE ───────────────────────────────────────────────── */
-function AmbientAudio() {
-  const audioRef = useRef(null);
+// Global audio singleton — created once, survives re-renders
+let _ambientAudio = null;
+function getAmbient() {
+  if (!_ambientAudio) {
+    _ambientAudio = new Audio("/ambient.mp3");
+    _ambientAudio.loop = true;
+    _ambientAudio.volume = 0.18;
+  }
+  return _ambientAudio;
+}
+// Call this from any user interaction to start music
+window.__synapsePlayAmbient = () => {
+  const a = getAmbient();
+  if (a.paused) a.play().catch(() => {});
+};
+
+function AmbientAudio({ onReady }) {
   const [playing, setPlaying] = useState(false);
   const [vol, setVol] = useState(false);
 
   useEffect(() => {
-    const a = new Audio("/ambient.mp3");
-    a.loop = true; a.volume = 0.18; a.preload = "none";
-    audioRef.current = a;
-    return () => { a.pause(); a.src = ""; };
+    if (onReady) onReady(window.__synapsePlayAmbient);
+    const a = getAmbient();
+    const onPlay = () => setPlaying(true);
+    const onPause = () => setPlaying(false);
+    a.addEventListener("play", onPlay);
+    a.addEventListener("pause", onPause);
+    return () => { a.removeEventListener("play", onPlay); a.removeEventListener("pause", onPause); };
   }, []);
 
   const toggle = () => {
-    const a = audioRef.current; if (!a) return;
-    if (playing) { a.pause(); setPlaying(false); }
-    else { a.play().then(() => setPlaying(true)).catch(() => {}); }
+    const a = getAmbient();
+    if (playing) { a.pause(); }
+    else { a.play().catch(() => {}); }
   };
 
   return (
@@ -2392,6 +2410,7 @@ export default function App() {
   const [emergency,setEmergency]=useState(false);
   const [milestone,setMilestone]=useState(null);
   const [toured,setToured]  =useState(()=>ls.get("syn_toured","")!=="1");
+  const audioPlayRef = useRef(null);
 
   useEffect(()=>{const s=document.createElement("style");s.textContent=G;document.head.appendChild(s);return()=>document.head.removeChild(s);},[]);
   useEffect(()=>{"serviceWorker" in navigator&&navigator.serviceWorker.register("/sw.js",{scope:"/"}).catch(()=>{});},[]);
@@ -2408,6 +2427,21 @@ export default function App() {
       setAuthLoading(false);
     });
     return unsub;
+  },[]);
+
+  // Play ambient on first any interaction — covers already-logged-in users
+  useEffect(()=>{
+    const handler=()=>{
+      if(typeof window.__synapsePlayAmbient==="function") window.__synapsePlayAmbient();
+      document.removeEventListener("click",handler);
+      document.removeEventListener("touchstart",handler);
+    };
+    document.addEventListener("click",handler,{once:true});
+    document.addEventListener("touchstart",handler,{once:true});
+    return()=>{
+      document.removeEventListener("click",handler);
+      document.removeEventListener("touchstart",handler);
+    };
   },[]);
 
   const topRef=useRef(null);
@@ -2437,8 +2471,11 @@ export default function App() {
   };
 
   const handleBegin=()=>{
+    // Play ambient — works because this is inside a user click handler
+    if(typeof window.__synapsePlayAmbient==="function") window.__synapsePlayAmbient();
+    else if(audioPlayRef.current) audioPlayRef.current();
     if(authed){ goTo(savedPlan?"checkin":"confess"); }
-    else { setShowAuth(true); }
+    else { goTo("confess"); }
   };
 
   const handleConfess=async(text,archData)=>{
@@ -2528,7 +2565,7 @@ export default function App() {
   return(
     <div style={{background:"#07040a",minHeight:"100vh",width:"100%",overflowX:"hidden",color:"#fff",position:"relative"}}>
       {toured&&<OnboardingTour onComplete={()=>setToured(false)}/>}
-      <AmbientAudio/>
+      <AmbientAudio onReady={fn=>audioPlayRef.current=fn}/>
       <CustomCursor/>
       <SynapseBackground intensity={screen==="checkin"?"heavy":"normal"}/>
       <FloatingNeurons/>
