@@ -2429,6 +2429,21 @@ export default function App() {
     return unsub;
   },[]);
 
+  // Play ambient on first any interaction — covers already-logged-in users
+  useEffect(()=>{
+    const handler=()=>{
+      if(typeof window.__synapsePlayAmbient==="function") window.__synapsePlayAmbient();
+      document.removeEventListener("click",handler);
+      document.removeEventListener("touchstart",handler);
+    };
+    document.addEventListener("click",handler,{once:true});
+    document.addEventListener("touchstart",handler,{once:true});
+    return()=>{
+      document.removeEventListener("click",handler);
+      document.removeEventListener("touchstart",handler);
+    };
+  },[]);
+
   const topRef=useRef(null);
   const goTo=useCallback(s=>{
     setTr(true);
