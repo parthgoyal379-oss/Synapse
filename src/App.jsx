@@ -2474,11 +2474,9 @@ export default function App() {
   };
 
   const handleBegin=()=>{
-    // Play ambient — works because this is inside a user click handler
     if(typeof window.__synapsePlayAmbient==="function") window.__synapsePlayAmbient();
     else if(audioPlayRef.current) audioPlayRef.current();
-    if(authed){ goTo(savedPlan?"checkin":"confess"); }
-    else { goTo("confess"); }
+    goTo("confess");
   };
 
   const handleConfess=async(text,archData)=>{
@@ -2621,7 +2619,9 @@ export default function App() {
         </div>
       ) : (
         <div style={{position:"relative",zIndex:2}}>
-          <Boot onBegin={handleBegin} hasPlan={false}/>
+          {screen==="confess" && <Confess onSubmit={handleConfess} loading={planLoading}/>}
+          {screen==="plan"    && <Plan plan={plan} loading={planLoading} onBegin={()=>setShowAuth(true)}/>}
+          {screen==="boot"    && <Boot onBegin={handleBegin} hasPlan={false}/>}
         </div>
       )}
     </div>
