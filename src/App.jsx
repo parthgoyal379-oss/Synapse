@@ -444,7 +444,7 @@ input[type=range]{-webkit-appearance:none;appearance:none;background:transparent
 
 @media(max-width:768px){
   /* ── Nav ── */
-  nav .nav-pill{padding:6px 12px !important;font-size:10px !important;letter-spacing:.3px !important;}
+  nav .nav-pill{padding:5px 10px !important;font-size:9px !important;letter-spacing:.3px !important;}
   .nav-logo-text div:last-child{display:none !important;} /* hide "RESET · REWIRE · RISE" */
 
   /* ── Global heading scale ── */
@@ -492,7 +492,7 @@ input[type=range]{-webkit-appearance:none;appearance:none;background:transparent
   .addiction-grid{grid-template-columns:1fr !important;}
 
   /* ── Nav pills — shorter ── */
-  nav .nav-pill{padding:6px 11px !important;font-size:10px !important;}
+  nav .nav-pill{padding:4px 8px !important;font-size:8px !important;}
 
   /* ── Body text — enforce readable sizes ── */
   p{font-size:13px !important;line-height:1.75 !important;}
@@ -506,7 +506,7 @@ input[type=range]{-webkit-appearance:none;appearance:none;background:transparent
 }
 
 @media(max-width:380px){
-  nav .nav-pill{padding:5px 9px !important;font-size:9px !important;letter-spacing:0 !important;}
+  nav .nav-pill{padding:4px 6px !important;font-size:7px !important;letter-spacing:0 !important;}
 }
 `;
 
@@ -529,7 +529,7 @@ function Nav({screen,goTo,savedPlan,onReset}) {
       </div>
       {/* Row 2 — Screen tabs (scrollable on mobile) */}
       <div style={{display:"flex",gap:6,alignItems:"center",padding:"0 clamp(12px,4vw,48px) 10px",overflowX:"auto",WebkitOverflowScrolling:"touch",scrollbarWidth:"none",msOverflowStyle:"none",whiteSpace:"nowrap"}}>
-        {savedPlan&&[["checkin","Check-In"],["plan","My Plan"],["chat","Coach"],["report","Report"],["history","Log"]].map(([s,l])=>(
+        {savedPlan&&[["checkin","Check-In"],["plan","My Plan"],["chat","Coach"],["report","Report"],["history","Log"],["urge","⚡ Urge"]].map(([s,l])=>(
           <button key={s} className={`nav-pill${screen===s?" active":""}`} onClick={()=>goTo(s)} style={{flexShrink:0}}>{l}</button>
         ))}
         <button className={`nav-pill${screen==="confess"?" active":""}`} onClick={()=>goTo("confess")} style={{flexShrink:0}}>Confess</button>
@@ -1311,6 +1311,263 @@ function Confess({onSubmit,loading}) {
 }
 
 /* ─── PLAN ───────────────────────────────────────────────────────────────── */
+/* ══════════════════════════════════════════════════════════════════════════
+   URGE SURFING TIMER
+══════════════════════════════════════════════════════════════════════════ */
+const URGE_TASKS = [
+  "Drop and do 20 pushups. Right now. No thinking.",
+  "Drink a full glass of cold water. Slowly.",
+  "Go outside. Walk for 2 minutes. Don't take your phone.",
+  "Write down exactly what triggered this urge. Be specific.",
+  "Splash cold water on your face 3 times.",
+  "Do 30 seconds of deep breathing — 4 in, hold 4, out 4.",
+  "Text someone you respect. Anything. Just connect.",
+  "Do 15 squats. Feel your body. You are not your urge.",
+  "Read your battle plan right now. Remember why you started.",
+  "Close your eyes. Name 5 things you can hear around you.",
+];
+
+const URGE_PHASES = [
+  { at: 600, label: "WAVE INCOMING", color: "#ff4040", sub: "Peak intensity. This is the hardest part. Hold." },
+  { at: 480, label: "HOLDING THE LINE", color: "#ff6020", sub: "You're in it. Don't negotiate. Just wait." },
+  { at: 300, label: "PAST THE PEAK", color: "#ff8c00", sub: "The wave is breaking. Keep breathing." },
+  { at: 120, label: "ALMOST THROUGH", color: "#ffb347", sub: "90% urges die in 10 minutes. You're almost there." },
+  { at: 0,   label: "YOU SURVIVED", color: "#4caf50", sub: "The urge passed. It always does. Log this win." },
+];
+
+function UrgeTimer({ streak, savedPlan }) {
+  const DURATION = 600; // 10 minutes
+  const [active, setActive] = useState(false);
+  const [timeLeft, setTimeLeft] = useState(DURATION);
+  const [done, setDone] = useState(false);
+  const [task, setTask] = useState(null);
+  const [urgeLog, setUrgeLog] = useState(() => {
+    try { return JSON.parse(ls.get("syn_urge_log", "[]")); } catch { return []; }
+  });
+  const [intensity, setIntensity] = useState(null); // null = not selected yet
+  const intervalRef = useRef(null);
+
+  const phase = URGE_PHASES.find(p => timeLeft > p.at) || URGE_PHASES[URGE_PHASES.length - 1];
+  const progress = ((DURATION - timeLeft) / DURATION) * 100;
+  const mins = String(Math.floor(timeLeft / 60)).padStart(2, "0");
+  const secs = String(timeLeft % 60).padStart(2, "0");
+
+  const startTimer = () => {
+    setActive(true);
+    setDone(false);
+    setTimeLeft(DURATION);
+    setTask(URGE_TASKS[Math.floor(Math.random() * URGE_TASKS.length)]);
+    intervalRef.current = setInterval(() => {
+      setTimeLeft(t => {
+        if (t <= 1) {
+          clearInterval(intervalRef.current);
+          setActive(false);
+          setDone(true);
+          return 0;
+        }
+        return t - 1;
+      });
+    }, 1000);
+  };
+
+  const reset = () => {
+    clearInterval(intervalRef.current);
+    setActive(false);
+    setDone(false);
+    setTimeLeft(DURATION);
+    setIntensity(null);
+    setTask(null);
+  };
+
+  const logUrge = (survived) => {
+    const entry = {
+      date: new Date().toISOString(),
+      intensity,
+      survived,
+      duration: DURATION - timeLeft,
+    };
+    const updated = [entry, ...urgeLog].slice(0, 30);
+    setUrgeLog(updated);
+    ls.set("syn_urge_log", JSON.stringify(updated));
+    reset();
+  };
+
+  const newTask = () => setTask(URGE_TASKS[Math.floor(Math.random() * URGE_TASKS.length)]);
+
+  useEffect(() => () => clearInterval(intervalRef.current), []);
+
+  const survived = urgeLog.filter(u => u.survived).length;
+  const total = urgeLog.length;
+
+  return (
+    <div style={{ maxWidth: 600, margin: "0 auto", padding: "clamp(80px,12vw,120px) clamp(16px,5vw,40px) 40px" }}>
+
+      {/* Header */}
+      <div style={{ marginBottom: 40 }}>
+        <div style={{ fontSize: 10, letterSpacing: 3, color: "rgba(255,140,0,0.4)", textTransform: "uppercase", marginBottom: 12 }}>
+          ◆ URGE PROTOCOL
+        </div>
+        <h1 style={{ fontFamily: "'Orbitron',sans-serif", fontSize: "clamp(28px,7vw,44px)", fontWeight: 900, color: "#fff", lineHeight: 1.1, marginBottom: 12 }}>
+          SURF THE<br/>WAVE
+        </h1>
+        <p style={{ fontSize: 14, color: "rgba(255,255,255,0.35)", lineHeight: 1.7 }}>
+          Every urge peaks in 3–5 minutes and dies within 10. You don't fight it — you outlast it.
+        </p>
+      </div>
+
+      {/* Stats bar */}
+      {total > 0 && (
+        <div style={{ display: "flex", gap: 12, marginBottom: 32, flexWrap: "wrap" }}>
+          {[
+            { label: "URGES LOGGED", val: total },
+            { label: "SURVIVED", val: survived },
+            { label: "WIN RATE", val: total > 0 ? Math.round((survived/total)*100) + "%" : "—" },
+          ].map(({ label, val }) => (
+            <div key={label} style={{ flex: 1, minWidth: 80, background: "rgba(255,140,0,0.05)", border: "1px solid rgba(255,140,0,0.12)", borderRadius: 12, padding: "12px 16px" }}>
+              <div style={{ fontSize: "clamp(18px,4vw,24px)", fontFamily: "'Orbitron',sans-serif", fontWeight: 700, color: "#ffb347" }}>{val}</div>
+              <div style={{ fontSize: 8, letterSpacing: 2, color: "rgba(255,255,255,0.25)", textTransform: "uppercase", marginTop: 4 }}>{label}</div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Main card */}
+      <div style={{ background: "rgba(255,140,0,0.04)", border: "1px solid rgba(255,140,0,0.12)", borderRadius: 20, padding: "clamp(24px,6vw,40px)", marginBottom: 24 }}>
+
+        {/* IDLE STATE — intensity picker */}
+        {!active && !done && (
+          <div>
+            <div style={{ fontSize: 13, color: "rgba(255,255,255,0.4)", marginBottom: 20, lineHeight: 1.6 }}>
+              Rate the intensity of your urge right now:
+            </div>
+            <div style={{ display: "flex", gap: 8, marginBottom: 28, flexWrap: "wrap" }}>
+              {["MILD", "MODERATE", "INTENSE", "OVERWHELMING"].map(lvl => (
+                <button key={lvl} onClick={() => setIntensity(lvl)}
+                  style={{
+                    padding: "8px 16px", borderRadius: 999, fontSize: 10, letterSpacing: 1.5,
+                    fontWeight: 600, cursor: "pointer", transition: "all .2s", textTransform: "uppercase",
+                    background: intensity === lvl ? "rgba(255,140,0,0.18)" : "transparent",
+                    border: `1px solid ${intensity === lvl ? "rgba(255,140,0,0.5)" : "rgba(255,255,255,0.1)"}`,
+                    color: intensity === lvl ? "#ffb347" : "rgba(255,255,255,0.3)",
+                    boxShadow: intensity === lvl ? "0 0 16px rgba(255,140,0,0.2)" : "none",
+                  }}>
+                  {lvl}
+                </button>
+              ))}
+            </div>
+
+            <button className="btn-primary" onClick={startTimer} disabled={!intensity}
+              style={{ width: "100%", fontSize: 13, padding: "16px", opacity: intensity ? 1 : 0.35, cursor: intensity ? "pointer" : "not-allowed" }}>
+              START 10-MIN TIMER →
+            </button>
+
+            <div style={{ marginTop: 16, fontSize: 12, color: "rgba(255,255,255,0.2)", textAlign: "center" }}>
+              Research: 90% of urges fade within 10 minutes if you don't act on them.
+            </div>
+          </div>
+        )}
+
+        {/* ACTIVE STATE — timer running */}
+        {active && (
+          <div>
+            {/* Phase label */}
+            <div style={{ textAlign: "center", marginBottom: 24 }}>
+              <div style={{ fontSize: 10, letterSpacing: 3, color: phase.color, textTransform: "uppercase", marginBottom: 8, transition: "color .5s" }}>
+                {phase.label}
+              </div>
+              <div style={{ fontSize: 12, color: "rgba(255,255,255,0.3)", lineHeight: 1.6 }}>{phase.sub}</div>
+            </div>
+
+            {/* Big timer */}
+            <div style={{ textAlign: "center", marginBottom: 28 }}>
+              <div style={{
+                fontFamily: "'Orbitron',sans-serif",
+                fontSize: "clamp(56px,18vw,96px)",
+                fontWeight: 900, lineHeight: 1,
+                color: phase.color,
+                filter: `drop-shadow(0 0 30px ${phase.color}66)`,
+                transition: "color .5s, filter .5s",
+                letterSpacing: 4,
+              }}>
+                {mins}:{secs}
+              </div>
+            </div>
+
+            {/* Progress bar */}
+            <div style={{ height: 4, background: "rgba(255,255,255,0.06)", borderRadius: 999, marginBottom: 28, overflow: "hidden" }}>
+              <div style={{
+                height: "100%", borderRadius: 999,
+                width: `${progress}%`,
+                background: `linear-gradient(90deg, ${phase.color}, ${phase.color}aa)`,
+                transition: "width 1s linear, background .5s",
+                boxShadow: `0 0 12px ${phase.color}88`,
+              }}/>
+            </div>
+
+            {/* Task card */}
+            {task && (
+              <div style={{ background: "rgba(255,140,0,0.07)", border: "1px solid rgba(255,140,0,0.18)", borderRadius: 14, padding: "16px 20px", marginBottom: 20 }}>
+                <div style={{ fontSize: 9, letterSpacing: 2.5, color: "rgba(255,180,80,0.5)", textTransform: "uppercase", marginBottom: 8 }}>◆ DO THIS NOW</div>
+                <div style={{ fontSize: 14, color: "rgba(255,255,255,0.75)", lineHeight: 1.65, fontWeight: 500 }}>{task}</div>
+                <button onClick={newTask} style={{ marginTop: 12, background: "none", border: "none", color: "rgba(255,140,0,0.4)", fontSize: 11, letterSpacing: 1.5, cursor: "pointer", textTransform: "uppercase", padding: 0 }}>
+                  Give me another →
+                </button>
+              </div>
+            )}
+
+            {/* Slip button */}
+            <button onClick={() => logUrge(false)}
+              style={{ width: "100%", background: "transparent", border: "1px solid rgba(255,50,50,0.15)", borderRadius: 12, padding: "12px", color: "rgba(255,80,80,0.35)", fontSize: 11, letterSpacing: 1.5, cursor: "pointer", textTransform: "uppercase" }}>
+              I gave in — log this slip
+            </button>
+          </div>
+        )}
+
+        {/* DONE STATE — survived */}
+        {done && (
+          <div style={{ textAlign: "center" }}>
+            <div style={{ fontSize: "clamp(48px,14vw,72px)", marginBottom: 16, filter: "drop-shadow(0 0 24px #4caf5088)" }}>✦</div>
+            <div style={{ fontFamily: "'Orbitron',sans-serif", fontSize: "clamp(22px,6vw,32px)", fontWeight: 900, color: "#4caf50", marginBottom: 12 }}>
+              YOU HELD THE LINE
+            </div>
+            <p style={{ fontSize: 14, color: "rgba(255,255,255,0.4)", lineHeight: 1.7, marginBottom: 28 }}>
+              10 minutes. The urge is gone. Every time you do this, the neural pathway weakens. This is how recovery actually works.
+            </p>
+            <div style={{ display: "flex", gap: 10, justifyContent: "center", flexWrap: "wrap" }}>
+              <button className="btn-primary" onClick={() => logUrge(true)} style={{ fontSize: 12, padding: "14px 28px" }}>
+                LOG THIS WIN ✓
+              </button>
+              <button onClick={reset} style={{ background: "transparent", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 12, padding: "14px 28px", color: "rgba(255,255,255,0.3)", fontSize: 12, cursor: "pointer" }}>
+                Reset
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Recent log */}
+      {urgeLog.length > 0 && (
+        <div>
+          <div style={{ fontSize: 10, letterSpacing: 2.5, color: "rgba(255,255,255,0.2)", textTransform: "uppercase", marginBottom: 14 }}>Recent Urge Log</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {urgeLog.slice(0, 5).map((u, i) => (
+              <div key={i} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)", borderRadius: 10, padding: "10px 16px" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <span style={{ fontSize: 14, color: u.survived ? "#4caf50" : "#ff4040" }}>{u.survived ? "✓" : "✗"}</span>
+                  <span style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", textTransform: "uppercase", letterSpacing: 1 }}>{u.intensity}</span>
+                </div>
+                <span style={{ fontSize: 10, color: "rgba(255,255,255,0.2)" }}>
+                  {new Date(u.date).toLocaleDateString("en-IN", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function Plan({plan,loading,onBegin}) {
   const {displayed,done}=useTypewriter(plan,11);
   return(
@@ -1987,19 +2244,14 @@ export default function App() {
   const topRef=useRef(null);
   const goTo=useCallback(s=>{
     setTr(true);
-    // Scroll to top immediately on navigate
-    window.scrollTo({top:0,behavior:"instant"});
-    document.documentElement.scrollTop=0;
-    document.body.scrollTop=0;
-    if(document.scrollingElement) document.scrollingElement.scrollTop=0;
     setTimeout(()=>{
       setScreen(s);
       setTr(false);
+      // Unlock body scroll, reset, then let CSS take over
       document.body.style.overflow="auto";
       document.body.style.overflowX="hidden";
-      // Double-fire after render to catch PWA scroll containers
       requestAnimationFrame(()=>{
-        window.scrollTo({top:0,behavior:"instant"});
+        window.scrollTo(0,0);
         document.documentElement.scrollTop=0;
         document.body.scrollTop=0;
         if(document.scrollingElement) document.scrollingElement.scrollTop=0;
@@ -2137,6 +2389,7 @@ export default function App() {
             {screen==="plan"    &&<Plan plan={plan||savedPlan} loading={planLoading} onBegin={handleBeginDay1}/>}
             {screen==="checkin" &&<Checkin streak={streak} savedPlan={savedPlan} lastCheckin={lastCI} onCheckin={handleCheckin} onGoChat={()=>goTo("chat")}/>}
             {screen==="history" &&<History history={history}/>}
+            {screen==="urge"    &&<UrgeTimer streak={streak} savedPlan={savedPlan}/>}
             {screen==="chat"    &&<Chat streak={streak} savedPlan={savedPlan}/>}
             {screen==="report"  &&<Report history={history} savedPlan={savedPlan} streak={streak} planHistory={planHistory}/>}
           </div>
