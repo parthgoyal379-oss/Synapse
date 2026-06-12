@@ -2421,6 +2421,9 @@ export default function App() {
       if(user){
         ls.set("syn_user",JSON.stringify({email:user.email,name:user.displayName||user.email?.split("@")[0],uid:user.uid}));
         setAuthed(true);
+        // Already logged in — skip boot screen, go straight to app
+        const sp=ls.get("syn_plan","");
+        setScreen(sp?"checkin":"confess");
       } else {
         setAuthed(false);
       }
