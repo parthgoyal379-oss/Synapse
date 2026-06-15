@@ -284,6 +284,11 @@ const ls = {
   remove: (key) => { try { localStorage.removeItem(key); } catch {} },
 };
 
+// Perf flag — lighten the always-on background animations on phones (fewer particles,
+// lower internal canvas resolution, capped frame rate, pause when tab/app is hidden).
+// Animation timing is delta-time based, so motion speed is unchanged either way.
+const IS_MOBILE = typeof window!=="undefined" && (window.innerWidth<=768 || ('ontouchstart' in window || navigator.maxTouchPoints>0));
+
 /* ══════════════════════════════════════════════════════════════════════════
    SYNAPSE BACKGROUND — 3-layer neural animation
 ══════════════════════════════════════════════════════════════════════════ */
@@ -294,12 +299,18 @@ function SynapseBackground({ intensity="normal" }) {
     const ctx = canvas.getContext("2d");
     let W, H, raf, time=0;
     let mouseX=0, mouseY=0, mouseVX=0, mouseVY=0, prevMX=0, prevMY=0;
-    const resize = () => { W=canvas.width=window.innerWidth; H=canvas.height=window.innerHeight; mouseX=W/2; mouseY=H/2; };
+    // Mobile perf: render at a slightly lower internal resolution (CSS stretches the canvas
+    // back to full size — since everything here is soft glow/gradient, the difference is
+    // invisible) and cap the frame rate. Motion below is delta-time based, so it doesn't slow down.
+    const RES_SCALE = IS_MOBILE ? 0.78 : 1;
+    const TARGET_FPS = IS_MOBILE ? 30 : 60;
+    const FRAME_MS = 1000/TARGET_FPS;
+    const resize = () => { W=window.innerWidth; H=window.innerHeight; canvas.width=Math.round(W*RES_SCALE); canvas.height=Math.round(H*RES_SCALE); ctx.setTransform(RES_SCALE,0,0,RES_SCALE,0,0); mouseX=W/2; mouseY=H/2; };
     resize();
     window.addEventListener("resize",resize);
     const onMouse = e => { mouseVX=e.clientX-prevMX; mouseVY=e.clientY-prevMY; prevMX=mouseX; prevMY=mouseY; mouseX=e.clientX; mouseY=e.clientY; };
     window.addEventListener("mousemove",onMouse);
-    const DEEP_N = intensity==="heavy" ? 110 : 75;
+    const DEEP_N = intensity==="heavy" ? (IS_MOBILE?90:110) : (IS_MOBILE?62:75);
     const deepNodes = Array.from({length:DEEP_N},()=>({ x:(Math.random()-.5)*3000, y:(Math.random()-.5)*2000, z:(Math.random()-.5)*1800, vx:(Math.random()-.5)*.13, vy:(Math.random()-.5)*.11, vz:(Math.random()-.5)*.09, r:Math.random()*2+.8, pulse:Math.random()*Math.PI*2, signalT:Math.random(), signalSpeed:.002+Math.random()*.004 }));
     const project3D = (x,y,z,rY,rX) => { const cY=Math.cos(rY),sY=Math.sin(rY); const x1=x*cY-z*sY, z1=x*sY+z*cY; const cX=Math.cos(rX),sX=Math.sin(rX); const y1=y*cX-z1*sX, z2=y*sX+z1*cX; const fov=900, d=fov/(fov+z2+700); return {sx:W/2+x1*d, sy:H/2+y1*d, depth:d}; };
     const EDGE_D=580; let deepEdges=[];
@@ -308,10 +319,19 @@ function SynapseBackground({ intensity="normal" }) {
     const clusters = Array.from({length:9},(_,ci)=>({ cx:.08+(ci%3)*.31+(Math.random()-.5)*.07, cy:.12+Math.floor(ci/3)*.36+(Math.random()-.5)*.1, vx:(Math.random()-.5)*.00017, vy:(Math.random()-.5)*.00013, phase:Math.random()*Math.PI*2, scale:.45+Math.random()*.7, op:.25+Math.random()*.4, nodes:Array.from({length:9},(_,ni)=>{ if(ni===0) return{dx:0,dy:0,r:9,tier:0}; const a=(ni/8)*Math.PI*2, rad=ni<=4?55:105; return{dx:Math.cos(a)*rad, dy:Math.sin(a)*rad, r:ni<=4?4.5:2.8, tier:ni<=4?1:2}; }) }));
     const bursts=[]; const spawnBurst=(x,y,n=2)=>{ for(let i=0;i<n;i++){ if(bursts.length>65) bursts.shift(); const a=Math.random()*Math.PI*2, spd=.8+Math.random()*2.5; bursts.push({x,y,vx:Math.cos(a)*spd,vy:Math.sin(a)*spd,life:1,decay:.013+Math.random()*.017,r:1.2+Math.random()*2.8,trail:[]}); } };
     let burstTimer=0;
-    const draw=()=>{
-      time+=.005; edgeTimer++; burstTimer++;
+    let lastFrame=performance.now(); let paused=document.hidden;
+    const onVis=()=>{ paused=document.hidden; if(!paused) lastFrame=performance.now(); };
+    document.addEventListener("visibilitychange",onVis);
+    const draw=(now)=>{
+      raf=requestAnimationFrame(draw);
+      if(paused) return;
+      const elapsed=now-lastFrame;
+      if(elapsed<FRAME_MS) return;
+      const dt=Math.min(elapsed/16.6667,3);
+      lastFrame=now-(elapsed%FRAME_MS);
+      time+=.005*dt; edgeTimer+=dt; burstTimer+=dt;
       if(edgeTimer>210){computeEdges();edgeTimer=0;}
-      if(burstTimer%22===0) spawnBurst(Math.random()*W,Math.random()*H,1);
+      if(burstTimer>=22){spawnBurst(Math.random()*W,Math.random()*H,1);burstTimer=0;}
       if(Math.sqrt(mouseVX*mouseVX+mouseVY*mouseVY)>7) spawnBurst(mouseX,mouseY,1);
       ctx.clearRect(0,0,W,H);
       const pX=(mouseX/W-.5)*55, pY=(mouseY/H-.5)*35;
@@ -322,22 +342,21 @@ function SynapseBackground({ intensity="normal" }) {
       proj.forEach((p,idx)=>{ const n=deepNodes[idx]; const pulse=.7+.3*Math.sin(time*2.2+n.pulse); const size=Math.max(0,n.r*p.depth*pulse*2.3), alpha=Math.max(0,p.depth*.78*pulse); if(size<=0||p.depth<=0) return; const outerR=Math.max(0,size*4.2); const grd=ctx.createRadialGradient(p.sx,p.sy,0,p.sx,p.sy,outerR||0.01); grd.addColorStop(0,`rgba(255,145,30,${alpha*.42})`); grd.addColorStop(.4,`rgba(255,95,0,${alpha*.16})`); grd.addColorStop(1,`rgba(255,50,0,0)`); if(outerR>0){ctx.beginPath(); ctx.arc(p.sx,p.sy,outerR,0,Math.PI*2); ctx.fillStyle=grd; ctx.fill();} if(size>0){ctx.beginPath(); ctx.arc(p.sx,p.sy,size,0,Math.PI*2); ctx.fillStyle=`rgba(255,185,85,${alpha})`; ctx.fill();} });
       clusters.forEach(cl=>{ cl.cx+=cl.vx; cl.cy+=cl.vy; if(cl.cx<.03||cl.cx>.97)cl.vx*=-1; if(cl.cy<.03||cl.cy>.97)cl.vy*=-1; const bcx=cl.cx*W+Math.sin(time*.85+cl.phase)*20; const bcy=cl.cy*H+Math.cos(time*.6+cl.phase)*14; const sc=cl.scale, pulse=.62+.38*Math.sin(time*1.35+cl.phase), op=cl.op; for(let i=1;i<=4;i++){ const na=cl.nodes[0],nb=cl.nodes[i]; const x1=bcx+na.dx*sc,y1=bcy+na.dy*sc,x2=bcx+nb.dx*sc,y2=bcy+nb.dy*sc; const g=ctx.createLinearGradient(x1,y1,x2,y2); g.addColorStop(0,`rgba(255,155,0,${op*.16*pulse})`); g.addColorStop(.5,`rgba(255,205,75,${op*.26*pulse})`); g.addColorStop(1,`rgba(255,95,0,${op*.16*pulse})`); ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.strokeStyle=g;ctx.lineWidth=1.1;ctx.stroke(); } for(let i=1;i<=4;i++){ const na=cl.nodes[i],nb=cl.nodes[i%4+1]; ctx.beginPath();ctx.moveTo(bcx+na.dx*sc,bcy+na.dy*sc);ctx.lineTo(bcx+nb.dx*sc,bcy+nb.dy*sc); ctx.strokeStyle=`rgba(255,135,0,${op*.08*pulse})`;ctx.lineWidth=.65;ctx.stroke(); } for(let i=5;i<=8;i++){ const na=cl.nodes[i%4+1],nb=cl.nodes[i]; ctx.beginPath();ctx.moveTo(bcx+na.dx*sc,bcy+na.dy*sc);ctx.lineTo(bcx+nb.dx*sc,bcy+nb.dy*sc); ctx.strokeStyle=`rgba(255,135,0,${op*.05*pulse})`;ctx.lineWidth=.45;ctx.stroke(); } for(let i=5;i<=8;i++){ const na=cl.nodes[i],nb=cl.nodes[i%4+5]; ctx.beginPath();ctx.moveTo(bcx+na.dx*sc,bcy+na.dy*sc);ctx.lineTo(bcx+nb.dx*sc,bcy+nb.dy*sc); ctx.strokeStyle=`rgba(255,135,0,${op*.04*pulse})`;ctx.lineWidth=.4;ctx.stroke(); } cl.nodes.forEach((n,ni)=>{ const nx=bcx+n.dx*sc,ny=bcy+n.dy*sc; const np=.8+.2*Math.sin(time*2+ni*.9+cl.phase); const nr=n.r*sc*np; if(n.tier===0){ const og=ctx.createRadialGradient(nx,ny,0,nx,ny,nr*5); og.addColorStop(0,`rgba(255,145,0,${op*.2*pulse})`);og.addColorStop(1,"rgba(0,0,0,0)"); ctx.beginPath();ctx.arc(nx,ny,nr*5,0,Math.PI*2);ctx.fillStyle=og;ctx.fill(); const cg=ctx.createRadialGradient(nx-nr*.3,ny-nr*.3,0,nx,ny,nr); cg.addColorStop(0,`rgba(255,225,115,${op*.58*pulse})`); cg.addColorStop(.5,`rgba(255,135,0,${op*.38*pulse})`); cg.addColorStop(1,`rgba(195,55,0,${op*.18*pulse})`); ctx.beginPath();ctx.arc(nx,ny,nr,0,Math.PI*2);ctx.fillStyle=cg;ctx.fill(); } else { ctx.beginPath();ctx.arc(nx,ny,nr,0,Math.PI*2); ctx.fillStyle=`rgba(255,155,38,${op*.22*pulse})`;ctx.fill(); } }); });
       for(let i=bursts.length-1;i>=0;i--){ const b=bursts[i]; b.trail.push({x:b.x,y:b.y}); if(b.trail.length>9)b.trail.shift(); b.x+=b.vx; b.y+=b.vy; b.vx*=.97; b.vy*=.97; b.life-=b.decay; if(b.life<=0){bursts.splice(i,1);continue;} for(let t=0;t<b.trail.length-1;t++){ const t0=b.trail[t],t1=b.trail[t+1]; const ta=(t/b.trail.length)*b.life*.28; ctx.beginPath();ctx.moveTo(t0.x,t0.y);ctx.lineTo(t1.x,t1.y); ctx.strokeStyle=`rgba(255,195,75,${ta})`; ctx.lineWidth=(t/b.trail.length)*b.r*.75;ctx.stroke(); } const grd=ctx.createRadialGradient(b.x,b.y,0,b.x,b.y,b.r*3); grd.addColorStop(0,`rgba(255,225,115,${b.life*.65})`); grd.addColorStop(.4,`rgba(255,135,0,${b.life*.28})`); grd.addColorStop(1,"rgba(255,75,0,0)"); ctx.beginPath();ctx.arc(b.x,b.y,b.r*3,0,Math.PI*2);ctx.fillStyle=grd;ctx.fill(); ctx.beginPath();ctx.arc(b.x,b.y,b.r*b.life,0,Math.PI*2); ctx.fillStyle=`rgba(255,215,95,${b.life*.88})`;ctx.fill(); }
-      raf=requestAnimationFrame(draw);
     };
-    draw();
-    return()=>{ cancelAnimationFrame(raf); window.removeEventListener("resize",resize); window.removeEventListener("mousemove",onMouse); };
+    raf=requestAnimationFrame(draw);
+    return()=>{ cancelAnimationFrame(raf); window.removeEventListener("resize",resize); window.removeEventListener("mousemove",onMouse); document.removeEventListener("visibilitychange",onVis); };
   },[intensity]);
   return <canvas ref={canvasRef} style={{position:"fixed",inset:0,width:"100%",height:"100%",pointerEvents:"none",zIndex:0,opacity:intensity==="heavy"?.72:.52}}/>;
 }
 
 /* ─── FLOATING NEURONS ───────────────────────────────────────────────────── */
 function FloatingNeurons() {
-  const neurons = useRef(Array.from({length:18}, (_,i) => ({ id:i, x:Math.random()*100, y:Math.random()*100, size:4+Math.random()*14, speedX:(Math.random()-.5)*0.018, speedY:(Math.random()-.5)*0.014, phase:Math.random()*Math.PI*2, pulseSpeed:0.6+Math.random()*0.8, opacity:0.12+Math.random()*0.22 })));
+  const neurons = useRef(Array.from({length:IS_MOBILE?13:18}, (_,i) => ({ id:i, x:Math.random()*100, y:Math.random()*100, size:4+Math.random()*14, speedX:(Math.random()-.5)*0.018, speedY:(Math.random()-.5)*0.014, phase:Math.random()*Math.PI*2, pulseSpeed:0.6+Math.random()*0.8, opacity:0.12+Math.random()*0.22 })));
   const posRef = useRef(neurons.current.map(n=>({x:n.x,y:n.y})));
   const [tick, setTick] = useState(0);
   const rafRef = useRef(null);
   const tRef = useRef(0);
-  useEffect(()=>{ let last=0; const animate=(ts)=>{ if(ts-last>32){ tRef.current+=0.016; neurons.current.forEach((n,i)=>{ let nx=posRef.current[i].x+n.speedX; let ny=posRef.current[i].y+n.speedY; if(nx<-5)nx=105; if(nx>105)nx=-5; if(ny<-5)ny=105; if(ny>105)ny=-5; posRef.current[i]={x:nx,y:ny}; }); setTick(t=>t+1); last=ts; } rafRef.current=requestAnimationFrame(animate); }; rafRef.current=requestAnimationFrame(animate); return()=>cancelAnimationFrame(rafRef.current); },[]);
+  useEffect(()=>{ const FRAME_GAP=IS_MOBILE?45:32; let last=0; const animate=(ts)=>{ if(!document.hidden && ts-last>FRAME_GAP){ tRef.current+=0.016; neurons.current.forEach((n,i)=>{ let nx=posRef.current[i].x+n.speedX; let ny=posRef.current[i].y+n.speedY; if(nx<-5)nx=105; if(nx>105)nx=-5; if(ny<-5)ny=105; if(ny>105)ny=-5; posRef.current[i]={x:nx,y:ny}; }); setTick(t=>t+1); last=ts; } rafRef.current=requestAnimationFrame(animate); }; rafRef.current=requestAnimationFrame(animate); return()=>cancelAnimationFrame(rafRef.current); },[]);
   const t=tRef.current;
   return(
     <div style={{position:"fixed",inset:0,pointerEvents:"none",zIndex:1,overflow:"hidden",background:"transparent"}}>
@@ -352,7 +371,7 @@ function FloatingNeurons() {
 /* ─── NEURAL MARK ────────────────────────────────────────────────────────── */
 function NeuralMark({size=36}) {
   const ref=useRef(null);
-  useEffect(()=>{ const canvas=ref.current, ctx=canvas.getContext("2d"); const S=size; canvas.width=S; canvas.height=S; const cx=S/2,cy=S/2; let raf,t=0; const nodes=[{x:cx,y:cy,r:S*.11,tier:0},...Array.from({length:6},(_,i)=>{const a=(i/6)*Math.PI*2-Math.PI/2;return{x:cx+Math.cos(a)*S*.22,y:cy+Math.sin(a)*S*.22,r:S*.045,tier:1};}),...Array.from({length:6},(_,i)=>{const a=(i/6)*Math.PI*2-Math.PI/2+Math.PI/6;return{x:cx+Math.cos(a)*S*.38,y:cy+Math.sin(a)*S*.38,r:S*.03,tier:2};})]; const edges=[]; for(let i=1;i<=6;i++)edges.push({a:0,b:i,w:1}); for(let i=0;i<6;i++){edges.push({a:i+1,b:7+i,w:.7});edges.push({a:i+1,b:7+((i+1)%6),w:.5});} for(let i=0;i<6;i++)edges.push({a:7+i,b:7+((i+1)%6),w:.4}); const sigs=edges.slice(0,8).map((e,i)=>({edge:e,t:i/8,speed:.005+Math.random()*.007})); const draw=()=>{ t+=.015;ctx.clearRect(0,0,S,S); const bg=ctx.createRadialGradient(cx,cy,0,cx,cy,S*.5);bg.addColorStop(0,"rgba(255,120,0,0.08)");bg.addColorStop(1,"rgba(0,0,0,0)"); ctx.beginPath();ctx.arc(cx,cy,S*.5,0,Math.PI*2);ctx.fillStyle=bg;ctx.fill(); edges.forEach(({a,b,w})=>{const na=nodes[a],nb=nodes[b];if(!na||!nb)return;const g=ctx.createLinearGradient(na.x,na.y,nb.x,nb.y);g.addColorStop(0,`rgba(255,160,40,${w*.3})`);g.addColorStop(.5,`rgba(255,200,80,${w*.5})`);g.addColorStop(1,`rgba(255,120,0,${w*.3})`);ctx.beginPath();ctx.moveTo(na.x,na.y);ctx.lineTo(nb.x,nb.y);ctx.strokeStyle=g;ctx.lineWidth=w*1.5;ctx.stroke();}); sigs.forEach(sig=>{sig.t+=sig.speed;if(sig.t>1)sig.t=0;const na=nodes[sig.edge.a],nb=nodes[sig.edge.b];if(!na||!nb)return;const sx=na.x+(nb.x-na.x)*sig.t,sy=na.y+(nb.y-na.y)*sig.t;const p=Math.sin(sig.t*Math.PI);const pg=ctx.createRadialGradient(sx,sy,0,sx,sy,S*.04*p+S*.015);pg.addColorStop(0,`rgba(255,240,180,${p*.9})`);pg.addColorStop(1,"rgba(255,100,0,0)");ctx.beginPath();ctx.arc(sx,sy,S*.04*p+S*.015,0,Math.PI*2);ctx.fillStyle=pg;ctx.fill();}); nodes.forEach((n,i)=>{const pulse=.85+.15*Math.sin(t*2+i*.9);if(n.tier===0){const og=ctx.createRadialGradient(cx,cy,0,cx,cy,n.r*5);og.addColorStop(0,"rgba(255,140,0,0.3)");og.addColorStop(1,"rgba(0,0,0,0)");ctx.beginPath();ctx.arc(cx,cy,n.r*5,0,Math.PI*2);ctx.fillStyle=og;ctx.fill();const cg=ctx.createRadialGradient(cx-n.r*.3,cy-n.r*.3,0,cx,cy,n.r*pulse);cg.addColorStop(0,"#fff8e0");cg.addColorStop(.3,"#ffdd88");cg.addColorStop(.7,"#ff9500");cg.addColorStop(1,"#cc2200");ctx.beginPath();ctx.arc(cx,cy,n.r*pulse,0,Math.PI*2);ctx.fillStyle=cg;ctx.shadowColor="#ff8c00";ctx.shadowBlur=S*.1;ctx.fill();ctx.shadowBlur=0;const sg=ctx.createRadialGradient(cx-n.r*.4,cy-n.r*.5,0,cx,cy,n.r*.7);sg.addColorStop(0,"rgba(255,255,255,0.65)");sg.addColorStop(1,"rgba(255,255,255,0)");ctx.beginPath();ctx.arc(cx,cy,n.r*pulse,0,Math.PI*2);ctx.fillStyle=sg;ctx.fill();}else{const bg2=ctx.createRadialGradient(n.x-n.r*.2,n.y-n.r*.2,0,n.x,n.y,n.r*pulse);bg2.addColorStop(0,n.tier===1?"#ffeeaa":"#ffd060");bg2.addColorStop(1,n.tier===1?"#cc4400":"#aa3300");ctx.beginPath();ctx.arc(n.x,n.y,n.r*pulse,0,Math.PI*2);ctx.fillStyle=bg2;ctx.shadowColor="#ff8800";ctx.shadowBlur=n.r*2;ctx.fill();ctx.shadowBlur=0;}}); raf=requestAnimationFrame(draw); }; draw(); return()=>cancelAnimationFrame(raf); },[size]);
+  useEffect(()=>{ const canvas=ref.current, ctx=canvas.getContext("2d"); const S=size; canvas.width=S; canvas.height=S; const cx=S/2,cy=S/2; let raf,t=0; const nodes=[{x:cx,y:cy,r:S*.11,tier:0},...Array.from({length:6},(_,i)=>{const a=(i/6)*Math.PI*2-Math.PI/2;return{x:cx+Math.cos(a)*S*.22,y:cy+Math.sin(a)*S*.22,r:S*.045,tier:1};}),...Array.from({length:6},(_,i)=>{const a=(i/6)*Math.PI*2-Math.PI/2+Math.PI/6;return{x:cx+Math.cos(a)*S*.38,y:cy+Math.sin(a)*S*.38,r:S*.03,tier:2};})]; const edges=[]; for(let i=1;i<=6;i++)edges.push({a:0,b:i,w:1}); for(let i=0;i<6;i++){edges.push({a:i+1,b:7+i,w:.7});edges.push({a:i+1,b:7+((i+1)%6),w:.5});} for(let i=0;i<6;i++)edges.push({a:7+i,b:7+((i+1)%6),w:.4}); const sigs=edges.slice(0,8).map((e,i)=>({edge:e,t:i/8,speed:.005+Math.random()*.007})); const draw=()=>{ if(document.hidden){raf=requestAnimationFrame(draw);return;} t+=.015;ctx.clearRect(0,0,S,S); const bg=ctx.createRadialGradient(cx,cy,0,cx,cy,S*.5);bg.addColorStop(0,"rgba(255,120,0,0.08)");bg.addColorStop(1,"rgba(0,0,0,0)"); ctx.beginPath();ctx.arc(cx,cy,S*.5,0,Math.PI*2);ctx.fillStyle=bg;ctx.fill(); edges.forEach(({a,b,w})=>{const na=nodes[a],nb=nodes[b];if(!na||!nb)return;const g=ctx.createLinearGradient(na.x,na.y,nb.x,nb.y);g.addColorStop(0,`rgba(255,160,40,${w*.3})`);g.addColorStop(.5,`rgba(255,200,80,${w*.5})`);g.addColorStop(1,`rgba(255,120,0,${w*.3})`);ctx.beginPath();ctx.moveTo(na.x,na.y);ctx.lineTo(nb.x,nb.y);ctx.strokeStyle=g;ctx.lineWidth=w*1.5;ctx.stroke();}); sigs.forEach(sig=>{sig.t+=sig.speed;if(sig.t>1)sig.t=0;const na=nodes[sig.edge.a],nb=nodes[sig.edge.b];if(!na||!nb)return;const sx=na.x+(nb.x-na.x)*sig.t,sy=na.y+(nb.y-na.y)*sig.t;const p=Math.sin(sig.t*Math.PI);const pg=ctx.createRadialGradient(sx,sy,0,sx,sy,S*.04*p+S*.015);pg.addColorStop(0,`rgba(255,240,180,${p*.9})`);pg.addColorStop(1,"rgba(255,100,0,0)");ctx.beginPath();ctx.arc(sx,sy,S*.04*p+S*.015,0,Math.PI*2);ctx.fillStyle=pg;ctx.fill();}); nodes.forEach((n,i)=>{const pulse=.85+.15*Math.sin(t*2+i*.9);if(n.tier===0){const og=ctx.createRadialGradient(cx,cy,0,cx,cy,n.r*5);og.addColorStop(0,"rgba(255,140,0,0.3)");og.addColorStop(1,"rgba(0,0,0,0)");ctx.beginPath();ctx.arc(cx,cy,n.r*5,0,Math.PI*2);ctx.fillStyle=og;ctx.fill();const cg=ctx.createRadialGradient(cx-n.r*.3,cy-n.r*.3,0,cx,cy,n.r*pulse);cg.addColorStop(0,"#fff8e0");cg.addColorStop(.3,"#ffdd88");cg.addColorStop(.7,"#ff9500");cg.addColorStop(1,"#cc2200");ctx.beginPath();ctx.arc(cx,cy,n.r*pulse,0,Math.PI*2);ctx.fillStyle=cg;ctx.shadowColor="#ff8c00";ctx.shadowBlur=S*.1;ctx.fill();ctx.shadowBlur=0;const sg=ctx.createRadialGradient(cx-n.r*.4,cy-n.r*.5,0,cx,cy,n.r*.7);sg.addColorStop(0,"rgba(255,255,255,0.65)");sg.addColorStop(1,"rgba(255,255,255,0)");ctx.beginPath();ctx.arc(cx,cy,n.r*pulse,0,Math.PI*2);ctx.fillStyle=sg;ctx.fill();}else{const bg2=ctx.createRadialGradient(n.x-n.r*.2,n.y-n.r*.2,0,n.x,n.y,n.r*pulse);bg2.addColorStop(0,n.tier===1?"#ffeeaa":"#ffd060");bg2.addColorStop(1,n.tier===1?"#cc4400":"#aa3300");ctx.beginPath();ctx.arc(n.x,n.y,n.r*pulse,0,Math.PI*2);ctx.fillStyle=bg2;ctx.shadowColor="#ff8800";ctx.shadowBlur=n.r*2;ctx.fill();ctx.shadowBlur=0;}}); raf=requestAnimationFrame(draw); }; draw(); return()=>cancelAnimationFrame(raf); },[size]);
   return <canvas ref={ref} style={{display:"block",flexShrink:0}}/>;
 }
 
@@ -399,7 +418,7 @@ function AmbientAudio({ onReady }) {
         <div style={{ background:"rgba(7,4,10,0.88)", border:"1px solid rgba(255,140,0,0.18)", borderRadius:999, padding:"6px 12px", backdropFilter:"blur(12px)", display:"flex", alignItems:"center", gap:8 }}>
           <span style={{ fontSize:9, color:"rgba(255,180,80,0.5)", letterSpacing:1.5, textTransform:"uppercase" }}>VOL</span>
           <input type="range" min="0" max="0.5" step="0.01" defaultValue="0.18"
-            onChange={e=>{ if(audioRef.current) audioRef.current.volume=parseFloat(e.target.value); }}
+            onChange={e=>{ getAmbient().volume=parseFloat(e.target.value); }}
             style={{ width:64, accentColor:"#ff8c00", cursor:"pointer", background:"transparent", height:3 }}/>
         </div>
       )}
@@ -1754,8 +1773,9 @@ function UrgeTimer({ streak, savedPlan }) {
   );
 }
 
-function Plan({plan,loading,onBegin}) {
+function Plan({plan,loading,onBegin,onRetry}) {
   const {displayed,done}=useTypewriter(plan,11);
+  const isError = !!plan && plan.startsWith("Connection error:");
   return(
     <div style={{minHeight:"100vh",paddingTop:80,position:"relative",overflowX:"hidden"}}>
       <div className="hero-pad" style={{padding:"clamp(60px,8vw,80px) clamp(20px,8vw,100px) clamp(40px,5vw,64px)",borderBottom:"1px solid rgba(255,140,0,0.07)",position:"relative",zIndex:1}}>
@@ -1775,7 +1795,10 @@ function Plan({plan,loading,onBegin}) {
             <div style={{fontSize:15,lineHeight:2.15,color:"rgba(255,255,255,0.62)",fontWeight:300,whiteSpace:"pre-wrap",borderLeft:"2px solid rgba(255,140,0,0.22)",paddingLeft:28}}>
               {done?parseBold(plan):<>{parseBold(displayed)}<span style={{animation:"dotBlink .7s infinite",color:"#ff8c00"}}>█</span></>}
             </div>
-            {done&&<div style={{marginTop:40,paddingTop:28,borderTop:"1px solid rgba(255,140,0,0.08)",display:"flex",gap:16,animation:"fadeUp .6s ease both"}}><button className="btn-primary" onClick={()=>onBegin(plan)} style={{fontSize:14,padding:"16px 48px"}}>Begin Day 1 →</button></div>}
+            {done&&(isError
+              ?<div style={{marginTop:40,paddingTop:28,borderTop:"1px solid rgba(255,140,0,0.08)",animation:"fadeUp .6s ease both"}}><button className="btn-primary" onClick={onRetry} style={{fontSize:14,padding:"16px 48px",background:"linear-gradient(135deg,#cc4400,#992200)"}}>← Back to Confess & Retry</button></div>
+              :<div style={{marginTop:40,paddingTop:28,borderTop:"1px solid rgba(255,140,0,0.08)",display:"flex",gap:16,animation:"fadeUp .6s ease both"}}><button className="btn-primary" onClick={()=>onBegin(plan)} style={{fontSize:14,padding:"16px 48px"}}>Begin Day 1 →</button></div>
+            )}
           </div>
         )}
       </div>
@@ -2585,7 +2608,7 @@ export default function App() {
           <Nav screen={screen} goTo={goTo} savedPlan={savedPlan} onReset={handleReset}/>
           <div key={screen} ref={topRef} style={{position:"relative",zIndex:2,opacity:tr?0:1,transition:"opacity .26s ease"}}>
             {screen==="confess" &&<Confess onSubmit={handleConfess} loading={planLoading}/>}
-            {screen==="plan"    &&<Plan plan={plan||savedPlan} loading={planLoading} onBegin={handleBeginDay1}/>}
+            {screen==="plan"    &&<Plan plan={plan||savedPlan} loading={planLoading} onBegin={handleBeginDay1} onRetry={()=>goTo("confess")}/>}
             {screen==="checkin" &&<Checkin streak={streak} savedPlan={savedPlan} lastCheckin={lastCI} onCheckin={handleCheckin} onGoChat={()=>goTo("chat")}/>}
             {screen==="history" &&<History history={history}/>}
             {screen==="urge"    &&<UrgeTimer streak={streak} savedPlan={savedPlan}/>}
@@ -2620,7 +2643,7 @@ export default function App() {
       ) : (
         <div style={{position:"relative",zIndex:2}}>
           {screen==="confess" && <Confess onSubmit={handleConfess} loading={planLoading}/>}
-          {screen==="plan"    && <Plan plan={plan} loading={planLoading} onBegin={()=>setShowAuth(true)}/>}
+          {screen==="plan"    && <Plan plan={plan} loading={planLoading} onBegin={()=>setShowAuth(true)} onRetry={()=>goTo("confess")}/>}
           {screen==="boot"    && <Boot onBegin={handleBegin} hasPlan={false}/>}
         </div>
       )}
