@@ -256,6 +256,83 @@ function parseBold(text) {
   );
 }
 
+function renderPlan(text) {
+  if (!text) return null;
+  const lines = text.split('\n');
+  const elements = [];
+  let key = 0;
+
+  const inlineBold = (str) =>
+    str.split(/\*\*(.*?)\*\*/g).map((p, i) =>
+      i % 2 === 1
+        ? <strong key={i} style={{ color: "#ffb347", fontWeight: 700 }}>{p}</strong>
+        : p
+    );
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const trimmed = line.trim();
+
+    if (!trimmed) {
+      elements.push(<div key={key++} style={{ height: 10 }} />);
+      continue;
+    }
+
+    // Bold header line e.g. **YOUR SYNAPSE BATTLE PLAN**
+    if (/^\*\*(.+)\*\*$/.test(trimmed)) {
+      const headerText = trimmed.replace(/^\*\*|\*\*$/g, '');
+      elements.push(
+        <div key={key++} style={{
+          fontSize: 10,
+          letterSpacing: 3,
+          fontWeight: 700,
+          color: "#ff8c00",
+          textTransform: "uppercase",
+          fontFamily: "'Orbitron', sans-serif",
+          marginTop: 22,
+          marginBottom: 8,
+          borderLeft: "2px solid #ff8c0088",
+          paddingLeft: 12,
+        }}>{headerText}</div>
+      );
+      continue;
+    }
+
+    // Bullet point
+    if (/^[-*]\s/.test(trimmed)) {
+      const bulletText = trimmed.replace(/^[-*]\s/, '');
+      elements.push(
+        <div key={key++} style={{
+          display: "flex",
+          gap: 10,
+          marginBottom: 8,
+          paddingLeft: 12,
+        }}>
+          <span style={{ color: "#ff8c00", fontSize: 10, marginTop: 4, flexShrink: 0 }}>\u25b8</span>
+          <span style={{ fontSize: 13, color: "rgba(255,255,255,0.65)", lineHeight: 1.8 }}>
+            {inlineBold(bulletText)}
+          </span>
+        </div>
+      );
+      continue;
+    }
+
+    // Regular line
+    elements.push(
+      <div key={key++} style={{
+        fontSize: 13,
+        color: "rgba(255,255,255,0.55)",
+        lineHeight: 1.9,
+        marginBottom: 4,
+      }}>
+        {inlineBold(trimmed)}
+      </div>
+    );
+  }
+
+  return elements;
+}
+
 function useTypewriter(text, speed=11) {
   const [idx, setIdx] = useState(0);
   const [done, setDone] = useState(false);
@@ -1797,8 +1874,8 @@ function Plan({plan,loading,onBegin,onRetry}) {
           </div>
         ):(
           <div className="glass s2" style={{padding:44,animation:"borderGlow 4s ease-in-out infinite"}}>
-            <div style={{fontSize:15,lineHeight:2.15,color:"rgba(255,255,255,0.62)",fontWeight:300,whiteSpace:"pre-wrap",borderLeft:"2px solid rgba(255,140,0,0.22)",paddingLeft:28}}>
-              {done?parseBold(plan):<>{parseBold(displayed)}<span style={{animation:"dotBlink .7s infinite",color:"#ff8c00"}}>█</span></>}
+            <div style={{paddingLeft:4}}>
+              {done?renderPlan(plan):<><div style={{fontSize:15,lineHeight:2.15,color:"rgba(255,255,255,0.62)",fontWeight:300,whiteSpace:"pre-wrap"}}>{parseBold(displayed)}</div><span style={{animation:"dotBlink .7s infinite",color:"#ff8c00"}}>█</span></>}
             </div>
             {done&&(isError
               ?<div style={{marginTop:40,paddingTop:28,borderTop:"1px solid rgba(255,140,0,0.08)",animation:"fadeUp .6s ease both"}}><button className="btn-primary" onClick={onRetry} style={{fontSize:14,padding:"16px 48px",background:"linear-gradient(135deg,#cc4400,#992200)"}}>← Back to Confess & Retry</button></div>
@@ -1823,7 +1900,7 @@ function BattlePlanAccordion({plan}) {
       </button>
       {open&&(
         <div className="glass" style={{padding:"28px 32px",borderRadius:"0 0 12px 12px",borderTop:"none",animation:"fadeUp .4s ease both"}}>
-          <div style={{fontSize:13,lineHeight:2.1,color:"rgba(255,255,255,0.55)",fontWeight:300,whiteSpace:"pre-wrap",borderLeft:"2px solid rgba(255,140,0,0.2)",paddingLeft:20}}>{parseBold(plan)}</div>
+          <div style={{paddingLeft:4}}>{renderPlan(plan)}</div>
         </div>
       )}
     </div>
@@ -2132,7 +2209,7 @@ function Report({history,savedPlan,streak,planHistory}) {
             </button>
             {planOpen&&(
               <div className="glass" style={{padding:"36px 40px",marginBottom:32,borderTop:"none",borderRadius:"0 0 12px 12px",animation:"fadeUp .4s ease both"}}>
-                <div style={{fontSize:14,lineHeight:2.15,color:"rgba(255,255,255,0.62)",fontWeight:300,whiteSpace:"pre-wrap",borderLeft:"2px solid rgba(255,140,0,0.22)",paddingLeft:24}}>{parseBold(savedPlan)}</div>
+                <div style={{paddingLeft:4}}>{renderPlan(savedPlan)}</div>
               </div>
             )}
           </>
@@ -2152,7 +2229,7 @@ function Report({history,savedPlan,streak,planHistory}) {
                   <span style={{fontSize:11,color:"rgba(255,140,0,0.4)",letterSpacing:1}}>Plan from {new Date(p.date).toLocaleDateString()}</span>
                   <span style={{fontSize:12,color:"rgba(255,255,255,0.2)"}}>{oldPlanIdx===i?"▲":"▼"}</span>
                 </div>
-                {oldPlanIdx===i&&<div style={{fontSize:13,lineHeight:2,color:"rgba(255,255,255,0.4)",fontWeight:300,whiteSpace:"pre-wrap",borderLeft:"2px solid rgba(255,140,0,0.12)",paddingLeft:20,marginTop:16}}>{parseBold(p.plan)}</div>}
+                {oldPlanIdx===i&&<div style={{paddingLeft:4,marginTop:16}}>{renderPlan(p.plan)}</div>}
               </div>
             ))}
           </>
