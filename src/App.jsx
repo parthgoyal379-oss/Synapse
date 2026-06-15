@@ -308,7 +308,7 @@ function renderPlan(text) {
           marginBottom: 8,
           paddingLeft: 12,
         }}>
-          <span style={{ color: "#ff8c00", fontSize: 10, marginTop: 4, flexShrink: 0 }}>\u25b8</span>
+          <span style={{ color: "#ff8c00", fontSize: 10, marginTop: 4, flexShrink: 0 }}>▸</span>
           <span style={{ fontSize: 13, color: "rgba(255,255,255,0.65)", lineHeight: 1.8 }}>
             {inlineBold(bulletText)}
           </span>
