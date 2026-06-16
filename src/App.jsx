@@ -2640,19 +2640,19 @@ export default function App() {
 
   const topRef=useRef(null);
   const goTo=useCallback(s=>{
+    // Scroll to top immediately before transition starts
+    window.scrollTo({top:0,behavior:"instant"});
+    document.documentElement.scrollTop=0;
+    document.body.scrollTop=0;
     setTr(true);
     setTimeout(()=>{
       setScreen(s);
       setTr(false);
-      // Unlock body scroll, reset, then let CSS take over
       document.body.style.overflow="auto";
       document.body.style.overflowX="hidden";
-      requestAnimationFrame(()=>{
-        window.scrollTo(0,0);
-        document.documentElement.scrollTop=0;
-        document.body.scrollTop=0;
-        if(document.scrollingElement) document.scrollingElement.scrollTop=0;
-      });
+      // Second reset after new screen mounts
+      window.scrollTo({top:0,behavior:"instant"});
+      if(document.scrollingElement) document.scrollingElement.scrollTop=0;
     },260);
   },[]);
 
