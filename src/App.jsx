@@ -723,7 +723,7 @@ const G=`
 @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;800;900&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500&display=swap');
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
 svg{background:transparent!important;overflow:visible;}
-html{scroll-behavior:smooth;overflow-x:hidden;width:100%;margin:0;padding:0;box-sizing:border-box;scrollbar-width:none;-ms-overflow-style:none;}
+html{scroll-behavior:auto;overflow-x:hidden;width:100%;margin:0;padding:0;box-sizing:border-box;scrollbar-width:none;-ms-overflow-style:none;}
 html::-webkit-scrollbar{width:0!important;height:0!important;display:none!important;}
 body{background:#07040a;color:#fff;font-family:'Inter',sans-serif;overflow-x:hidden;overflow-y:auto;cursor:none!important;width:100%;max-width:100%;min-height:100vh;margin:0;padding:0;scrollbar-width:none;-ms-overflow-style:none;}
 body::-webkit-scrollbar{width:0!important;height:0!important;display:none!important;}
@@ -2640,7 +2640,6 @@ export default function App() {
 
   const topRef=useRef(null);
   const goTo=useCallback(s=>{
-    // Scroll to top immediately before transition starts
     window.scrollTo({top:0,behavior:"instant"});
     document.documentElement.scrollTop=0;
     document.body.scrollTop=0;
@@ -2650,9 +2649,12 @@ export default function App() {
       setTr(false);
       document.body.style.overflow="auto";
       document.body.style.overflowX="hidden";
-      // Second reset after new screen mounts
-      window.scrollTo({top:0,behavior:"instant"});
-      if(document.scrollingElement) document.scrollingElement.scrollTop=0;
+      setTimeout(()=>{
+        window.scrollTo({top:0,behavior:"instant"});
+        document.documentElement.scrollTop=0;
+        document.body.scrollTop=0;
+        if(document.scrollingElement) document.scrollingElement.scrollTop=0;
+      },0);
     },260);
   },[]);
 
