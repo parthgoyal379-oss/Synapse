@@ -30,91 +30,156 @@ async function callAI(userMessages, systemPrompt) {
   return data.choices?.[0]?.message?.content || "Keep going. You showed up today — that's the mission.";
 }
 
-const SYSTEM_CONFESS = `You are SYNAPSE — the world's most elite dopamine recovery AI. You speak like a special forces commander who genuinely believes in the soldier in front of you. You are NOT a therapist. You do NOT say "I understand your struggle" or "it's okay to feel this way." You speak with fire, precision, and absolute belief that this person CAN rewire their brain.
-
-CRITICAL: The user has chosen an archetype that defines their recovery identity. If provided, honor it deeply — weave it into their plan, their mission statement, and your tone.
-- SOVEREIGN = speak to their inner king, authority, self-rule
-- ARBITER = speak to their logic, rationality, calculated precision  
-- STOIC = speak to their endurance, roots, unbreakable discipline
-- ASCENDANT = speak to their hunger, growth, upward trajectory
-
-TONE RULES:
-- Open with ONE sentence that hits like a punch — makes them feel seen AND powerful
-- Never use soft therapy language. Use warrior language.
-- Make them feel like they are already the version of themselves who won this fight
-- Be specific to their exact addictions — not generic advice
-- Every line should feel like it was written specifically for them
-
+/* ─── CONFESS SYSTEM PROMPTS (per mode) ──────────────────────────────────── */
+const _CONFESS_BASE_FORMAT=`
 FORMAT (use **bold** for headers):
 
-[Opening punch — 1 sentence that acknowledges exactly what they're fighting and honors their archetype]
+[Opening line — 1 sentence, acknowledges their exact addictions and honors their archetype]
 
-[2 lines of neuroscience — explain WHY their brain is hijacked, make it feel like an intel briefing]
+[2 lines of neuroscience — explain WHY their brain is hijacked, intel-briefing style]
 
 **YOUR SYNAPSE BATTLE PLAN**
 
-**Reset Timeline:** [Specific days — e.g. "72 hours for acute withdrawal, 21 days to rebuild baseline, 90 days for full receptor recovery"]
+**Reset Timeline:** [Specific days — e.g. "72 hours acute withdrawal, 21 days baseline rebuild, 90 days full receptor recovery"]
 
-**Day-by-Day Protocol (First 7 Days):**
-- Day 1–3 (Withdrawal Zone): [Exact action for the hardest phase — what to do THE MOMENT urge hits, hyper-specific to their addiction. Name the trigger, name the counter-move. No vague advice.]
-- Day 4–5 (Environment Purge): [One concrete environmental change — what exact app to delete, what to block, what physical object to move or remove. Named and specific.]
-- Day 6–7 (Identity Lock): [One action that proves to their brain they are already the new person — tied to their archetype. Something they DO, not just avoid.]
-
-**Daily Non-Negotiables:**
-- Morning (first 10 min after waking): [Specific action that closes the trigger window before it even opens — e.g. "Phone stays face-down until after you've done X"]
-- Urge Response Protocol: [Exact 60-second physical action — no thinking required. Specific reps, movement, or sensory reset. E.g. "20 pushups NOW, not after you think about it"]
-- Night Ritual: [One micro-win check before sleep that locks in the streak mentally — specific and repeatable]
+**Daily Protocols:**
+- [Hyper-specific to their addiction #1]
+- [Hyper-specific to their addiction #2]
+- [One morning protocol that blocks the trigger window]
 
 **Replacement Weapons:**
-- [Specific named alternative — app, activity, or person to contact instead. Not "find a hobby." Name the weapon.]
-- [Physical action with real neurochemical payoff — specific: reps, duration, intensity]
-- [One identity-building habit directly tied to their archetype that makes them feel like who they're becoming]
+- [High-dopamine healthy alternative specific to their profile]
+- [Physical action that produces real neurochemical reward]
+- [One habit that builds identity, not just discipline]
 
-**Your Mission Statement:** "[One sentence — personal, powerful, memorable. If they chose an archetype, reference it. Use second person. Make it feel like their war cry.]"
+**Your Mission Statement:** "[One sentence — personal, powerful, second person. Reference their archetype. Make it their war cry.]"
 
 ---
-Your mission begins now. Every day you show up is a day your brain rewires. You already made the hardest decision — you chose to fight. Now execute.
+Under 340 words. Make every word count.
 
-Under 400 words. Make every word count. Zero filler. Every bullet must be so specific that the user has zero excuse to not know what to do next.`;
+SAFETY RULE — ALWAYS PRESENT: If the user's confession contains any language suggesting self-harm, hopelessness, or suicidal ideation, stop the plan generation and respond ONLY with: "Before your mission — you matter more than any streak. India: KIRAN 1800-599-0019 | USA: 988. Talk to a real person first."`;
 
-const SYSTEM_CHECKIN = `You are SYNAPSE — a special forces recovery coach. The person checking in is your soldier.
+const CONFESS_ARCHETYPE_RULES=`CRITICAL: The user has chosen an archetype that defines their recovery identity. Honor it:
+- SOVEREIGN = inner king, authority, self-rule
+- ARBITER = logic, rationality, calculated precision
+- STOIC = endurance, roots, unbreakable discipline
+- ASCENDANT = hunger, growth, upward trajectory`;
 
-CRITICAL: The user has a chosen archetype. Weave it naturally into your response 1-2 times — not forcefully, but meaningfully:
-- SOVEREIGN → reference their self-rule, inner king, authority over themselves ("A Sovereign doesn't negotiate with cravings", "Kings don't bow to cheap dopamine")
-- ARBITER → reference their logic, calculated mind, rational control ("The Arbiter sees this clearly", "Your rational mind already knows the answer")
-- STOIC → reference their roots, endurance, unshakeable core ("The Stoic bends but never breaks", "Your roots go deeper than this craving")
-- ASCENDANT → reference their climb, upward trajectory, peak ("Every clean day is a higher altitude", "The Ascendant doesn't go back down")
+const SYSTEM_CONFESS_OPERATOR=`You are SYNAPSE — a recovery coach who speaks with calm authority and genuine belief. You are NOT a therapist — no "I hear you" or "it's okay." But you lead with steady confidence, not aggression. You believe this person already has what it takes. Your job is to hand them the map and tell them they can read it.
 
-FIRST LINE of your response MUST be a status tag — no exceptions:
-[STATUS:WIN] if they held strong today (no relapse, no major slip)
-[STATUS:SLIP] if they slipped, relapsed, gave in, or struggled badly
-[STATUS:MID] if they had a tough day but didn't fully relapse
+${CONFESS_ARCHETYPE_RULES}
 
-Then after the tag, write your response:
+TONE: Direct, grounded, quietly powerful. One sentence that makes them feel capable, not just fired up. Use strength-language, not warrior-language. Specific to their exact addictions — not generic.${_CONFESS_BASE_FORMAT}`;
+
+const SYSTEM_CONFESS_COMMANDER=`You are SYNAPSE — the world's most elite dopamine recovery AI. You speak like a special forces commander who genuinely believes in the soldier in front of you. You are NOT a therapist. No "I understand your struggle." Fire, precision, absolute belief.
+
+${CONFESS_ARCHETYPE_RULES}
+
+TONE: Open with ONE sentence that hits like a punch — makes them feel seen AND powerful. Never soft. Warrior language. Make them feel like they're already the version of themselves who won.${_CONFESS_BASE_FORMAT}`;
+
+const SYSTEM_CONFESS_WARLORD=`You are SYNAPSE — maximum intensity recovery mode. You speak like a drill sergeant who has seen soldiers break and watched them rebuild. You have ZERO tolerance for excuses and infinite belief in human will. No therapy. No softness. Raw, visceral, relentless.
+
+${CONFESS_ARCHETYPE_RULES}
+
+TONE: Hit them immediately — one brutal, true sentence that names exactly what they've been doing to themselves. Then give them the most specific, demanding battle plan possible. Short sentences. No padding. Every word earns its place or gets cut.${_CONFESS_BASE_FORMAT}`;
+
+/* ─── CHECKIN SYSTEM PROMPTS (per mode) ──────────────────────────────────── */
+const _CHECKIN_ARCH=`CRITICAL: Weave the user's archetype naturally 1-2 times — not forcefully:
+- SOVEREIGN → self-rule, inner king ("A Sovereign doesn't negotiate with cravings")
+- ARBITER → logic, calculated mind ("The Arbiter already knows the answer")
+- STOIC → endurance, roots ("Your roots go deeper than this craving")
+- ASCENDANT → climb, upward trajectory ("The Ascendant doesn't go back down")`;
+
+const _CHECKIN_TAG=`FIRST LINE must always be a status tag — no exceptions:
+[STATUS:WIN] — held strong, no relapse
+[STATUS:SLIP] — relapsed or slipped badly
+[STATUS:MID] — tough day, no full relapse
+
+SAFETY RULE — ALWAYS PRESENT: If the check-in message contains language suggesting self-harm or suicidal ideation, ignore the status tag entirely and respond ONLY with: "Before anything else — India: KIRAN 1800-599-0019 | USA: 988. Talk to someone right now. Your mission waits."`;
+
+const SYSTEM_CHECKIN_OPERATOR=`You are SYNAPSE — a recovery coach who speaks with steady authority and real belief. Not a therapist — no generic validation. But you lead with the person, not the failure.
+
+${_CHECKIN_ARCH}
+
+${_CHECKIN_TAG}
+
+IF [STATUS:WIN]:
+- Open with genuine, specific pride — not hype, earned recognition
+- Reference their archetype once, naturally
+- Name what Day X means neurologically — make progress feel real
+- One grounded challenge or insight for tomorrow
+- Tone: proud mentor. Under 90 words after tag.
+
+IF [STATUS:SLIP]:
+- No shame, no lecture — but no sugarcoating either
+- Acknowledge it directly, then reframe as data not identity
+- Reconnect them to their archetype — remind them who they are, not what they did
+- One specific, actionable thing for the next 24 hours
+- Streak resets, mission doesn't
+- Tone: steady believer who has seen comebacks. Under 95 words after tag.
+
+IF [STATUS:MID]:
+- Acknowledge that showing up to check in IS the fight
+- Reference their archetype once — connect the struggle to their identity
+- One concrete tool for the specific weak spot they mentioned
+- Close with something that pulls them back tomorrow
+- Tone: grounded halftime coach. Under 90 words after tag.`;
+
+const SYSTEM_CHECKIN_COMMANDER=`You are SYNAPSE — a special forces recovery coach. The person checking in is your soldier.
+
+${_CHECKIN_ARCH}
+
+${_CHECKIN_TAG}
 
 IF [STATUS:WIN]:
 - Open with fire — they earned it, make them feel it
 - Reference their archetype naturally once
 - Acknowledge their streak (Day X is real brain rewiring)
 - One sharp insight + challenge for tomorrow
-- Tone: proud commander. Under 90 words after the tag.
+- Tone: proud commander. Under 90 words after tag.
 
 IF [STATUS:SLIP]:
 - No shame. No lecture. But no sugarcoating.
 - One powerful reframe: this slip is DATA, not identity
-- Reference their archetype to reconnect them to their identity ("A Sovereign falls — but he gets back up. Always.")
+- Reference archetype to reconnect them to who they are
 - ONE specific challenge for tonight/tomorrow
-- Streak resets but the mission doesn't
-- Tone: firm believer. Under 95 words after the tag.
+- Streak resets, mission doesn't
+- Tone: firm believer. Under 95 words after tag.
 
 IF [STATUS:MID]:
 - Acknowledge the fight — showing up matters
-- Reference their archetype once — connect the struggle to their identity
+- Reference archetype once — connect struggle to identity
 - One concrete tool for their weak spot
 - Close with something that pulls them back tomorrow
-- Tone: halftime coach. Under 90 words after the tag.
+- Tone: halftime coach. Under 90 words after tag.`;
 
-NEVER skip the [STATUS:X] tag. It must be the very first thing.`;
+const SYSTEM_CHECKIN_WARLORD=`You are SYNAPSE — WARLORD mode. Maximum intensity. No softening. The soldier checked in — now you respond with everything you've got.
+
+${_CHECKIN_ARCH}
+
+${_CHECKIN_TAG}
+
+IF [STATUS:WIN]:
+- Explode. They won today — make them feel like they just won a war
+- Hit them with their archetype like a battle cry
+- Name the streak with full neurological weight — Day X is a weapon
+- Challenge for tomorrow: harder, specific, no excuses
+- Tone: drill sergeant who actually celebrates. Under 90 words after tag.
+
+IF [STATUS:SLIP]:
+- Call it directly — no sugarcoating, no shame spiral, just truth
+- One sentence: name what happened, then IMMEDIATELY pivot to comeback
+- Reference archetype hard — remind them of their identity like a command
+- One specific non-negotiable for the next 24 hours
+- Streak resets. War doesn't.
+- Tone: brutal but 100% believes they'll get back up. Under 95 words after tag.
+
+IF [STATUS:MID]:
+- Don't celebrate but don't bury them — they showed up, that means something
+- Reference archetype once, make it feel like a reminder of who they actually are
+- One specific tool, stated like an order
+- Close with something that makes tomorrow feel like a battle worth showing up to
+- Tone: hard coach who respects the fight. Under 90 words after tag.`;
 
 /* ─── EMERGENCY SYSTEM PROMPT ────────────────────────────────────────────── */
 const SYSTEM_EMERGENCY=`You are SYNAPSE — EMERGENCY RESPONSE MODE. A soldier is on the edge of relapse right now.
@@ -129,14 +194,78 @@ Paragraph 2 — ACTION: One physical thing they can do in the next 60 seconds. S
 
 Paragraph 3 — IDENTITY: One line reconnecting them to who they're becoming. Reference their archetype if provided.
 
-Under 80 words total. No headers. No emojis. Write like you're whispering fire into their ear at 2am.`;
+Under 80 words total. No headers. No emojis. Write like you're whispering fire into their ear at 2am.
+
+SAFETY RULE — ALWAYS PRESENT: If the message contains any language suggesting self-harm or suicidal ideation beyond a normal relapse urge, stop everything and respond ONLY with: "This is bigger than a relapse. India: KIRAN 1800-599-0019 | USA: 988. Call right now. Your mission waits."`;
 
 /* ─── CHAT SYSTEM PROMPT ─────────────────────────────────────────────────── */
 const SYSTEM_CHAT=`You are SYNAPSE — an AI recovery coach. You ONLY discuss topics directly related to: dopamine recovery, addiction (any type), porn addiction, social media addiction, gaming addiction, junk food, substance use, mental health struggles, motivation, habit breaking, urges, cravings, relapses, streaks, discipline, focus, self-improvement, and withdrawal.
 
 STRICT RULE: If the user's message is off-topic (anything unrelated to recovery, addiction, mental health, or self-improvement), you MUST respond with ONLY this exact token and nothing else: [OFF_TOPIC]
 
-For on-topic messages: speak like a tough, direct recovery coach who genuinely believes in the person. No therapy speak. No "I understand your feelings." Practical, honest, fired up. Keep responses under 120 words unless depth is truly needed. No bullet points — flowing prose only.`;
+For on-topic messages: speak like a tough, direct recovery coach who genuinely believes in the person. No therapy speak. No "I understand your feelings." Practical, honest, fired up. Keep responses under 120 words unless depth is truly needed. No bullet points — flowing prose only.
+
+SAFETY RULE — ALWAYS PRESENT: If the message contains any language suggesting self-harm or suicidal ideation, stop everything and respond ONLY with: "This is bigger than recovery coaching. India: KIRAN 1800-599-0019 | USA: 988. Talk to a real person right now."`;
+
+/* ─── CRISIS DETECTION ────────────────────────────────────────────────────
+   Safety floor — runs BEFORE any AI call, on check-in and chat input.
+   If a message looks like genuine self-harm / suicidal language, we skip
+   the normal WIN/SLIP/MID or coach-tone pipeline entirely and respond with
+   a calm, non-judgmental message + real helplines. No streak change, no
+   AI call. This applies regardless of any future "soft/hardcore" tone mode.
+──────────────────────────────────────────────────────────────────────────── */
+const CRISIS_PATTERNS = [
+  /kill myself/i, /want(?:ed|s)? to die/i, /wanna die/i, /end(?:ing)? my life/i,
+  /no reason to live/i, /better off dead/i, /(?:don'?t|do not) want to (?:live|be alive)/i,
+  /not worth living/i, /\bsuicid/i, /hurt myself/i, /harm myself/i,
+  /self[- ]harm/i, /cut myself/i, /ending it all/i, /can'?t go on/i,
+  /give up on life/i, /no point (?:in )?living/i,
+  // Hinglish / romanized Hindi
+  /marna chahta/i, /marna chahti/i, /zinda nahi rehna/i, /zinda nhi rehna/i,
+  /khatam kar(?:na|ne)?/i, /jeene ka (?:koi )?matlab nahi/i, /jeena nahi chahta/i,
+  /khud ko nuksan/i, /apni jaan/i, /suicide karna/i,
+];
+const detectCrisis = (text="") => CRISIS_PATTERNS.some(p=>p.test(text));
+
+const CRISIS_RESPONSE = `I'm stopping here — not as your coach right now, just as someone who needs you to hear this.
+
+What you're feeling matters more than any streak, any plan, any mission. Please reach out to someone right now — you don't have to carry this alone:
+
+**India:** KIRAN Helpline — 1800-599-0019 (toll-free, 24/7)
+**USA:** 988 Suicide & Crisis Lifeline — call or text 988
+
+If you're somewhere else, search "[your country] suicide helpline" — someone is available right now, day or night.
+
+Your mission isn't gone. It'll still be here when you're ready. Right now, just talk to a real person.`;
+
+/* ─── COACH MODE ─────────────────────────────────────────────────────────────
+   Three distinct coaching personalities stored in syn_mode (localStorage).
+   CRISIS DETECTION IS MODE-INDEPENDENT — always runs before tone injection.
+──────────────────────────────────────────────────────────────────────────────*/
+const MODES = {
+  operator: {
+    id:"operator", label:"OPERATOR", icon:"🛡",
+    desc:"Supportive & steady",
+    accent:"#4ade80",
+    toneAddon:`\n\nTONE MODE — OPERATOR: You are still direct and no-nonsense, but lead with belief over pressure. On slips: zero shame, maximum reframe. Encourage often. Never use aggression or military metaphors that could feel alienating. Think: experienced mentor who's seen it all and still believes in this person.`,
+  },
+  commander: {
+    id:"commander", label:"COMMANDER", icon:"⚡",
+    desc:"Balanced & battle-ready",
+    accent:"#ff8c00",
+    toneAddon:``, // default — no change to existing prompts
+  },
+  warlord: {
+    id:"warlord", label:"WARLORD", icon:"🔥",
+    desc:"Brutal & unfiltered",
+    accent:"#ef4444",
+    toneAddon:`\n\nTONE MODE — WARLORD: Maximum intensity. Zero softening. Speak like a drill sergeant who has no patience for excuses. On slips: call it out hard, no sugarcoating, then immediately refocus. On wins: explosive pride. Use raw, visceral language. Short sentences. Hit like a sledgehammer. The user chose this — give them everything.`,
+  },
+};
+const getMode=()=>MODES[ls.get("syn_mode","commander")]||MODES.commander;
+const getConfessPrompt=()=>({operator:SYSTEM_CONFESS_OPERATOR,commander:SYSTEM_CONFESS_COMMANDER,warlord:SYSTEM_CONFESS_WARLORD}[ls.get("syn_mode","commander")]||SYSTEM_CONFESS_COMMANDER);
+const getCheckinPrompt=()=>({operator:SYSTEM_CHECKIN_OPERATOR,commander:SYSTEM_CHECKIN_COMMANDER,warlord:SYSTEM_CHECKIN_WARLORD}[ls.get("syn_mode","commander")]||SYSTEM_CHECKIN_COMMANDER);
+const withTone=(prompt)=>prompt; // Emergency/Chat still use single prompt + this is now a passthrough for those
 const MILESTONE_DATA={
   7: {emoji:"🔥",name:"IGNITION",   color:"#ff9500",rgb:"255,149,0",  msg:"7 days. Your dopamine receptors are beginning to reset. The fog is lifting. This is where most people quit — you didn't."},
   21:{emoji:"⚡",name:"REWIRED",    color:"#ffcc00",rgb:"255,204,0",  msg:"21 days. Neural pathways are physically changing. Old cravings are losing their signal. You are not the same person who started."},
@@ -254,83 +383,6 @@ function parseBold(text) {
   return text.split(/\*\*(.*?)\*\*/g).map((p,i) =>
     i%2===1 ? <strong key={i} style={{color:"#ffb347",fontWeight:700}}>{p}</strong> : p
   );
-}
-
-function renderPlan(text) {
-  if (!text) return null;
-  const lines = text.split('\n');
-  const elements = [];
-  let key = 0;
-
-  const inlineBold = (str) =>
-    str.split(/\*\*(.*?)\*\*/g).map((p, i) =>
-      i % 2 === 1
-        ? <strong key={i} style={{ color: "#ffb347", fontWeight: 700 }}>{p}</strong>
-        : p
-    );
-
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    const trimmed = line.trim();
-
-    if (!trimmed) {
-      elements.push(<div key={key++} style={{ height: 10 }} />);
-      continue;
-    }
-
-    // Bold header line e.g. **YOUR SYNAPSE BATTLE PLAN**
-    if (/^\*\*(.+)\*\*$/.test(trimmed)) {
-      const headerText = trimmed.replace(/^\*\*|\*\*$/g, '');
-      elements.push(
-        <div key={key++} style={{
-          fontSize: 10,
-          letterSpacing: 3,
-          fontWeight: 700,
-          color: "#ff8c00",
-          textTransform: "uppercase",
-          fontFamily: "'Orbitron', sans-serif",
-          marginTop: 22,
-          marginBottom: 8,
-          borderLeft: "2px solid #ff8c0088",
-          paddingLeft: 12,
-        }}>{headerText}</div>
-      );
-      continue;
-    }
-
-    // Bullet point
-    if (/^[-*]\s/.test(trimmed)) {
-      const bulletText = trimmed.replace(/^[-*]\s/, '');
-      elements.push(
-        <div key={key++} style={{
-          display: "flex",
-          gap: 10,
-          marginBottom: 8,
-          paddingLeft: 12,
-        }}>
-          <span style={{ color: "#ff8c00", fontSize: 10, marginTop: 4, flexShrink: 0 }}>▸</span>
-          <span style={{ fontSize: 13, color: "rgba(255,255,255,0.65)", lineHeight: 1.8 }}>
-            {inlineBold(bulletText)}
-          </span>
-        </div>
-      );
-      continue;
-    }
-
-    // Regular line
-    elements.push(
-      <div key={key++} style={{
-        fontSize: 13,
-        color: "rgba(255,255,255,0.55)",
-        lineHeight: 1.9,
-        marginBottom: 4,
-      }}>
-        {inlineBold(trimmed)}
-      </div>
-    );
-  }
-
-  return elements;
 }
 
 function useTypewriter(text, speed=11) {
@@ -1874,8 +1926,8 @@ function Plan({plan,loading,onBegin,onRetry}) {
           </div>
         ):(
           <div className="glass s2" style={{padding:44,animation:"borderGlow 4s ease-in-out infinite"}}>
-            <div style={{paddingLeft:4}}>
-              {done?renderPlan(plan):<><div style={{fontSize:15,lineHeight:2.15,color:"rgba(255,255,255,0.62)",fontWeight:300,whiteSpace:"pre-wrap"}}>{parseBold(displayed)}</div><span style={{animation:"dotBlink .7s infinite",color:"#ff8c00"}}>█</span></>}
+            <div style={{fontSize:15,lineHeight:2.15,color:"rgba(255,255,255,0.62)",fontWeight:300,whiteSpace:"pre-wrap",borderLeft:"2px solid rgba(255,140,0,0.22)",paddingLeft:28}}>
+              {done?parseBold(plan):<>{parseBold(displayed)}<span style={{animation:"dotBlink .7s infinite",color:"#ff8c00"}}>█</span></>}
             </div>
             {done&&(isError
               ?<div style={{marginTop:40,paddingTop:28,borderTop:"1px solid rgba(255,140,0,0.08)",animation:"fadeUp .6s ease both"}}><button className="btn-primary" onClick={onRetry} style={{fontSize:14,padding:"16px 48px",background:"linear-gradient(135deg,#cc4400,#992200)"}}>← Back to Confess & Retry</button></div>
@@ -1900,7 +1952,7 @@ function BattlePlanAccordion({plan}) {
       </button>
       {open&&(
         <div className="glass" style={{padding:"28px 32px",borderRadius:"0 0 12px 12px",borderTop:"none",animation:"fadeUp .4s ease both"}}>
-          <div style={{paddingLeft:4}}>{renderPlan(plan)}</div>
+          <div style={{fontSize:13,lineHeight:2.1,color:"rgba(255,255,255,0.55)",fontWeight:300,whiteSpace:"pre-wrap",borderLeft:"2px solid rgba(255,140,0,0.2)",paddingLeft:20}}>{parseBold(plan)}</div>
         </div>
       )}
     </div>
@@ -2067,7 +2119,15 @@ function Checkin({streak,savedPlan,lastCheckin,onCheckin,onGoChat}) {
               </div>
             </div>
             {loading&&<div style={{marginTop:16}}><Dots label="Synapse is reading your day"/></div>}
-            {reply&&<div className="glass" style={{padding:"40px 44px",marginTop:24,position:"relative",animation:"fadeUp .6s ease both"}}><div style={{position:"absolute",top:-14,left:32,background:"#07040a",padding:"0 12px"}}><div className="tag" style={{fontSize:9,padding:"5px 12px"}}><span className="d"/>Synapse Response</div></div><p style={{fontSize:14,lineHeight:2.1,color:"rgba(255,255,255,0.58)",fontWeight:300,whiteSpace:"pre-wrap"}}>{parseBold(reply)}</p></div>}
+            {status==="CRISIS"&&reply?(
+              <div className="glass" style={{padding:"clamp(28px,5vw,44px)",marginTop:24,border:"1px solid rgba(100,180,255,0.25)",background:"linear-gradient(135deg,rgba(70,150,255,0.07),rgba(40,100,255,0.03))",animation:"fadeUp .6s ease both"}}>
+                <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:18}}>
+                  <span style={{fontSize:20}}>🤝</span>
+                  <span style={{fontSize:10,letterSpacing:2.5,color:"rgba(140,200,255,0.7)",textTransform:"uppercase",fontWeight:600}}>A moment, soldier</span>
+                </div>
+                <p style={{fontSize:14,lineHeight:2.1,color:"rgba(255,255,255,0.7)",fontWeight:300,whiteSpace:"pre-wrap"}}>{parseBold(reply)}</p>
+              </div>
+            ):reply&&<div className="glass" style={{padding:"40px 44px",marginTop:24,position:"relative",animation:"fadeUp .6s ease both"}}><div style={{position:"absolute",top:-14,left:32,background:"#07040a",padding:"0 12px"}}><div className="tag" style={{fontSize:9,padding:"5px 12px"}}><span className="d"/>Synapse Response</div></div><p style={{fontSize:14,lineHeight:2.1,color:"rgba(255,255,255,0.58)",fontWeight:300,whiteSpace:"pre-wrap"}}>{parseBold(reply)}</p></div>}
           </>
         )}
         <div ref={bottomRef}/>
@@ -2209,7 +2269,7 @@ function Report({history,savedPlan,streak,planHistory}) {
             </button>
             {planOpen&&(
               <div className="glass" style={{padding:"36px 40px",marginBottom:32,borderTop:"none",borderRadius:"0 0 12px 12px",animation:"fadeUp .4s ease both"}}>
-                <div style={{paddingLeft:4}}>{renderPlan(savedPlan)}</div>
+                <div style={{fontSize:14,lineHeight:2.15,color:"rgba(255,255,255,0.62)",fontWeight:300,whiteSpace:"pre-wrap",borderLeft:"2px solid rgba(255,140,0,0.22)",paddingLeft:24}}>{parseBold(savedPlan)}</div>
               </div>
             )}
           </>
@@ -2229,7 +2289,7 @@ function Report({history,savedPlan,streak,planHistory}) {
                   <span style={{fontSize:11,color:"rgba(255,140,0,0.4)",letterSpacing:1}}>Plan from {new Date(p.date).toLocaleDateString()}</span>
                   <span style={{fontSize:12,color:"rgba(255,255,255,0.2)"}}>{oldPlanIdx===i?"▲":"▼"}</span>
                 </div>
-                {oldPlanIdx===i&&<div style={{paddingLeft:4,marginTop:16}}>{renderPlan(p.plan)}</div>}
+                {oldPlanIdx===i&&<div style={{fontSize:13,lineHeight:2,color:"rgba(255,255,255,0.4)",fontWeight:300,whiteSpace:"pre-wrap",borderLeft:"2px solid rgba(255,140,0,0.12)",paddingLeft:20,marginTop:16}}>{parseBold(p.plan)}</div>}
               </div>
             ))}
           </>
@@ -2247,8 +2307,8 @@ function ChatBubble({msg,idx}){
   const isUser=msg.role==="user";
   return(
     <div style={{display:"flex",justifyContent:isUser?"flex-end":"flex-start",marginBottom:16,animation:`fadeUp .4s cubic-bezier(.16,1,.3,1) both`,animationDelay:`${idx*0.04}s`}}>
-      {!isUser&&<div style={{width:28,height:28,borderRadius:"50%",background:"rgba(255,140,0,.12)",border:"1px solid rgba(255,140,0,.25)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,marginRight:10,marginTop:2}}><span style={{fontSize:12}}>⚡</span></div>}
-      <div style={{maxWidth:"78%",padding:"13px 18px",borderRadius:isUser?"16px 16px 4px 16px":"16px 16px 16px 4px",background:isUser?"linear-gradient(135deg,rgba(255,140,0,.18),rgba(255,80,0,.12))":"rgba(255,255,255,.04)",border:`1px solid ${isUser?"rgba(255,140,0,.25)":msg.offTopic?"rgba(255,80,80,.2)":"rgba(255,255,255,.07)"}`,fontSize:13,lineHeight:1.85,color:msg.offTopic?"rgba(255,120,120,.75)":isUser?"rgba(255,255,255,.75)":"rgba(255,255,255,.65)",fontWeight:300}}>
+      {!isUser&&<div style={{width:28,height:28,borderRadius:"50%",background:msg.crisis?"rgba(70,150,255,.12)":"rgba(255,140,0,.12)",border:`1px solid ${msg.crisis?"rgba(100,180,255,.3)":"rgba(255,140,0,.25)"}`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,marginRight:10,marginTop:2}}><span style={{fontSize:12}}>{msg.crisis?"🤝":"⚡"}</span></div>}
+      <div style={{maxWidth:"78%",padding:"13px 18px",borderRadius:isUser?"16px 16px 4px 16px":"16px 16px 16px 4px",background:isUser?"linear-gradient(135deg,rgba(255,140,0,.18),rgba(255,80,0,.12))":msg.crisis?"linear-gradient(135deg,rgba(70,150,255,.08),rgba(40,100,255,.04))":"rgba(255,255,255,.04)",border:`1px solid ${isUser?"rgba(255,140,0,.25)":msg.crisis?"rgba(100,180,255,.25)":msg.offTopic?"rgba(255,80,80,.2)":"rgba(255,255,255,.07)"}`,fontSize:13,lineHeight:1.85,color:msg.crisis?"rgba(255,255,255,.75)":msg.offTopic?"rgba(255,120,120,.75)":isUser?"rgba(255,255,255,.75)":"rgba(255,255,255,.65)",fontWeight:300}}>
         {parseBold(msg.text)}
       </div>
     </div>
@@ -2260,9 +2320,15 @@ function Chat({streak,savedPlan}){
   const [input,setInput]=useState("");
   const [loading,setLoading]=useState(false);
   const [vis,setVis]=useState(false);
+  const [mode,setMode]=useState(getMode());
   const bottomRef=useRef(null);
   useEffect(()=>{setTimeout(()=>setVis(true),60);},[]);
   useEffect(()=>{bottomRef.current?.scrollIntoView({behavior:"smooth"});},[msgs,loading]);
+
+  const switchMode=(m)=>{
+    ls.set("syn_mode",m.id);
+    setMode(m);
+  };
 
   const send=async()=>{
     const txt=input.trim();
@@ -2270,13 +2336,17 @@ function Chat({streak,savedPlan}){
     setInput("");
     const userMsg={role:"user",text:txt};
     setMsgs(m=>[...m,userMsg]);
+    if(detectCrisis(txt)){
+      setMsgs(m=>[...m,{role:"ai",text:CRISIS_RESPONSE,crisis:true}]);
+      return;
+    }
     setLoading(true);
     try{
       // Build context — last 6 messages for memory
       const ctx=([...msgs,userMsg]).slice(-6).map(m=>({role:m.role==="user"?"user":"assistant",content:m.text}));
       // Add streak context to first message
       ctx[0]={...ctx[0],content:`[User context: Day ${streak} of recovery. Plan: ${savedPlan?savedPlan.slice(0,120)+"...":"not set yet"}]\n\n${ctx[0].content}`};
-      const reply=await callAI(ctx,SYSTEM_CHAT);
+      const reply=await callAI(ctx,withTone(SYSTEM_CHAT));
       if(reply.includes("[OFF_TOPIC]")){
         setMsgs(m=>[...m,{role:"ai",text:OFF_TOPIC_MSG,offTopic:true}]);
       } else {
@@ -2298,7 +2368,23 @@ function Chat({streak,savedPlan}){
           <span style={{fontSize:10,fontWeight:600,letterSpacing:2.5,color:"rgba(255,180,80,.65)",textTransform:"uppercase"}}>SYNAPSE Coach — Live</span>
         </div>
         <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(24px,5.5vw,52px)",fontWeight:900,letterSpacing:-2,background:"linear-gradient(135deg,#fff,rgba(255,180,80,.7))",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",lineHeight:.95,marginBottom:14}}>TALK TO<br/>SYNAPSE</div>
-        <p style={{fontSize:13,color:"rgba(255,255,255,.25)",lineHeight:1.8,maxWidth:"100%",margin:0}}>Ask anything about your recovery — urges, relapses, streaks, cravings, your battle plan. I stay on topic.</p>
+        <p style={{fontSize:13,color:"rgba(255,255,255,.25)",lineHeight:1.8,maxWidth:"100%",margin:"0 0 24px 0"}}>Ask anything about your recovery — urges, relapses, streaks, cravings, your battle plan. I stay on topic.</p>
+
+        {/* Mode selector */}
+        <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+          {Object.values(MODES).map(m=>{
+            const active=mode.id===m.id;
+            return(
+              <button key={m.id} onClick={()=>switchMode(m)}
+                style={{display:"flex",alignItems:"center",gap:6,padding:"8px 16px",borderRadius:999,border:`1px solid ${active?m.accent:"rgba(255,255,255,.1)"}`,background:active?`rgba(${m.id==="operator"?"74,222,128":m.id==="warlord"?"239,68,68":"255,140,0"},.1)`:"transparent",color:active?m.accent:"rgba(255,255,255,.3)",fontSize:11,fontWeight:active?700:400,letterSpacing:active?2:1.5,textTransform:"uppercase",cursor:"none",transition:"all .25s",boxShadow:active?`0 0 16px ${m.accent}33`:"none"}}>
+                <span style={{fontSize:13}}>{m.icon}</span>
+                {m.label}
+                {active&&<span style={{fontSize:9,opacity:.7,marginLeft:2}}>●</span>}
+              </button>
+            );
+          })}
+          <span style={{fontSize:11,color:"rgba(255,255,255,.15)",alignSelf:"center",marginLeft:4}}>{mode.desc}</span>
+        </div>
       </div>
 
       {/* Messages */}
@@ -2455,7 +2541,7 @@ function EmergencyOverlay({savedPlan,streak,onClose,onCoach}){
       try{
         let arch="";
         try{const a=JSON.parse(ls.get("syn_archetype","null"));if(a)arch=`\nArchetype: ${a.title} — ${a.sub}`;}catch{}
-        const r=await callAI([{role:"user",content:`Day ${streak} of recovery.${arch}\n\nI'm struggling right now. Urge is hitting hard. Help me right now.`}],SYSTEM_EMERGENCY);
+        const r=await callAI([{role:"user",content:`Day ${streak} of recovery.${arch}\n\nI'm struggling right now. Urge is hitting hard. Help me right now.`}],withTone(SYSTEM_EMERGENCY));
         setReply(r);
       }catch{
         setReply("This craving is a 90-second wave. It has no power over you — only a deadline.\n\nStand up right now. Walk to a different room. Drink cold water.\n\nYou chose recovery. That choice is still valid. It will always be valid.");
@@ -2596,7 +2682,7 @@ export default function App() {
     if(archData) ls.set("syn_archetype",JSON.stringify(archData));
     setPL(true);setPlan("");goTo("plan");
     try{
-      const reply=await callAI([{role:"user",content:text}],SYSTEM_CONFESS);
+      const reply=await callAI([{role:"user",content:text}],getConfessPrompt());
       setPlan(reply);setSP(reply);ls.set("syn_plan",reply);
     }catch(e){
       setPlan(`Connection error: ${e.message}\n\nYour mission still stands. Show up every day.`);
@@ -2611,6 +2697,7 @@ export default function App() {
   };
 
   const handleCheckin=async msg=>{
+    if(detectCrisis(msg)) return {reply:CRISIS_RESPONSE, status:"CRISIS"};
     const today=new Date().toDateString();
     let rawReply="[STATUS:MID]\n\nYou showed up. That matters. Keep going.";
     try{
@@ -2624,7 +2711,7 @@ export default function App() {
         {role:"user",content:savedPlan + archetypeCtx},
         {role:"assistant",content:"Your mission begins now. Show up every day."},
         {role:"user",content:`Day ${streak+1} check-in: ${msg}`}
-      ],SYSTEM_CHECKIN);
+      ],getCheckinPrompt());
     }catch{}
 
     // Parse status tag from AI response
