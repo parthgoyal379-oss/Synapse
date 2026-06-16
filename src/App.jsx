@@ -2640,21 +2640,24 @@ export default function App() {
 
   const topRef=useRef(null);
   const goTo=useCallback(s=>{
-    window.scrollTo({top:0,behavior:"instant"});
-    document.documentElement.scrollTop=0;
-    document.body.scrollTop=0;
+    const forceTop=()=>{
+      document.documentElement.style.scrollBehavior="auto";
+      document.body.style.scrollBehavior="auto";
+      document.documentElement.scrollTop=0;
+      document.body.scrollTop=0;
+      window.scrollTo(0,0);
+      if(document.scrollingElement) document.scrollingElement.scrollTop=0;
+    };
+    forceTop();
     setTr(true);
     setTimeout(()=>{
       setScreen(s);
       setTr(false);
       document.body.style.overflow="auto";
       document.body.style.overflowX="hidden";
-      setTimeout(()=>{
-        window.scrollTo({top:0,behavior:"instant"});
-        document.documentElement.scrollTop=0;
-        document.body.scrollTop=0;
-        if(document.scrollingElement) document.scrollingElement.scrollTop=0;
-      },0);
+      forceTop();
+      setTimeout(forceTop,50);
+      setTimeout(forceTop,150);
     },260);
   },[]);
 
