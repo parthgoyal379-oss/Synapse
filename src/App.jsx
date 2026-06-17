@@ -1936,62 +1936,55 @@ function Plan({plan,loading,onBegin,onRetry}) {
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>SYNAPSE — Battle Plan</title>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Inter:wght@300;400;500;600&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Inter:wght@300;400;500;600;700&display=swap');
   *{margin:0;padding:0;box-sizing:border-box;}
-  html,body{background:#07040a;color:#fff;font-family:'Inter',sans-serif;}
-  @media print{
-    html,body{background:#fff;color:#111;}
-    .no-print{display:none!important;}
-    .card{border:1px solid #ddd!important;background:#fafafa!important;}
-    .plan-text{color:#222!important;}
-    .plan-text strong{color:#b35000!important;}
-    .plan-text h3{color:#b35000!important;border-color:#ddd!important;}
-    .divider{border-color:#ddd!important;}
-    .brand-name{color:#b35000!important;-webkit-text-fill-color:#b35000!important;}
-    .brand-tagline,.meta-label{color:#666!important;}
-    .meta-value{color:#111!important;}
-    .arch-badge{background:#fff3e0!important;border-color:#ffb347!important;color:#b35000!important;}
-    .footer{color:#888!important;border-color:#ddd!important;}
-    .watermark{color:rgba(0,0,0,.04)!important;}
-  }
-  body{padding:0;max-width:800px;margin:0 auto;}
+  html,body{background:#fff;color:#111;font-family:'Inter',sans-serif;font-size:13px;}
+  body{max-width:720px;margin:0 auto;padding:0;}
   /* HEADER */
-  .header{padding:48px 56px 36px;border-bottom:1px solid rgba(255,140,0,.15);position:relative;overflow:hidden;}
-  .header::before{content:"";position:absolute;top:-60px;right:-60px;width:240px;height:240px;background:radial-gradient(circle,rgba(255,140,0,.12),transparent 70%);pointer-events:none;}
-  .brand{display:flex;align-items:center;gap:14px;margin-bottom:28px;}
-  .brand-logo{width:40px;height:40px;border-radius:10px;background:linear-gradient(135deg,#ff9500,#ff5000);display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:900;font-family:'Orbitron',sans-serif;color:#fff;letter-spacing:-1px;}
-  .brand-name{font-family:'Orbitron',sans-serif;font-size:22px;font-weight:900;letter-spacing:2px;background:linear-gradient(135deg,#ff9500,#ff5000);-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
-  .brand-tagline{font-size:10px;color:rgba(255,255,255,.3);letter-spacing:3px;text-transform:uppercase;margin-top:2px;}
-  .doc-title{font-family:'Orbitron',sans-serif;font-size:clamp(28px,5vw,42px);font-weight:900;letter-spacing:-1px;line-height:1;color:#fff;margin-bottom:6px;}
-  .doc-subtitle{font-size:12px;color:rgba(255,140,0,.6);letter-spacing:2.5px;text-transform:uppercase;font-weight:500;}
+  .header{padding:36px 48px 28px;border-bottom:2px solid #f0f0f0;position:relative;background:#fff;}
+  .brand{display:flex;align-items:center;gap:12px;margin-bottom:20px;}
+  .brand-logo{width:36px;height:36px;border-radius:8px;background:linear-gradient(135deg,#ff9500,#ff5000);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:900;font-family:'Orbitron',sans-serif;color:#fff;}
+  .brand-name{font-family:'Orbitron',sans-serif;font-size:18px;font-weight:900;letter-spacing:2px;color:#ff6000;}
+  .brand-tagline{font-size:9px;color:#999;letter-spacing:3px;text-transform:uppercase;margin-top:2px;}
+  .doc-title{font-family:'Orbitron',sans-serif;font-size:32px;font-weight:900;letter-spacing:-1px;line-height:1;color:#111;margin-bottom:4px;}
+  .doc-subtitle{font-size:10px;color:#ff6000;letter-spacing:2px;text-transform:uppercase;font-weight:600;}
   /* META */
-  .meta{display:flex;flex-wrap:wrap;gap:32px;padding:28px 56px;border-bottom:1px solid rgba(255,140,0,.08);align-items:center;}
-  .meta-item{display:flex;flex-direction:column;gap:3px;}
-  .meta-label{font-size:9px;color:rgba(255,255,255,.25);letter-spacing:2px;text-transform:uppercase;font-weight:600;}
-  .meta-value{font-size:14px;color:rgba(255,255,255,.8);font-weight:500;}
-  .arch-badge{display:inline-flex;align-items:center;gap:6px;padding:5px 14px;border-radius:999px;border:1px solid rgba(255,140,0,.3);background:rgba(255,140,0,.08);font-family:'Orbitron',sans-serif;font-size:11px;font-weight:700;color:${archColor};letter-spacing:1px;}
+  .meta{display:flex;flex-wrap:wrap;gap:28px;padding:20px 48px;border-bottom:1px solid #f0f0f0;background:#fafafa;align-items:center;}
+  .meta-item{display:flex;flex-direction:column;gap:2px;}
+  .meta-label{font-size:8px;color:#999;letter-spacing:2px;text-transform:uppercase;font-weight:600;}
+  .meta-value{font-size:13px;color:#111;font-weight:600;}
+  .arch-badge{display:inline-flex;align-items:center;gap:6px;padding:4px 12px;border-radius:999px;border:1px solid #ffb347;background:#fff8f0;font-family:'Orbitron',sans-serif;font-size:10px;font-weight:700;color:#b35000;letter-spacing:1px;}
   /* PLAN CONTENT */
-  .content{padding:40px 56px 32px;}
-  .section-label{font-size:9px;color:rgba(255,140,0,.5);letter-spacing:3px;text-transform:uppercase;font-weight:600;margin-bottom:24px;}
-  .card{background:rgba(255,255,255,.025);border:1px solid rgba(255,140,0,.1);border-radius:16px;padding:36px 40px;}
-  .plan-text{font-size:14px;line-height:2.1;color:rgba(255,255,255,.65);font-weight:300;}
-  .plan-text p{margin-bottom:2px;}
-  .plan-text h3{font-family:'Inter',sans-serif;font-size:12px;font-weight:700;color:rgba(255,140,0,.9);letter-spacing:2px;text-transform:uppercase;margin:22px 0 8px;padding-top:18px;border-top:1px solid rgba(255,140,0,.1);}
+  .content{padding:28px 48px 24px;}
+  .section-label{font-size:8px;color:#ff6000;letter-spacing:3px;text-transform:uppercase;font-weight:700;margin-bottom:16px;}
+  .card{border:1px solid #efefef;border-left:3px solid #ff6000;border-radius:8px;padding:24px 28px;background:#fff;}
+  .plan-text{font-size:13px;line-height:1.9;color:#333;font-weight:400;}
+  .plan-text p{margin-bottom:1px;}
+  .plan-text h3{font-size:10px;font-weight:700;color:#b35000;letter-spacing:2px;text-transform:uppercase;margin:16px 0 6px;padding-top:14px;border-top:1px solid #f0f0f0;}
   .plan-text h3:first-child{margin-top:0;padding-top:0;border-top:none;}
-  .plan-text hr{border:none;border-top:1px solid rgba(255,140,0,.1);margin:20px 0;}
-  .plan-text strong{color:rgba(255,180,80,.9);font-weight:600;}
+  .plan-text hr{border:none;border-top:1px solid #f0f0f0;margin:14px 0;}
+  .plan-text strong{color:#b35000;font-weight:700;}
   /* FOOTER */
-  .footer{padding:24px 56px 40px;border-top:1px solid rgba(255,140,0,.08);display:flex;justify-content:space-between;align-items:center;flex-wrap:gap;}
-  .footer-left{font-size:10px;color:rgba(255,255,255,.2);letter-spacing:.5px;line-height:1.8;}
-  .footer-right{font-size:9px;color:rgba(255,255,255,.15);letter-spacing:1px;text-transform:uppercase;text-align:right;}
-  .watermark{position:fixed;bottom:0;right:0;font-family:'Orbitron',sans-serif;font-size:120px;font-weight:900;color:rgba(255,140,0,.03);pointer-events:none;line-height:1;z-index:0;letter-spacing:-4px;}
+  .footer{padding:16px 48px 28px;border-top:1px solid #f0f0f0;display:flex;justify-content:space-between;align-items:center;background:#fafafa;}
+  .footer-left{font-size:9px;color:#aaa;line-height:1.8;}
+  .footer-right{font-size:9px;color:#ccc;text-align:right;}
+  /* WATERMARK */
+  .watermark{position:fixed;bottom:-20px;right:-20px;font-family:'Orbitron',sans-serif;font-size:160px;font-weight:900;color:rgba(255,100,0,.04);pointer-events:none;line-height:1;z-index:0;}
   /* PRINT BUTTON */
-  .print-btn{position:fixed;top:20px;right:20px;background:linear-gradient(135deg,#ff9500,#ff5000);border:none;color:#fff;padding:12px 28px;border-radius:10px;font-family:'Inter',sans-serif;font-size:13px;font-weight:600;cursor:pointer;box-shadow:0 4px 20px rgba(255,140,0,.4);letter-spacing:.3px;z-index:999;}
-  .print-btn:hover{transform:translateY(-1px);box-shadow:0 6px 28px rgba(255,140,0,.5);}
+  .print-btn{position:fixed;top:16px;right:16px;background:linear-gradient(135deg,#ff9500,#ff5000);border:none;color:#fff;padding:10px 24px;border-radius:8px;font-family:'Inter',sans-serif;font-size:12px;font-weight:600;cursor:pointer;box-shadow:0 4px 16px rgba(255,140,0,.35);z-index:999;}
+  @media print{
+    .print-btn{display:none!important;}
+    .watermark{position:fixed;}
+    body{font-size:12px;}
+    .header{padding:24px 36px 20px;}
+    .meta{padding:14px 36px;}
+    .content{padding:20px 36px 16px;}
+    .footer{padding:12px 36px 20px;}
+  }
 </style>
 </head>
 <body>
-<button class="print-btn no-print" onclick="window.print()">⬇ Save as PDF</button>
+<button class="print-btn" onclick="window.print()">⬇ Save as PDF</button>
 <div class="watermark">S</div>
 
 <div class="header">
@@ -2230,7 +2223,22 @@ function Checkin({streak,savedPlan,lastCheckin,onCheckin,onGoChat}) {
           </div>
         );})()}
         {/* Battle Plan — always accessible from checkin */}
-        <BattlePlanAccordion plan={savedPlan}/>
+        {savedPlan&&<div style={{display:"flex",alignItems:"center",gap:10,marginBottom:0}}>
+          <div style={{flex:1}}><BattlePlanAccordion plan={savedPlan}/></div>
+          <button onClick={()=>{
+            const user=JSON.parse(ls.get("syn_user","{}"));
+            const arch=JSON.parse(ls.get("syn_archetype","null"));
+            const streakVal=parseInt(ls.get("syn_streak","0"))||0;
+            const date=new Date().toLocaleDateString("en-IN",{day:"numeric",month:"long",year:"numeric"});
+            const archName=arch?.title||"WARRIOR";
+            const archSymbol=arch?.symbol||"⚡";
+            const formatted=savedPlan.replace(/\*\*(.+?)\*\*/g,"<strong>$1</strong>").split("\n").map(line=>line.startsWith("**")&&line.endsWith("**")?`<h3>${line.replace(/\*\*/g,"")}</h3>`:line.trim()==="---"?`<hr/>`:`<p>${line||"&nbsp;"}</p>`).join("");
+            const w=window.open("","_blank","width=900,height=800");
+            w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"/><title>SYNAPSE — Battle Plan</title><style>@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Inter:wght@300;400;500;600;700&display=swap');*{margin:0;padding:0;box-sizing:border-box;}html,body{background:#fff;color:#111;font-family:'Inter',sans-serif;font-size:13px;}body{max-width:720px;margin:0 auto;}.header{padding:36px 48px 28px;border-bottom:2px solid #f0f0f0;}.brand{display:flex;align-items:center;gap:12px;margin-bottom:20px;}.brand-logo{width:36px;height:36px;border-radius:8px;background:linear-gradient(135deg,#ff9500,#ff5000);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:900;font-family:'Orbitron',sans-serif;color:#fff;}.brand-name{font-family:'Orbitron',sans-serif;font-size:18px;font-weight:900;letter-spacing:2px;color:#ff6000;}.brand-tagline{font-size:9px;color:#999;letter-spacing:3px;text-transform:uppercase;margin-top:2px;}.doc-title{font-family:'Orbitron',sans-serif;font-size:32px;font-weight:900;color:#111;margin-bottom:4px;}.doc-subtitle{font-size:10px;color:#ff6000;letter-spacing:2px;text-transform:uppercase;font-weight:600;}.meta{display:flex;flex-wrap:wrap;gap:28px;padding:20px 48px;border-bottom:1px solid #f0f0f0;background:#fafafa;}.meta-label{font-size:8px;color:#999;letter-spacing:2px;text-transform:uppercase;font-weight:600;}.meta-value{font-size:13px;color:#111;font-weight:600;}.arch-badge{display:inline-flex;align-items:center;gap:6px;padding:4px 12px;border-radius:999px;border:1px solid #ffb347;background:#fff8f0;font-family:'Orbitron',sans-serif;font-size:10px;font-weight:700;color:#b35000;}.content{padding:28px 48px 24px;}.section-label{font-size:8px;color:#ff6000;letter-spacing:3px;text-transform:uppercase;font-weight:700;margin-bottom:16px;}.card{border:1px solid #efefef;border-left:3px solid #ff6000;border-radius:8px;padding:24px 28px;}.plan-text{font-size:13px;line-height:1.9;color:#333;}.plan-text p{margin-bottom:1px;}.plan-text h3{font-size:10px;font-weight:700;color:#b35000;letter-spacing:2px;text-transform:uppercase;margin:16px 0 6px;padding-top:14px;border-top:1px solid #f0f0f0;}.plan-text h3:first-child{margin-top:0;padding-top:0;border-top:none;}.plan-text hr{border:none;border-top:1px solid #f0f0f0;margin:14px 0;}.plan-text strong{color:#b35000;font-weight:700;}.footer{padding:16px 48px 28px;border-top:1px solid #f0f0f0;display:flex;justify-content:space-between;background:#fafafa;font-size:9px;color:#aaa;}.watermark{position:fixed;bottom:-20px;right:-20px;font-family:'Orbitron',sans-serif;font-size:160px;font-weight:900;color:rgba(255,100,0,.04);pointer-events:none;}.print-btn{position:fixed;top:16px;right:16px;background:linear-gradient(135deg,#ff9500,#ff5000);border:none;color:#fff;padding:10px 24px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;z-index:999;}@media print{.print-btn{display:none!important;}}</style></head><body><button class="print-btn" onclick="window.print()">⬇ Save as PDF</button><div class="watermark">S</div><div class="header"><div class="brand"><div class="brand-logo">S</div><div><div class="brand-name">SYNAPSE</div><div class="brand-tagline">Dopamine Recovery Protocol</div></div></div><div class="doc-title">BATTLE PLAN</div><div class="doc-subtitle">Personalized Recovery Protocol — Classified</div></div><div class="meta"><div><div class="meta-label">Soldier</div><div class="meta-value">${user.name||"Anonymous"}</div></div><div><div class="meta-label">Streak</div><div class="meta-value">Day ${streakVal}</div></div><div><div class="meta-label">Issued</div><div class="meta-value">${date}</div></div><div><div class="meta-label">Archetype</div><div class="arch-badge">${archSymbol} ${archName}</div></div></div><div class="content"><div class="section-label">Mission Briefing</div><div class="card"><div class="plan-text">${formatted}</div></div></div><div class="footer"><div>Generated by SYNAPSE • synapserewire@gmail.com</div><div>synapse-parth.vercel.app</div></div></body></html>`);
+            w.document.close();
+          }} style={{flexShrink:0,background:"rgba(255,140,0,0.06)",border:"1px solid rgba(255,140,0,0.2)",color:"rgba(255,180,80,0.7)",padding:"10px 16px",borderRadius:10,fontSize:11,fontWeight:600,cursor:"none",transition:"all .25s",letterSpacing:.5,whiteSpace:"nowrap",alignSelf:"flex-start",marginTop:0}} onMouseEnter={e=>{e.currentTarget.style.background="rgba(255,140,0,0.12)";}} onMouseLeave={e=>{e.currentTarget.style.background="rgba(255,140,0,0.06)";}}>⬇ Plan</button>
+        </div>}
+        {!savedPlan&&<BattlePlanAccordion plan={savedPlan}/>}
         <div className="tag s1" style={{marginBottom:32}}><span className="d"/>Daily Check-In</div>
         {done?(
           <div style={{animation:"scaleIn .55s cubic-bezier(.16,1,.3,1) both"}}>
