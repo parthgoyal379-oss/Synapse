@@ -1117,7 +1117,7 @@ const ADDICTIONS=[
 ];
 
 // These addictions are measured by frequency (times/day) not hours
-const FREQ_ADDICTIONS = new Set(["masturbation","junk","smoking","caffeine","gambling","alcohol"]);
+const FREQ_ADDICTIONS = new Set(["masturbation","junk","smoking","caffeine","gambling","alcohol","shopping"]);
 
 const EFFECTS={
   reels:{brain:"Shrinks attention span to under 40 seconds. Dopamine spikes every 3 seconds rewire your reward circuit permanently.",loss:["Deep focus & flow states","Ability to read books","Real-world patience","Creative thinking"],stat:"2.4 hrs avg daily"},
@@ -1403,8 +1403,8 @@ function ConfessStep2({selected, hours, onHoursChange, onNext, onBack}) {
         <span style={{fontSize:10,fontWeight:600,letterSpacing:2.5,color:"rgba(255,180,80,.65)",textTransform:"uppercase"}}>Step 03 of 05 — Measure the Damage</span>
       </div>
       <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(26px,7vw,84px)",fontWeight:900,letterSpacing:-3,background:"linear-gradient(160deg,#fff 0%,rgba(255,210,110,.8) 60%,rgba(255,100,30,.5) 100%)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",lineHeight:.9,marginBottom:8}}>HOW MUCH</div>
-      <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(26px,7vw,84px)",fontWeight:900,letterSpacing:-3,background:"linear-gradient(160deg,#fff 0%,rgba(255,210,110,.8) 60%,rgba(255,100,30,.5) 100%)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",lineHeight:.9,marginBottom:28}}>PER DAY?</div>
-      <p style={{fontSize:14,color:"rgba(255,255,255,.28)",fontWeight:300,lineHeight:1.9,maxWidth:440,marginBottom:40}}>Some addictions are measured in hours, others in times per day. Be brutally honest.</p>
+      <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(26px,7vw,84px)",fontWeight:900,letterSpacing:-3,background:"linear-gradient(160deg,#fff 0%,rgba(255,210,110,.8) 60%,rgba(255,100,30,.5) 100%)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",lineHeight:.9,marginBottom:28}}>& HOW OFTEN?</div>
+      <p style={{fontSize:14,color:"rgba(255,255,255,.28)",fontWeight:300,lineHeight:1.9,maxWidth:440,marginBottom:40}}>Screen addictions are measured in hours per day. Urge-based addictions are measured in times per week. Be brutally honest.</p>
       <div style={{display:"flex",flexDirection:"column",gap:18,marginBottom:40}}>
         {selectedAddictions.map((a,i)=>{
           const v=hours[a.id]||0;
@@ -1413,10 +1413,10 @@ function ConfessStep2({selected, hours, onHoursChange, onNext, onBack}) {
           const step=isFreq?1:0.5;
           const rgb=a.color.replace('#','').match(/.{2}/g).map(x=>parseInt(x,16)).join(',');
           const displayVal=isFreq
-            ?(v===0?"Not measured yet":v===1?"1 time today":`${v}x per day`)
+            ?(v===0?"Not measured yet":v===1?"1 time this week":`${v}x per week`)
             :(v===0?"Not measured yet":v<1?"Less than an hour":`${v}h per day`);
           const unitLabel=isFreq?`${v}x`:`${v}h`;
-          const unitSub=isFreq?(v>0?`${v*7}x/week`:""):(v>0?`${v*365} hrs/year`:"");
+          const unitSub=isFreq?(v>0?`${Math.round(v*52)}x/year`:""):(v>0?`${v*365} hrs/year`:"");
           const tickMarks=isFreq?[0,2,4,6,8,10]:[0,2,4,6,8,10,12];
           const tickLabel=isFreq?(n=>`${n}x`):(n=>`${n}h`);
           return(
@@ -1433,7 +1433,7 @@ function ConfessStep2({selected, hours, onHoursChange, onNext, onBack}) {
                   </div>
                 </div>
                 <div style={{textAlign:"right"}}>
-                  <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:26,fontWeight:800,color:a.color,letterSpacing:-2,lineHeight:1}}>{unitLabel}</div>
+                  <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:28,fontWeight:900,color:a.color,letterSpacing:-1,lineHeight:1}}>{unitLabel}</div>
                   {v>0&&<div style={{fontSize:9,color:"rgba(255,255,255,.18)",marginTop:2}}>{unitSub}</div>}
                 </div>
               </div>
