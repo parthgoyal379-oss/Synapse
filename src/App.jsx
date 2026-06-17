@@ -2647,6 +2647,9 @@ export default function App() {
       document.body.scrollTop=0;
       window.scrollTo(0,0);
       if(document.scrollingElement) document.scrollingElement.scrollTop=0;
+      // Body is the actual scrolling container in this app
+      document.body.style.overflowY="hidden";
+      setTimeout(()=>{ document.body.style.overflowY="auto"; },300);
     };
     forceTop();
     setTr(true);
@@ -2805,8 +2808,8 @@ export default function App() {
               <div><div style={{fontSize:12,fontWeight:600,color:"rgba(255,255,255,0.5)",letterSpacing:.5}}>Parth Goyal</div><div style={{fontSize:10,color:"rgba(255,140,0,0.35)",letterSpacing:.5,marginTop:1}}>Designed & Built</div></div>
             </div>
             <div style={{display:"flex",gap:12,alignItems:"center",flexWrap:"wrap"}}>
-              <a href="mailto:parthgoyal379@gmail.com" style={{display:"flex",alignItems:"center",gap:7,fontSize:11,color:"rgba(255,180,80,0.4)",letterSpacing:.5,textDecoration:"none",border:"1px solid rgba(255,140,0,0.12)",borderRadius:999,padding:"7px 16px",transition:"all .3s",fontWeight:500}} onMouseEnter={e=>{e.currentTarget.style.color="#ffb347";e.currentTarget.style.borderColor="rgba(255,140,0,0.45)";e.currentTarget.style.background="rgba(255,140,0,0.07)";}} onMouseLeave={e=>{e.currentTarget.style.color="rgba(255,180,80,0.4)";e.currentTarget.style.borderColor="rgba(255,140,0,0.12)";e.currentTarget.style.background="transparent;"}}><span>✉</span><span>parthgoyal379@gmail.com</span></a>
-              <a href="https://parth-goyal.vercel.app" target="_blank" rel="noopener noreferrer" style={{display:"flex",alignItems:"center",gap:7,fontSize:11,color:"rgba(255,180,80,0.4)",letterSpacing:.5,textDecoration:"none",border:"1px solid rgba(255,140,0,0.12)",borderRadius:999,padding:"7px 16px",transition:"all .3s",fontWeight:500}} onMouseEnter={e=>{e.currentTarget.style.color="#ffb347";e.currentTarget.style.borderColor="rgba(255,140,0,0.45)";e.currentTarget.style.background="rgba(255,140,0,0.07)";}} onMouseLeave={e=>{e.currentTarget.style.color="rgba(255,180,80,0.4)";e.currentTarget.style.borderColor="rgba(255,140,0,0.12)";e.currentTarget.style.background="transparent;"}}><span>parth—goyal.vercel.app</span><span style={{fontSize:10}}>↗</span></a>
+              <a href="mailto:synapserewire@gmail.com" style={{display:"flex",alignItems:"center",gap:7,fontSize:11,color:"rgba(255,180,80,0.4)",letterSpacing:.5,textDecoration:"none",border:"1px solid rgba(255,140,0,0.12)",borderRadius:999,padding:"7px 16px",transition:"all .3s",fontWeight:500}} onMouseEnter={e=>{e.currentTarget.style.color="#ffb347";e.currentTarget.style.borderColor="rgba(255,140,0,0.45)";e.currentTarget.style.background="rgba(255,140,0,0.07)";}} onMouseLeave={e=>{e.currentTarget.style.color="rgba(255,180,80,0.4)";e.currentTarget.style.borderColor="rgba(255,140,0,0.12)";e.currentTarget.style.background="transparent;"}}><span>✉</span><span>synapserewire@gmail.com</span></a>
+              
             </div>
           </div>
         </>
