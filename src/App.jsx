@@ -1910,6 +1910,145 @@ function UrgeTimer({ streak, savedPlan }) {
 function Plan({plan,loading,onBegin,onRetry}) {
   const {displayed,done}=useTypewriter(plan,11);
   const isError = !!plan && plan.startsWith("Connection error:");
+
+  const printPlan=()=>{
+    const user=JSON.parse(ls.get("syn_user","{}"));
+    const arch=JSON.parse(ls.get("syn_archetype","null"));
+    const streak=parseInt(ls.get("syn_streak","0"))||0;
+    const date=new Date().toLocaleDateString("en-IN",{day:"numeric",month:"long",year:"numeric"});
+    const archName=arch?.title||"WARRIOR";
+    const archSymbol=arch?.symbol||"⚡";
+    const archColor=arch?.accent||"#ff8c00";
+
+    // Convert **bold** markdown to <strong> tags and newlines to <br>
+    const formatted=plan
+      .replace(/\*\*(.+?)\*\*/g,"<strong>$1</strong>")
+      .split("\n").map(line=>{
+        if(line.startsWith("**")&&line.endsWith("**")) return `<h3>${line.replace(/\*\*/g,"")}</h3>`;
+        if(line.trim()==="---") return `<hr/>`;
+        return `<p>${line||"&nbsp;"}</p>`;
+      }).join("");
+
+    const html=`<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>SYNAPSE — Battle Plan</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Inter:wght@300;400;500;600&display=swap');
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html,body{background:#07040a;color:#fff;font-family:'Inter',sans-serif;}
+  @media print{
+    html,body{background:#fff;color:#111;}
+    .no-print{display:none!important;}
+    .card{border:1px solid #ddd!important;background:#fafafa!important;}
+    .plan-text{color:#222!important;}
+    .plan-text strong{color:#b35000!important;}
+    .plan-text h3{color:#b35000!important;border-color:#ddd!important;}
+    .divider{border-color:#ddd!important;}
+    .brand-name{color:#b35000!important;-webkit-text-fill-color:#b35000!important;}
+    .brand-tagline,.meta-label{color:#666!important;}
+    .meta-value{color:#111!important;}
+    .arch-badge{background:#fff3e0!important;border-color:#ffb347!important;color:#b35000!important;}
+    .footer{color:#888!important;border-color:#ddd!important;}
+    .watermark{color:rgba(0,0,0,.04)!important;}
+  }
+  body{padding:0;max-width:800px;margin:0 auto;}
+  /* HEADER */
+  .header{padding:48px 56px 36px;border-bottom:1px solid rgba(255,140,0,.15);position:relative;overflow:hidden;}
+  .header::before{content:"";position:absolute;top:-60px;right:-60px;width:240px;height:240px;background:radial-gradient(circle,rgba(255,140,0,.12),transparent 70%);pointer-events:none;}
+  .brand{display:flex;align-items:center;gap:14px;margin-bottom:28px;}
+  .brand-logo{width:40px;height:40px;border-radius:10px;background:linear-gradient(135deg,#ff9500,#ff5000);display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:900;font-family:'Orbitron',sans-serif;color:#fff;letter-spacing:-1px;}
+  .brand-name{font-family:'Orbitron',sans-serif;font-size:22px;font-weight:900;letter-spacing:2px;background:linear-gradient(135deg,#ff9500,#ff5000);-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+  .brand-tagline{font-size:10px;color:rgba(255,255,255,.3);letter-spacing:3px;text-transform:uppercase;margin-top:2px;}
+  .doc-title{font-family:'Orbitron',sans-serif;font-size:clamp(28px,5vw,42px);font-weight:900;letter-spacing:-1px;line-height:1;color:#fff;margin-bottom:6px;}
+  .doc-subtitle{font-size:12px;color:rgba(255,140,0,.6);letter-spacing:2.5px;text-transform:uppercase;font-weight:500;}
+  /* META */
+  .meta{display:flex;flex-wrap:wrap;gap:32px;padding:28px 56px;border-bottom:1px solid rgba(255,140,0,.08);align-items:center;}
+  .meta-item{display:flex;flex-direction:column;gap:3px;}
+  .meta-label{font-size:9px;color:rgba(255,255,255,.25);letter-spacing:2px;text-transform:uppercase;font-weight:600;}
+  .meta-value{font-size:14px;color:rgba(255,255,255,.8);font-weight:500;}
+  .arch-badge{display:inline-flex;align-items:center;gap:6px;padding:5px 14px;border-radius:999px;border:1px solid rgba(255,140,0,.3);background:rgba(255,140,0,.08);font-family:'Orbitron',sans-serif;font-size:11px;font-weight:700;color:${archColor};letter-spacing:1px;}
+  /* PLAN CONTENT */
+  .content{padding:40px 56px 32px;}
+  .section-label{font-size:9px;color:rgba(255,140,0,.5);letter-spacing:3px;text-transform:uppercase;font-weight:600;margin-bottom:24px;}
+  .card{background:rgba(255,255,255,.025);border:1px solid rgba(255,140,0,.1);border-radius:16px;padding:36px 40px;}
+  .plan-text{font-size:14px;line-height:2.1;color:rgba(255,255,255,.65);font-weight:300;}
+  .plan-text p{margin-bottom:2px;}
+  .plan-text h3{font-family:'Inter',sans-serif;font-size:12px;font-weight:700;color:rgba(255,140,0,.9);letter-spacing:2px;text-transform:uppercase;margin:22px 0 8px;padding-top:18px;border-top:1px solid rgba(255,140,0,.1);}
+  .plan-text h3:first-child{margin-top:0;padding-top:0;border-top:none;}
+  .plan-text hr{border:none;border-top:1px solid rgba(255,140,0,.1);margin:20px 0;}
+  .plan-text strong{color:rgba(255,180,80,.9);font-weight:600;}
+  /* FOOTER */
+  .footer{padding:24px 56px 40px;border-top:1px solid rgba(255,140,0,.08);display:flex;justify-content:space-between;align-items:center;flex-wrap:gap;}
+  .footer-left{font-size:10px;color:rgba(255,255,255,.2);letter-spacing:.5px;line-height:1.8;}
+  .footer-right{font-size:9px;color:rgba(255,255,255,.15);letter-spacing:1px;text-transform:uppercase;text-align:right;}
+  .watermark{position:fixed;bottom:0;right:0;font-family:'Orbitron',sans-serif;font-size:120px;font-weight:900;color:rgba(255,140,0,.03);pointer-events:none;line-height:1;z-index:0;letter-spacing:-4px;}
+  /* PRINT BUTTON */
+  .print-btn{position:fixed;top:20px;right:20px;background:linear-gradient(135deg,#ff9500,#ff5000);border:none;color:#fff;padding:12px 28px;border-radius:10px;font-family:'Inter',sans-serif;font-size:13px;font-weight:600;cursor:pointer;box-shadow:0 4px 20px rgba(255,140,0,.4);letter-spacing:.3px;z-index:999;}
+  .print-btn:hover{transform:translateY(-1px);box-shadow:0 6px 28px rgba(255,140,0,.5);}
+</style>
+</head>
+<body>
+<button class="print-btn no-print" onclick="window.print()">⬇ Save as PDF</button>
+<div class="watermark">S</div>
+
+<div class="header">
+  <div class="brand">
+    <div class="brand-logo">S</div>
+    <div>
+      <div class="brand-name">SYNAPSE</div>
+      <div class="brand-tagline">Dopamine Recovery Protocol</div>
+    </div>
+  </div>
+  <div class="doc-title">BATTLE PLAN</div>
+  <div class="doc-subtitle">Personalized Recovery Protocol — Classified</div>
+</div>
+
+<div class="meta">
+  <div class="meta-item">
+    <div class="meta-label">Soldier</div>
+    <div class="meta-value">${user.name||"Anonymous"}</div>
+  </div>
+  <div class="meta-item">
+    <div class="meta-label">Current Streak</div>
+    <div class="meta-value">Day ${streak}</div>
+  </div>
+  <div class="meta-item">
+    <div class="meta-label">Issued</div>
+    <div class="meta-value">${date}</div>
+  </div>
+  <div class="meta-item">
+    <div class="meta-label">Archetype</div>
+    <div class="arch-badge">${archSymbol} ${archName}</div>
+  </div>
+</div>
+
+<div class="content">
+  <div class="section-label">Mission Briefing</div>
+  <div class="card">
+    <div class="plan-text">${formatted}</div>
+  </div>
+</div>
+
+<div class="footer">
+  <div class="footer-left">
+    Generated by SYNAPSE • synapserewire@gmail.com<br/>
+    This document is your personal recovery protocol. Keep it close.
+  </div>
+  <div class="footer-right">
+    synapse-parth.vercel.app<br/>
+    ${date}
+  </div>
+</div>
+</body>
+</html>`;
+
+    const w=window.open("","_blank","width=900,height=800");
+    w.document.write(html);
+    w.document.close();
+  };
   return(
     <div style={{minHeight:"100vh",paddingTop:80,position:"relative",overflowX:"hidden"}}>
       <div className="hero-pad" style={{padding:"clamp(60px,8vw,80px) clamp(20px,8vw,100px) clamp(40px,5vw,64px)",borderBottom:"1px solid rgba(255,140,0,0.07)",position:"relative",zIndex:1}}>
@@ -1931,7 +2070,12 @@ function Plan({plan,loading,onBegin,onRetry}) {
             </div>
             {done&&(isError
               ?<div style={{marginTop:40,paddingTop:28,borderTop:"1px solid rgba(255,140,0,0.08)",animation:"fadeUp .6s ease both"}}><button className="btn-primary" onClick={onRetry} style={{fontSize:14,padding:"16px 48px",background:"linear-gradient(135deg,#cc4400,#992200)"}}>← Back to Confess & Retry</button></div>
-              :<div style={{marginTop:40,paddingTop:28,borderTop:"1px solid rgba(255,140,0,0.08)",display:"flex",gap:16,animation:"fadeUp .6s ease both"}}><button className="btn-primary" onClick={()=>onBegin(plan)} style={{fontSize:14,padding:"16px 48px"}}>Begin Day 1 →</button></div>
+              :<div style={{marginTop:40,paddingTop:28,borderTop:"1px solid rgba(255,140,0,0.08)",display:"flex",gap:16,flexWrap:"wrap",animation:"fadeUp .6s ease both"}}>
+                  <button className="btn-primary" onClick={()=>onBegin(plan)} style={{fontSize:14,padding:"16px 48px"}}>Begin Day 1 →</button>
+                  <button onClick={printPlan} style={{background:"rgba(255,140,0,0.07)",border:"1px solid rgba(255,140,0,0.25)",color:"rgba(255,180,80,0.8)",padding:"16px 28px",borderRadius:12,fontFamily:"'Inter',sans-serif",fontSize:13,fontWeight:600,letterSpacing:.3,cursor:"none",transition:"all .3s",display:"flex",alignItems:"center",gap:8}} onMouseEnter={e=>{e.currentTarget.style.background="rgba(255,140,0,0.12)";e.currentTarget.style.borderColor="rgba(255,140,0,0.45)";}} onMouseLeave={e=>{e.currentTarget.style.background="rgba(255,140,0,0.07)";e.currentTarget.style.borderColor="rgba(255,140,0,0.25)";}}>
+                    <span>⬇</span><span>Download Plan</span>
+                  </button>
+                </div>
             )}
           </div>
         )}
