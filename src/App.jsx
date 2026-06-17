@@ -2104,6 +2104,51 @@ function BattlePlanAccordion({plan}) {
 }
 
 /* ─── CHECKIN ────────────────────────────────────────────────────────────── */
+/* ─── DAILY QUOTES ───────────────────────────────────────────────────────── */
+const DAILY_QUOTES = [
+  {q:"The first and greatest victory is to conquer yourself.",a:"Plato"},
+  {q:"Discipline is the bridge between goals and accomplishment.",a:"Jim Rohn"},
+  {q:"You don't rise to the level of your goals. You fall to the level of your systems.",a:"James Clear"},
+  {q:"We are what we repeatedly do. Excellence, then, is not an act, but a habit.",a:"Aristotle"},
+  {q:"The cave you fear to enter holds the treasure you seek.",a:"Joseph Campbell"},
+  {q:"Do not indulge in dreams of having what you have not, but count the blessings you actually possess.",a:"Marcus Aurelius"},
+  {q:"Strength does not come from physical capacity. It comes from an indomitable will.",a:"Gandhi"},
+  {q:"It does not matter how slowly you go as long as you do not stop.",a:"Confucius"},
+  {q:"The mind is everything. What you think, you become.",a:"Buddha"},
+  {q:"He who conquers himself is the mightiest warrior.",a:"Confucius"},
+  {q:"What stands in the way becomes the way.",a:"Marcus Aurelius"},
+  {q:"The impediment to action advances action. What stands in the way becomes the way.",a:"Marcus Aurelius"},
+  {q:"You have power over your mind — not outside events. Realize this, and you will find strength.",a:"Marcus Aurelius"},
+  {q:"Fall seven times, stand up eight.",a:"Japanese Proverb"},
+  {q:"If you are going through hell, keep going.",a:"Winston Churchill"},
+  {q:"The secret of getting ahead is getting started.",a:"Mark Twain"},
+  {q:"Act as if what you do makes a difference. It does.",a:"William James"},
+  {q:"The only way out is through.",a:"Robert Frost"},
+  {q:"Energy and persistence conquer all things.",a:"Benjamin Franklin"},
+  {q:"In the middle of difficulty lies opportunity.",a:"Albert Einstein"},
+  {q:"One day or day one. You decide.",a:"Unknown"},
+  {q:"Your future self is watching you right now through your memories.",a:"Aubrey Marcus"},
+  {q:"Don't count the days. Make the days count.",a:"Muhammad Ali"},
+  {q:"The two most powerful warriors are patience and time.",a:"Leo Tolstoy"},
+  {q:"Success is the sum of small efforts repeated day in and day out.",a:"Robert Collier"},
+  {q:"To improve is to change; to be perfect is to change often.",a:"Winston Churchill"},
+  {q:"Hardships often prepare ordinary people for an extraordinary destiny.",a:"C.S. Lewis"},
+  {q:"The harder the battle, the sweeter the victory.",a:"Les Brown"},
+  {q:"Every moment is a fresh beginning.",a:"T.S. Eliot"},
+  {q:"Doubt kills more dreams than failure ever will.",a:"Suzy Kassem"},
+  {q:"Pain is temporary. Quitting lasts forever.",a:"Lance Armstrong"},
+  {q:"Be so good they can't ignore you.",a:"Steve Martin"},
+  {q:"The brain is plastic. Every clean day reshapes it.",a:"SYNAPSE"},
+  {q:"Your dopamine system is healing right now. Trust the process.",a:"SYNAPSE"},
+  {q:"Discipline now. Freedom forever.",a:"SYNAPSE"},
+  {q:"Every urge you outlast is a neural pathway you starve.",a:"SYNAPSE"},
+  {q:"The soldier who shows up every day wins the war.",a:"SYNAPSE"},
+];
+const getDailyQuote=()=>{
+  const dayOfYear=Math.floor((Date.now()-new Date(new Date().getFullYear(),0,0))/(1000*60*60*24));
+  return DAILY_QUOTES[dayOfYear%DAILY_QUOTES.length];
+};
+
 function Checkin({streak,savedPlan,lastCheckin,onCheckin,onGoChat}) {
   const [msg,setMsg]=useState("");
   const [reply,setReply]=useState("");
@@ -2175,6 +2220,15 @@ function Checkin({streak,savedPlan,lastCheckin,onCheckin,onGoChat}) {
         </div>
       </div>
       <div style={{maxWidth:820,margin:"0 auto",padding:"clamp(40px,6vw,72px) clamp(16px,8vw,100px)",position:"relative",zIndex:1}}>
+        {/* Daily Quote */}
+        {(()=>{const dq=getDailyQuote();return(
+          <div style={{marginBottom:32,padding:"22px 28px",borderRadius:14,background:"rgba(255,140,0,0.03)",border:"1px solid rgba(255,140,0,0.1)",position:"relative",overflow:"hidden"}}>
+            <div style={{position:"absolute",top:0,left:0,width:3,height:"100%",background:"linear-gradient(180deg,rgba(255,140,0,0.6),rgba(255,80,0,0.2))",borderRadius:"3px 0 0 3px"}}/>
+            <div style={{fontSize:9,letterSpacing:2.5,color:"rgba(255,140,0,0.4)",textTransform:"uppercase",fontWeight:600,marginBottom:10,paddingLeft:4}}>⚡ Today's Signal</div>
+            <div style={{fontSize:14,lineHeight:1.75,color:"rgba(255,255,255,0.6)",fontWeight:300,fontStyle:"italic",paddingLeft:4,marginBottom:8}}>"{dq.q}"</div>
+            <div style={{fontSize:10,color:"rgba(255,255,255,0.2)",letterSpacing:1,paddingLeft:4}}>— {dq.a}</div>
+          </div>
+        );})()}
         {/* Battle Plan — always accessible from checkin */}
         <BattlePlanAccordion plan={savedPlan}/>
         <div className="tag s1" style={{marginBottom:32}}><span className="d"/>Daily Check-In</div>
