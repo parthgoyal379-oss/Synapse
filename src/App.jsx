@@ -2323,7 +2323,11 @@ function Chat({streak,savedPlan}){
   const [mode,setMode]=useState(getMode());
   const bottomRef=useRef(null);
   useEffect(()=>{setTimeout(()=>setVis(true),60);},[]);
-  useEffect(()=>{bottomRef.current?.scrollIntoView({behavior:"smooth"});},[msgs,loading]);
+  const isFirstRender=useRef(true);
+  useEffect(()=>{
+    if(isFirstRender.current){isFirstRender.current=false;return;}
+    bottomRef.current?.scrollIntoView({behavior:"smooth"});
+  },[msgs,loading]);
 
   const switchMode=(m)=>{
     ls.set("syn_mode",m.id);
