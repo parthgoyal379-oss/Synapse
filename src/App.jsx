@@ -1,4 +1,4 @@
-import { useState, useEffect, useLayoutEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo } from "react";
 import { auth, googleProvider } from "./firebase";
 import {
   signInWithEmailAndPassword, createUserWithEmailAndPassword,
@@ -94,6 +94,8 @@ const _CHECKIN_TAG=`FIRST LINE must always be a status tag — no exceptions:
 [STATUS:WIN] — held strong, no relapse
 [STATUS:SLIP] — relapsed or slipped badly
 [STATUS:MID] — tough day, no full relapse
+
+PATTERN AWARENESS: If the message contains a "PATTERN DATA" note (recurring triggers/times from recent check-ins), you may reference it naturally if it fits — e.g. noticing the user tends to slip at a certain time or around a certain trigger. Don't force this every message; only mention it when it adds real insight, especially on a SLIP or repeated MID.
 
 SAFETY RULE — ALWAYS PRESENT: If the check-in message contains language suggesting self-harm or suicidal ideation, ignore the status tag entirely and respond ONLY with: "Before anything else — India: KIRAN 1800-599-0019 | USA: 988. Talk to someone right now. Your mission waits."`;
 
@@ -1746,6 +1748,15 @@ function Confess({onSubmit,loading}) {
     const arch = ARCHETYPES.find(a=>a.id===archetype);
     const archData = arch ? {id:arch.id,title:arch.title,sub:arch.sub} : null;
     if(arch) ls.set("syn_archetype", JSON.stringify(archData));
+    // Save addiction data for structured checkin screen
+    const confessData = {
+      addictions: selected.map(a=>({
+        id:a.id, label:a.label, emoji:a.emoji, color:a.color,
+        isFreq:FREQ_ADDICTIONS.has(a.id),
+        value:hours[a.id]||0
+      }))
+    };
+    ls.set("syn_confess", JSON.stringify(confessData));
     const enriched = arch ? `User Archetype: ${arch.title} (${arch.sub})\n\n${prompt}` : prompt;
     onSubmit(enriched, archData);
   };
@@ -2242,200 +2253,368 @@ const getDailyQuote=()=>{
 };
 
 function Checkin({streak,savedPlan,lastCheckin,onCheckin,onGoChat}) {
-  const [msg,setMsg]=useState("");
+  // Load saved confess data (addictions + baseline values)
+  const confessData = useMemo(()=>{ try{ return JSON.parse(ls.get("syn_confess","null")); }catch{ return null; } },[]);
+  const addictions = confessData?.addictions||[];
+
+  // Per-addiction status: "clean" | "partial" | "slip"
+  const [adStatus,setAdStatus]=useState(()=>Object.fromEntries(addictions.map(a=>[a.id,"clean"])));
+  // Per-addiction actual usage today (for partial/slip)
+  const [adUsage,setAdUsage]=useState(()=>Object.fromEntries(addictions.map(a=>[a.id,0])));
+  // Per-addiction trigger tags (only relevant for partial/slip)
+  const [adTriggers,setAdTriggers]=useState(()=>Object.fromEntries(addictions.map(a=>[a.id,[]])));
+  // Per-addiction time of day it happened
+  const [adTimeOfDay,setAdTimeOfDay]=useState(()=>Object.fromEntries(addictions.map(a=>[a.id,null])));
+  // Overall mood
+  const [mood,setMood]=useState(null);
+  // Optional notes
+  const [notes,setNotes]=useState("");
+  const [notesFocused,setNotesFocused]=useState(false);
+
   const [reply,setReply]=useState("");
-  // Restore today's status if user revisits checkin screen same day
   const [status,setStatus]=useState(()=>{
     const today=new Date().toDateString();
     if(lastCheckin!==today) return null;
-    try{
-      const h=JSON.parse(ls.get("syn_history","[]"));
-      const entry=h.find(e=>e.date===today);
-      return entry?entry.status.toUpperCase():null;
-    }catch{return null;}
+    try{ const h=JSON.parse(ls.get("syn_history","[]")); const e=h.find(e=>e.date===today); return e?e.status.toUpperCase():null; }catch{ return null; }
   });
   const [sharing,setSharing]=useState(false);
   const [loading,setLoading]=useState(false);
   const [entered,setEntered]=useState(false);
-  const [focused,setFocused]=useState(false);
+  // Inline follow-up chat after AI responds
+  const [chatMsgs,setChatMsgs]=useState([]);
+  const [chatInput,setChatInput]=useState("");
+  const [chatLoading,setChatLoading]=useState(false);
+  const isFirstChatRender=useRef(true);
   const bottomRef=useRef(null);
+  const chatBottomRef=useRef(null);
   const today=new Date().toDateString();
   const done=lastCheckin===today;
-  const lv=getLevel(streak);const nx=getNextLvl(streak);
+  const lv=getLevel(streak); const nx=getNextLvl(streak);
   const xp=nx?Math.min(100,((streak-lv.minDays)/(nx.minDays-lv.minDays))*100):100;
-  useEffect(()=>{setTimeout(()=>setEntered(true),60);},[]);
-  useEffect(()=>{bottomRef.current?.scrollIntoView({behavior:"smooth"});},[reply]);
+
+  useEffect(()=>{ setTimeout(()=>setEntered(true),60); },[]);
+  useEffect(()=>{ if(reply) bottomRef.current?.scrollIntoView({behavior:"smooth"}); },[reply]);
+  useEffect(()=>{
+    if(isFirstChatRender.current){ isFirstChatRender.current=false; return; }
+    chatBottomRef.current?.scrollIntoView({behavior:"smooth"});
+  },[chatMsgs,chatLoading]);
+
+  const MOODS=[
+    {id:"strong",label:"💪 Strong",desc:"Felt in control"},
+    {id:"held",label:"😤 Held firm",desc:"Tough but managed"},
+    {id:"struggled",label:"😔 Struggled",desc:"Close calls today"},
+    {id:"rough",label:"💀 Rough day",desc:"Really hard"},
+  ];
+
+  const TRIGGERS=[
+    {id:"bored",label:"😑 Bored"},
+    {id:"stressed",label:"😰 Stressed"},
+    {id:"lonely",label:"🫤 Lonely"},
+    {id:"alone_room",label:"🚪 Alone in room"},
+    {id:"phone_bed",label:"📱 Phone in bed"},
+    {id:"after_argument",label:"💢 After argument"},
+    {id:"tired",label:"😴 Tired / late night"},
+    {id:"social_media",label:"📲 Saw it on social media"},
+    {id:"friends_around",label:"👥 Around certain friends"},
+    {id:"failure",label:"📉 Felt like a failure"},
+    {id:"free_time",label:"⏳ Too much free time"},
+    {id:"habit_cue",label:"🔁 Just a habit / autopilot"},
+  ];
+
+  const TIME_SLOTS=[
+    {id:"morning",label:"🌅 Morning"},
+    {id:"afternoon",label:"☀️ Afternoon"},
+    {id:"evening",label:"🌆 Evening"},
+    {id:"late_night",label:"🌙 Late Night"},
+  ];
+
+  const toggleTrigger=(addictionId,triggerId)=>{
+    setAdTriggers(prev=>{
+      const current=prev[addictionId]||[];
+      const next=current.includes(triggerId)?current.filter(t=>t!==triggerId):[...current,triggerId];
+      return {...prev,[addictionId]:next};
+    });
+  };
+
+  // Build structured report for AI
+  const buildReport=()=>{
+    const adLines=addictions.map(a=>{
+      const s=adStatus[a.id];
+      const goal=a.isFreq?`Goal: 0x/week`:`Goal: 0h/day`;
+      const baseline=a.isFreq?`Baseline: ${a.value}x/week`:`Baseline: ${a.value}h/day`;
+      const usage=adUsage[a.id];
+      if(s==="clean") return `${a.emoji} ${a.label}: CLEAN ✓ (${goal}, ${baseline})`;
+      const usageStr=a.isFreq?`${usage}x today`:`${usage}h today`;
+      const triggerIds=adTriggers[a.id]||[];
+      const triggerStr=triggerIds.length?` | Triggers: ${triggerIds.map(t=>TRIGGERS.find(tr=>tr.id===t)?.label.replace(/^\S+\s/,"")||t).join(", ")}`:"";
+      const timeId=adTimeOfDay[a.id];
+      const timeStr=timeId?` | When: ${TIME_SLOTS.find(t=>t.id===timeId)?.label.replace(/^\S+\s/,"")||timeId}`:"";
+      return `${a.emoji} ${a.label}: ${s==="partial"?"PARTIAL ~":"SLIPPED ✗"} (${usageStr}, ${goal}, ${baseline}${triggerStr}${timeStr})`;
+    }).join("\n");
+    const moodLine=mood?`\nOverall mood: ${MOODS.find(m=>m.id===mood)?.label||mood}`:"";
+    const notesLine=notes.trim()?`\nAdditional notes: ${notes.trim()}`:"";
+    return `Day ${streak+1} structured check-in:\n\n${adLines}${moodLine}${notesLine}`;
+  };
+
+  // Save raw trigger data to a separate localStorage log for long-term pattern detection
+  const logTriggerData=()=>{
+    try{
+      const log=JSON.parse(ls.get("syn_trigger_log","[]"));
+      const entry={
+        date:new Date().toDateString(),
+        mood,
+        addictions:addictions.filter(a=>adStatus[a.id]!=="clean").map(a=>({
+          id:a.id,label:a.label,status:adStatus[a.id],usage:adUsage[a.id],
+          triggers:adTriggers[a.id]||[],timeOfDay:adTimeOfDay[a.id]
+        }))
+      };
+      log.push(entry);
+      ls.set("syn_trigger_log",JSON.stringify(log.slice(-90))); // keep last 90 days
+    }catch{}
+  };
+
   const submit=async()=>{
-    if(!msg.trim()||done)return;
+    if(done||!mood) return;
     setLoading(true);
-    const result=await onCheckin(msg);
+    const report=buildReport();
+    logTriggerData();
+    const result=await onCheckin(report);
     setReply(result.reply);
     setStatus(result.status);
     setLoading(false);
-    setMsg("");
   };
+
+  const sendChat=async()=>{
+    const txt=chatInput.trim();
+    if(!txt||chatLoading) return;
+    setChatInput("");
+    setChatMsgs(m=>[...m,{role:"user",text:txt}]);
+    if(detectCrisis(txt)){ setChatMsgs(m=>[...m,{role:"ai",text:CRISIS_RESPONSE,crisis:true}]); return; }
+    setChatLoading(true);
+    try{
+      const arch=JSON.parse(ls.get("syn_archetype","null"));
+      const archetypeCtx=arch?`\n\nUser archetype: ${arch.title} — ${arch.sub}`:"";
+      const ctx=[
+        {role:"user",content:savedPlan+archetypeCtx},
+        {role:"assistant",content:"Your mission begins now."},
+        {role:"user",content:buildReport()},
+        {role:"assistant",content:reply},
+        ...chatMsgs.map(m=>({role:m.role==="user"?"user":"assistant",content:m.text})),
+        {role:"user",content:txt}
+      ];
+      const r=await callAI(ctx,withTone(SYSTEM_CHAT));
+      const aiText=r.startsWith("[OFF_TOPIC]")?"That's outside my scope — I only coach on recovery topics. What's on your mind about your mission?":r;
+      setChatMsgs(m=>[...m,{role:"ai",text:aiText}]);
+    }catch(e){ setChatMsgs(m=>[...m,{role:"ai",text:"Connection issue — try again."}]); }
+    setChatLoading(false);
+  };
+
+  const canSubmit=mood&&!done&&!loading;
+
   return(
     <div style={{minHeight:"100vh",paddingTop:80,position:"relative",overflowX:"hidden"}}>
+      {/* Hero streak */}
       <div className="hero-pad" style={{padding:"clamp(60px,8vw,80px) clamp(20px,8vw,100px) clamp(40px,5vw,64px)",borderBottom:"1px solid rgba(255,140,0,0.07)",position:"relative",zIndex:1,minHeight:"52vh",display:"flex",flexDirection:"column",justifyContent:"flex-end"}}>
         <div style={{position:"absolute",inset:0,background:`radial-gradient(ellipse at 65% 55%, rgba(${lv.hex},0.12) 0%, transparent 60%)`,pointerEvents:"none",transition:"background 1s"}}/>
         {[100,180,260].map((s,i)=><div key={i} style={{position:"absolute",top:"45%",right:"30%",width:s,height:s,borderRadius:"50%",border:`1px solid rgba(${lv.hex},0.2)`,animation:`ringOut ${3.5+i*.8}s ease-out ${i*.6}s infinite`,pointerEvents:"none"}}/>)}
         <div style={{opacity:entered?1:0,transform:entered?"translateY(0)":"translateY(24px)",transition:"all .9s cubic-bezier(.16,1,.3,1)",position:"relative",zIndex:2}}>
           <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:20,flexWrap:"wrap"}}>
             <div className="tag"><span className="d"/>Current Streak</div>
-            {(()=>{
-              try{
-                const arch=JSON.parse(ls.get("syn_archetype","null"));
-                if(!arch) return null;
-                const archetypeData = ARCHETYPES.find(a=>a.id===arch.id);
-                return(
-                  <div style={{display:"inline-flex",alignItems:"center",gap:6,
-                    background:`rgba(${archetypeData?.accentRgb||"255,140,0"},0.08)`,
-                    border:`1px solid rgba(${archetypeData?.accentRgb||"255,140,0"},0.22)`,
-                    borderRadius:999,padding:"5px 14px"}}>
-                    <span style={{fontSize:13}}>{arch.id==="sovereign"?"♛":arch.id==="arbiter"?"⚖":arch.id==="stoic"?"🌳":"▲"}</span>
-                    <span style={{fontSize:10,letterSpacing:1.5,fontWeight:600,color:`rgba(${archetypeData?.accentRgb||"255,180,80"},0.75)`,textTransform:"uppercase"}}>{arch.title}</span>
-                  </div>
-                );
-              }catch{return null;}
-            })()}
+            {(()=>{ try{ const arch=JSON.parse(ls.get("syn_archetype","null")); if(!arch) return null; const ad=ARCHETYPES.find(a=>a.id===arch.id); return(<div style={{display:"inline-flex",alignItems:"center",gap:6,background:`rgba(${ad?.accentRgb||"255,140,0"},0.08)`,border:`1px solid rgba(${ad?.accentRgb||"255,140,0"},0.22)`,borderRadius:999,padding:"5px 14px"}}><span style={{fontSize:13}}>{arch.id==="sovereign"?"♛":arch.id==="arbiter"?"⚖":arch.id==="stoic"?"🌳":"▲"}</span><span style={{fontSize:10,letterSpacing:1.5,fontWeight:600,color:`rgba(${ad?.accentRgb||"255,180,80"},0.75)`,textTransform:"uppercase"}}>{arch.title}</span></div>); }catch{return null;} })()}
           </div>
-          <div className="streak-num" style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(72px,16vw,200px)",fontWeight:800,lineHeight:.85,color:"#fff",marginBottom:12,textShadow:`0 0 80px rgba(${lv.hex},0.25)`,transition:"text-shadow 1s"}}><AnimatedNumber target={streak}/></div>
-          <div style={{fontSize:11,letterSpacing:5,color:"rgba(255,255,255,0.25)",textTransform:"uppercase",marginBottom:24}}>Days Clean</div>
+          <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(72px,16vw,200px)",fontWeight:800,lineHeight:.85,color:"var(--text)",marginBottom:12,textShadow:`0 0 80px rgba(${lv.hex},0.25)`,transition:"text-shadow 1s"}}><AnimatedNumber target={streak}/></div>
+          <div style={{fontSize:11,letterSpacing:5,color:"var(--text3)",textTransform:"uppercase",marginBottom:24}}>Days Clean</div>
           <div style={{display:"inline-flex",alignItems:"center",gap:9,background:`rgba(${lv.hex},0.09)`,border:`1px solid rgba(${lv.hex},0.3)`,borderRadius:999,padding:"9px 22px",marginBottom:32,transition:"all .8s"}}>
             <div style={{width:7,height:7,borderRadius:"50%",background:lv.color,boxShadow:`0 0 12px ${lv.color}`,transition:"all .8s"}}/>
             <span style={{fontSize:11,letterSpacing:2,color:lv.color,textTransform:"uppercase",fontWeight:600,transition:"color .8s"}}>Level {lv.level} — {lv.title}</span>
           </div>
           <div style={{maxWidth:480}}>
-            <div style={{display:"flex",justifyContent:"space-between",fontSize:10,color:"rgba(255,255,255,0.18)",letterSpacing:1,textTransform:"uppercase",marginBottom:10}}><span>{lv.title}</span><span>{nx?`${streak} / ${nx.minDays} days`:"MAX LEVEL REACHED"}</span></div>
+            <div style={{display:"flex",justifyContent:"space-between",fontSize:10,color:"var(--text4)",letterSpacing:1,textTransform:"uppercase",marginBottom:10}}><span>{lv.title}</span><span>{nx?`${streak} / ${nx.minDays} days`:"MAX LEVEL REACHED"}</span></div>
             <div style={{height:3,background:"rgba(255,255,255,0.05)",borderRadius:2,overflow:"hidden"}}><div style={{height:"100%",borderRadius:2,background:`linear-gradient(90deg,${lv.color}cc,${lv.color})`,boxShadow:`0 0 14px ${lv.color}80`,width:`${xp}%`,transition:"width 1.6s cubic-bezier(.16,1,.3,1) .3s"}}/></div>
           </div>
         </div>
       </div>
-      <div style={{maxWidth:820,margin:"0 auto",padding:"clamp(40px,6vw,72px) clamp(16px,8vw,100px)",position:"relative",zIndex:1}}>
+
+      <div style={{maxWidth:820,margin:"0 auto",padding:"clamp(32px,5vw,60px) clamp(16px,8vw,100px)",position:"relative",zIndex:1}}>
         {/* Daily Quote */}
-        {(()=>{const dq=getDailyQuote();return(
-          <div style={{marginBottom:32,padding:"22px 28px",borderRadius:14,background:"rgba(255,140,0,0.03)",border:"1px solid rgba(255,140,0,0.1)",position:"relative",overflow:"hidden"}}>
+        {(()=>{ const dq=getDailyQuote(); return(
+          <div style={{marginBottom:28,padding:"18px 24px",borderRadius:12,background:"var(--accent3)",border:"1px solid var(--border)",position:"relative",overflow:"hidden"}}>
             <div style={{position:"absolute",top:0,left:0,width:3,height:"100%",background:"linear-gradient(180deg,rgba(255,140,0,0.6),rgba(255,80,0,0.2))",borderRadius:"3px 0 0 3px"}}/>
-            <div style={{fontSize:9,letterSpacing:2.5,color:"rgba(255,140,0,0.4)",textTransform:"uppercase",fontWeight:600,marginBottom:10,paddingLeft:4}}>⚡ Today's Signal</div>
-            <div style={{fontSize:14,lineHeight:1.75,color:"rgba(255,255,255,0.6)",fontWeight:300,fontStyle:"italic",paddingLeft:4,marginBottom:8}}>"{dq.q}"</div>
-            <div style={{fontSize:10,color:"rgba(255,255,255,0.2)",letterSpacing:1,paddingLeft:4}}>— {dq.a}</div>
+            <div style={{fontSize:9,letterSpacing:2.5,color:"var(--accent)",textTransform:"uppercase",fontWeight:600,marginBottom:8,paddingLeft:4}}>⚡ Today's Signal</div>
+            <div style={{fontSize:13,lineHeight:1.75,color:"var(--text2)",fontWeight:300,fontStyle:"italic",paddingLeft:4,marginBottom:6}}>"{dq.q}"</div>
+            <div style={{fontSize:10,color:"var(--text4)",letterSpacing:1,paddingLeft:4}}>— {dq.a}</div>
           </div>
-        );})()}
-        {/* Battle Plan — always accessible from checkin */}
-        {savedPlan&&<div style={{display:"flex",alignItems:"center",gap:10,marginBottom:0}}>
-          <div style={{flex:1}}><BattlePlanAccordion plan={savedPlan}/></div>
-          <button onClick={()=>{
-            const user=JSON.parse(ls.get("syn_user","{}"));
-            const arch=JSON.parse(ls.get("syn_archetype","null"));
-            const streakVal=parseInt(ls.get("syn_streak","0"))||0;
-            const date=new Date().toLocaleDateString("en-IN",{day:"numeric",month:"long",year:"numeric"});
-            const archName=arch?.title||"WARRIOR";
-            const archSymbol=arch?.symbol||"⚡";
-            const formatted=savedPlan.replace(/\*\*(.+?)\*\*/g,"<strong>$1</strong>").split("\n").map(line=>line.startsWith("**")&&line.endsWith("**")?`<h3>${line.replace(/\*\*/g,"")}</h3>`:line.trim()==="---"?`<hr/>`:!line.trim()?`<div style="height:4px"></div>`:`<p>${line}</p>`).join("");
-            const w=window.open("","_blank","width=900,height=800");
-            w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"/><title>SYNAPSE — Battle Plan</title><style>@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Inter:wght@300;400;500;600;700&display=swap');*{margin:0;padding:0;box-sizing:border-box;word-wrap:break-word;overflow-wrap:break-word;}html,body{background:#fff;color:#111;font-family:'Inter',sans-serif;font-size:12px;}body{max-width:100%;margin:0;padding:0;}@media screen{body{max-width:720px;margin:0 auto;}}.header{padding:20px 32px 16px;border-bottom:2px solid #f0f0f0;display:flex;align-items:center;justify-content:space-between;}.brand{display:flex;align-items:center;gap:10px;}.brand-logo{width:28px;height:28px;border-radius:6px;background:linear-gradient(135deg,#ff9500,#ff5000);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900;font-family:'Orbitron',sans-serif;color:#fff;}.brand-name{font-family:'Orbitron',sans-serif;font-size:14px;font-weight:900;letter-spacing:2px;color:#ff6000;}.brand-tagline{font-size:8px;color:#bbb;letter-spacing:2px;text-transform:uppercase;margin-top:1px;}.doc-title{font-family:'Orbitron',sans-serif;font-size:18px;font-weight:900;color:#111;}.doc-subtitle{font-size:8px;color:#ff6000;letter-spacing:2px;text-transform:uppercase;font-weight:600;margin-top:2px;}.meta{display:flex;flex-wrap:wrap;gap:20px;padding:10px 32px;border-bottom:1px solid #f0f0f0;background:#fafafa;align-items:center;}.meta-label{font-size:7px;color:#bbb;letter-spacing:2px;text-transform:uppercase;font-weight:600;}.meta-value{font-size:12px;color:#111;font-weight:600;}.arch-badge{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:999px;border:1px solid #ffb347;background:#fff8f0;font-family:'Orbitron',sans-serif;font-size:9px;font-weight:700;color:#b35000;}.content{padding:16px 32px;}.section-label{font-size:7px;color:#ff6000;letter-spacing:3px;text-transform:uppercase;font-weight:700;margin-bottom:10px;}.card{border:1px solid #efefef;border-left:3px solid #ff6000;border-radius:6px;padding:16px 20px;}.plan-text{font-size:12px;line-height:1.65;color:#333;}.plan-text p{margin-bottom:0;}.plan-text h3{font-size:9px;font-weight:700;color:#b35000;letter-spacing:2px;text-transform:uppercase;margin:12px 0 4px;padding-top:10px;border-top:1px solid #f0f0f0;}.plan-text h3:first-child{margin-top:0;padding-top:0;border-top:none;}.plan-text hr{border:none;border-top:1px solid #f0f0f0;margin:10px 0;}.plan-text strong{color:#b35000;font-weight:700;}.footer{padding:10px 32px 16px;border-top:1px solid #f0f0f0;display:flex;justify-content:space-between;background:#fafafa;font-size:8px;color:#bbb;}.watermark{position:fixed;bottom:-20px;right:-10px;font-family:'Orbitron',sans-serif;font-size:120px;font-weight:900;color:rgba(255,100,0,.035);pointer-events:none;line-height:1;}.print-btn{position:fixed;top:12px;right:12px;background:linear-gradient(135deg,#ff9500,#ff5000);border:none;color:#fff;padding:8px 20px;border-radius:7px;font-size:11px;font-weight:600;cursor:pointer;z-index:999;}@media print{.print-btn{display:none!important;}.card{page-break-inside:avoid;}}@page{margin:0.5in 0.6in;size:A4;}</style></head><body><button class="print-btn" onclick="window.print()">⬇ Save as PDF</button><div class="watermark">S</div><div class="header"><div class="brand"><div class="brand-logo">S</div><div><div class="brand-name">SYNAPSE</div><div class="brand-tagline">Dopamine Recovery Protocol</div></div></div><div style="text-align:right"><div class="doc-title">BATTLE PLAN</div><div class="doc-subtitle">Personalized Recovery Protocol — Classified</div></div></div><div class="meta"><div><div class="meta-label">Soldier</div><div class="meta-value">${user.name||"Anonymous"}</div></div><div><div class="meta-label">Streak</div><div class="meta-value">Day ${streakVal}</div></div><div><div class="meta-label">Issued</div><div class="meta-value">${date}</div></div><div><div class="meta-label">Archetype</div><div class="arch-badge">${archSymbol} ${archName}</div></div></div><div class="content"><div class="section-label">Mission Briefing</div><div class="card"><div class="plan-text">${formatted}</div></div></div><div class="footer"><div>Generated by SYNAPSE • synapserewire@gmail.com</div><div>synapse-parth.vercel.app • ${date}</div></div></body></html>`);
-            w.document.close();
-          }} style={{flexShrink:0,background:"rgba(255,140,0,0.06)",border:"1px solid rgba(255,140,0,0.2)",color:"rgba(255,180,80,0.7)",padding:"10px 16px",borderRadius:10,fontSize:11,fontWeight:600,cursor:"none",transition:"all .25s",letterSpacing:.5,whiteSpace:"nowrap",alignSelf:"flex-start",marginTop:0}} onMouseEnter={e=>{e.currentTarget.style.background="rgba(255,140,0,0.12)";}} onMouseLeave={e=>{e.currentTarget.style.background="rgba(255,140,0,0.06)";}}>⬇ Plan</button>
-        </div>}
-        {!savedPlan&&<BattlePlanAccordion plan={savedPlan}/>}
-        <div className="tag s1" style={{marginBottom:32}}><span className="d"/>Daily Check-In</div>
-        {done?(
-          <div style={{animation:"scaleIn .55s cubic-bezier(.16,1,.3,1) both"}}>
-            {/* WIN state */}
-            {status!=="SLIP" && (
-              <div className="glass" style={{padding:"clamp(24px,5vw,52px) clamp(16px,4vw,48px)",textAlign:"center",animation:"borderGlow 4s ease-in-out infinite",
-                background:status==="WIN"
-                  ?"linear-gradient(135deg,rgba(255,140,0,0.08),rgba(255,80,0,0.04))"
-                  :"linear-gradient(135deg,rgba(255,200,0,0.06),rgba(255,100,0,0.03))"}}>
-                <div style={{fontSize:48,marginBottom:16}}>{status==="WIN"?"🔥":"⚡"}</div>
-                <h3 style={{fontFamily:"'Orbitron',sans-serif",fontSize:36,fontWeight:800,
-                  background:status==="WIN"
-                    ?"linear-gradient(135deg,#ff9500,#ffcc00)"
-                    :"linear-gradient(135deg,#ffcc00,#ff9500)",
-                  WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",
-                  marginBottom:8,letterSpacing:-1}}>
-                  {status==="WIN"?"MISSION COMPLETE":"YOU SHOWED UP"}
-                </h3>
-                <p style={{fontSize:13,color:"rgba(255,255,255,0.28)",letterSpacing:1}}>
-                  {status==="WIN"
-                    ?`Day ${streak} locked in. Your brain rewired a little more today.`
-                    :`Day ${streak} — tough day, but you came back. That's what matters.`}
-                </p>
-              </div>
-            )}
-            {/* SLIP state */}
-            {status==="SLIP" && (
-              <div className="glass" style={{padding:"clamp(24px,5vw,52px) clamp(16px,4vw,48px)",textAlign:"center",
-                background:"linear-gradient(135deg,rgba(255,50,50,0.07),rgba(200,20,20,0.03))",
-                border:"1px solid rgba(255,80,80,0.2)"}}>
-                <div style={{fontSize:48,marginBottom:16}}>⚔️</div>
-                <h3 style={{fontFamily:"'Orbitron',sans-serif",fontSize:32,fontWeight:800,
-                  color:"#ff4444",marginBottom:8,letterSpacing:-1}}>STREAK RESET</h3>
-                <p style={{fontSize:13,color:"rgba(255,255,255,0.28)",letterSpacing:.5,lineHeight:1.8,maxWidth:400,margin:"0 auto"}}>
-                  Every soldier falls. The ones who win are the ones who get back up.<br/>
-                  <span style={{color:"rgba(255,140,0,0.5)"}}>Your mission doesn't end here — it restarts.</span>
-                </p>
-              </div>
-            )}
-            {reply&&(
-              <div className="glass" style={{padding:"36px 40px",marginTop:16,position:"relative",animation:"fadeUp .6s ease both",
-                border:`1px solid ${status==="WIN"?"rgba(255,140,0,0.18)":status==="SLIP"?"rgba(255,80,80,0.18)":"rgba(255,200,0,0.15)"}`}}>
-                <div style={{position:"absolute",top:-14,left:28,background:"var(--bg)",padding:"0 12px"}}>
-                  <div className="tag" style={{fontSize:9,padding:"5px 12px",
-                    borderColor:status==="SLIP"?"rgba(255,80,80,0.3)":"rgba(255,140,0,0.18)"}}>
-                    <span className="d" style={{background:status==="WIN"?"#ff8c00":status==="SLIP"?"#ff4444":"#ffcc00",boxShadow:`0 0 7px ${status==="WIN"?"#ff8c00":status==="SLIP"?"#ff4444":"#ffcc00"}`}}/>
-                    {status==="WIN"?"Synapse — Coach Response":status==="SLIP"?"Synapse — Get Back Up":"Synapse — Keep Fighting"}
-                  </div>
-                </div>
-                <p style={{fontSize:14,lineHeight:2.1,color:"rgba(255,255,255,0.58)",fontWeight:300,whiteSpace:"pre-wrap"}}>{parseBold(reply)}</p>
-              </div>
-            )}
-            {/* Share Card — only on WIN/MID days */}
-            {done && status !== "SLIP" && streak > 0 && (
-              <div style={{marginTop:24,display:"flex",flexDirection:"column",gap:10,animation:"fadeUp .6s ease .3s both"}}>
-                <button
-                  onClick={()=>doShare(streak,lv,setSharing)}
-                  disabled={sharing}
-                  style={{width:"100%",background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.1)",color:"rgba(255,255,255,0.45)",padding:"15px 28px",borderRadius:12,fontFamily:"'Inter',sans-serif",fontSize:13,fontWeight:500,letterSpacing:.3,cursor:"none",display:"flex",alignItems:"center",justifyContent:"center",gap:10,transition:"all .3s"}}>
-                  <span style={{fontSize:16}}>{sharing?"⏳":"📤"}</span>
-                  {sharing ? "Generating card..." : `Share Day ${streak} 🔥`}
-                </button>
-                <button onClick={()=>onGoChat&&onGoChat()} style={{width:"100%",background:"rgba(255,140,0,.06)",border:"1px solid rgba(255,140,0,.2)",borderRadius:12,padding:"14px",color:"rgba(255,180,80,.7)",fontSize:12,fontWeight:600,letterSpacing:1,textTransform:"uppercase",cursor:"none",fontFamily:"'Orbitron',sans-serif"}}>
-                  ⚡ Talk to Coach
-                </button>
-              </div>
-            )}
-            {done && status === "SLIP" && (
-              <div style={{marginTop:24,animation:"fadeUp .6s ease .3s both"}}>
-                <button onClick={()=>onGoChat&&onGoChat()} style={{width:"100%",background:"rgba(255,140,0,.06)",border:"1px solid rgba(255,140,0,.2)",borderRadius:12,padding:"14px",color:"rgba(255,180,80,.7)",fontSize:12,fontWeight:600,letterSpacing:1,textTransform:"uppercase",cursor:"none",fontFamily:"'Orbitron',sans-serif"}}>
-                  ⚡ Talk to Coach — I need help
-                </button>
-              </div>
-            )}
-          </div>
-        ):(
+        ); })()}
+
+        {!done?(
           <>
-            <h3 className="s2" style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(26px,6.5vw,76px)",fontWeight:800,lineHeight:.92,letterSpacing:-2,marginBottom:36,background:"linear-gradient(145deg,#fff 50%,rgba(255,180,80,0.5) 100%)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent"}}>HOW WAS<br/>TODAY?</h3>
-            <div className="glass s3" style={{padding:32,transition:"box-shadow .4s",boxShadow:focused?"0 0 60px rgba(255,140,0,0.1),0 0 0 1px rgba(255,140,0,0.18)":"none"}}>
-              <textarea className="syn-textarea" rows={5} placeholder="Tell SYNAPSE how your day went. Did you hold? Did you slip? What was the hardest moment? What helped? Be real." value={msg} onChange={e=>setMsg(e.target.value)} onFocus={()=>setFocused(true)} onBlur={()=>setFocused(false)}/>
-              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginTop:20,paddingTop:18,borderTop:"1px solid rgba(255,140,0,0.07)"}}>
-                <span style={{fontSize:12,color:"rgba(255,255,255,0.15)"}}>Day {streak+1}</span>
-                <button className="btn-primary" onClick={submit} disabled={!msg.trim()||loading}>{loading?"Processing...":"Mark Complete →"}</button>
+            {/* Section: Addiction Cards */}
+            {addictions.length>0&&(
+              <div style={{marginBottom:28}}>
+                <div className="tag" style={{marginBottom:16,display:"inline-flex"}}><span className="d"/>Your Missions — How did today go?</div>
+                <div style={{display:"flex",flexDirection:"column",gap:12}}>
+                  {addictions.map(a=>{
+                    const s=adStatus[a.id];
+                    const goalStr=a.isFreq?`Goal: 0x/week • Baseline: ${a.value}x/week`:`Goal: 0h/day • Baseline: ${a.value}h/day`;
+                    const maxVal=a.isFreq?Math.max(a.value*2,10):Math.max(a.value*2,12);
+                    const rgb=a.color.replace('#','').match(/.{2}/g)?.map(x=>parseInt(x,16)).join(',')||"255,140,0";
+                    return(
+                      <div key={a.id} className="glass" style={{padding:"18px 22px",border:`1px solid ${s==="clean"?"rgba(136,255,68,0.2)":s==="partial"?"rgba(255,200,0,0.2)":"rgba(255,80,80,0.2)"}`,transition:"border-color .3s"}}>
+                        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12,flexWrap:"wrap",gap:8}}>
+                          <div style={{display:"flex",alignItems:"center",gap:10}}>
+                            <span style={{fontSize:22}}>{a.emoji}</span>
+                            <div>
+                              <div style={{fontSize:13,fontWeight:600,color:"var(--text)"}}>{a.label}</div>
+                              <div style={{fontSize:10,color:"var(--text4)",marginTop:1}}>{goalStr}</div>
+                            </div>
+                          </div>
+                          {/* Status pills */}
+                          <div style={{display:"flex",gap:6}}>
+                            {[["clean","✓ Clean","rgba(136,255,68,"],["partial","~ Partial","rgba(255,200,0,"],["slip","✗ Slipped","rgba(255,80,80,"]].map(([id,label,c])=>(
+                              <button key={id} onClick={()=>setAdStatus(p=>({...p,[a.id]:id}))}
+                                style={{padding:"5px 12px",borderRadius:999,border:`1px solid ${s===id?c+"0.6)":c+"0.15)"}`,background:s===id?c+"0.12)":"transparent",color:s===id?c+"0.9)":c+"0.4)",fontSize:10,fontWeight:600,letterSpacing:.5,transition:"all .2s"}}>
+                                {label}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                        {/* Usage slider — only on partial/slip */}
+                        {(s==="partial"||s==="slip")&&(
+                          <div style={{marginTop:8,padding:"12px 16px",background:"rgba(255,255,255,0.03)",borderRadius:8,border:"1px solid rgba(255,255,255,0.06)"}}>
+                            <div style={{display:"flex",justifyContent:"space-between",marginBottom:8}}>
+                              <span style={{fontSize:10,color:"var(--text3)"}}>How much today?</span>
+                              <span style={{fontSize:11,fontWeight:700,color:"var(--accent)",fontFamily:"'JetBrains Mono',monospace"}}>{adUsage[a.id]}{a.isFreq?"x":"h"}</span>
+                            </div>
+                            <input type="range" min={0} max={maxVal} step={a.isFreq?1:0.5} value={adUsage[a.id]}
+                              onChange={e=>setAdUsage(p=>({...p,[a.id]:parseFloat(e.target.value)}))}
+                              style={{width:"100%",accentColor:a.color,height:3}}/>
+                            <div style={{display:"flex",justifyContent:"space-between",fontSize:9,color:"var(--text4)",marginTop:4}}>
+                              <span>0{a.isFreq?"x":"h"}</span><span>{maxVal}{a.isFreq?"x":"h"}</span>
+                            </div>
+
+                            {/* Time of day picker */}
+                            <div style={{marginTop:14,paddingTop:12,borderTop:"1px solid rgba(255,255,255,0.05)"}}>
+                              <div style={{fontSize:10,color:"var(--text3)",marginBottom:8}}>When did it happen?</div>
+                              <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+                                {TIME_SLOTS.map(t=>(
+                                  <button key={t.id} onClick={()=>setAdTimeOfDay(p=>({...p,[a.id]:p[a.id]===t.id?null:t.id}))}
+                                    style={{padding:"5px 11px",borderRadius:999,border:`1px solid ${adTimeOfDay[a.id]===t.id?"rgba(255,140,0,0.5)":"rgba(255,255,255,0.08)"}`,background:adTimeOfDay[a.id]===t.id?"rgba(255,140,0,0.1)":"transparent",color:adTimeOfDay[a.id]===t.id?"var(--accent2)":"var(--text3)",fontSize:10,fontWeight:500,transition:"all .2s"}}>
+                                    {t.label}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+
+                            {/* Trigger tags */}
+                            <div style={{marginTop:12,paddingTop:12,borderTop:"1px solid rgba(255,255,255,0.05)"}}>
+                              <div style={{fontSize:10,color:"var(--text3)",marginBottom:8}}>What triggered it? <span style={{opacity:.5}}>(pick any)</span></div>
+                              <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+                                {TRIGGERS.map(t=>{
+                                  const active=(adTriggers[a.id]||[]).includes(t.id);
+                                  return(
+                                    <button key={t.id} onClick={()=>toggleTrigger(a.id,t.id)}
+                                      style={{padding:"5px 11px",borderRadius:999,border:`1px solid ${active?"rgba(255,140,0,0.5)":"rgba(255,255,255,0.08)"}`,background:active?"rgba(255,140,0,0.1)":"transparent",color:active?"var(--accent2)":"var(--text3)",fontSize:10,fontWeight:500,transition:"all .2s"}}>
+                                      {t.label}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Section: Mood */}
+            <div style={{marginBottom:28}}>
+              <div className="tag" style={{marginBottom:16,display:"inline-flex"}}><span className="d"/>Overall — How are you feeling?</div>
+              <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(160px,1fr))",gap:10}}>
+                {MOODS.map(m=>(
+                  <button key={m.id} onClick={()=>setMood(m.id)}
+                    style={{padding:"14px 16px",borderRadius:12,border:`1px solid ${mood===m.id?"rgba(255,140,0,0.5)":"var(--border)"}`,background:mood===m.id?"var(--accent3)":"var(--surface2)",textAlign:"left",transition:"all .2s"}}>
+                    <div style={{fontSize:15,marginBottom:4}}>{m.label}</div>
+                    <div style={{fontSize:10,color:"var(--text4)"}}>{m.desc}</div>
+                  </button>
+                ))}
               </div>
             </div>
-            {loading&&<div style={{marginTop:16}}><Dots label="Synapse is reading your day"/></div>}
+
+            {/* Section: Optional notes */}
+            <div style={{marginBottom:28}}>
+              <div className="tag" style={{marginBottom:14,display:"inline-flex"}}><span className="d"/>Anything else? <span style={{opacity:.5,marginLeft:6,fontStyle:"italic",textTransform:"none",letterSpacing:0}}>optional</span></div>
+              <textarea value={notes} onChange={e=>setNotes(e.target.value)} onFocus={()=>setNotesFocused(true)} onBlur={()=>setNotesFocused(false)}
+                placeholder="What made today hard? What helped? Anything SYNAPSE should know..."
+                rows={3}
+                style={{width:"100%",background:"var(--input-bg)",border:`1px solid ${notesFocused?"var(--border3)":"var(--border)"}`,borderRadius:10,color:"var(--text)",fontFamily:"'Inter',sans-serif",fontSize:13,fontWeight:300,padding:"14px 16px",outline:"none",resize:"none",lineHeight:1.75,transition:"all .3s",caretColor:"var(--accent)"}}/>
+            </div>
+
+            {/* Battle Plan accordion + download */}
+            {savedPlan&&<div style={{display:"flex",alignItems:"flex-start",gap:10,marginBottom:28}}>
+              <div style={{flex:1}}><BattlePlanAccordion plan={savedPlan}/></div>
+              <button onClick={()=>{
+                const user=JSON.parse(ls.get("syn_user","{}"));
+                const arch=JSON.parse(ls.get("syn_archetype","null"));
+                const streakVal=parseInt(ls.get("syn_streak","0"))||0;
+                const date=new Date().toLocaleDateString("en-IN",{day:"numeric",month:"long",year:"numeric"});
+                const archName=arch?.title||"WARRIOR"; const archSymbol=arch?.symbol||"⚡";
+                const formatted=savedPlan.replace(/\*\*(.+?)\*\*/g,"<strong>$1</strong>").split("\n").map(line=>line.startsWith("**")&&line.endsWith("**")?`<h3>${line.replace(/\*\*/g,"")}</h3>`:line.trim()==="---"?`<hr/>`:!line.trim()?`<div style="height:4px"></div>`:`<p>${line}</p>`).join("");
+                const w=window.open("","_blank","width=900,height=800");
+                w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"/><title>SYNAPSE — Battle Plan</title><style>@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Inter:wght@300;400;500;600;700&display=swap');*{margin:0;padding:0;box-sizing:border-box;word-wrap:break-word;overflow-wrap:break-word;}@page{margin:0.5in 0.6in;size:A4 portrait;}html,body{background:#fff;color:#111;font-family:'Inter',sans-serif;font-size:10px;line-height:1.35;}body{width:100%;padding:0;}.header{display:flex;align-items:center;justify-content:space-between;padding:0 0 8px;border-bottom:1.5px solid #f0f0f0;margin-bottom:6px;}.brand{display:flex;align-items:center;gap:7px;}.brand-logo{width:22px;height:22px;border-radius:5px;background:linear-gradient(135deg,#ff9500,#ff5000);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;font-family:'Orbitron',sans-serif;color:#fff;flex-shrink:0;}.brand-name{font-family:'Orbitron',sans-serif;font-size:11px;font-weight:900;letter-spacing:2px;color:#ff6000;line-height:1;}.brand-tagline{font-size:6.5px;color:#bbb;letter-spacing:2px;text-transform:uppercase;margin-top:1px;}.doc-title{font-family:'Orbitron',sans-serif;font-size:15px;font-weight:900;color:#111;letter-spacing:-0.5px;line-height:1;text-align:right;}.doc-subtitle{font-size:6.5px;color:#e06000;letter-spacing:1.5px;text-transform:uppercase;font-weight:600;margin-top:2px;text-align:right;}.meta{display:flex;gap:16px;padding:5px 0;border-bottom:1px solid #f5f5f5;margin-bottom:8px;align-items:center;flex-wrap:wrap;}.meta-label{font-size:6px;color:#ccc;letter-spacing:1.5px;text-transform:uppercase;font-weight:600;}.meta-value{font-size:10px;color:#111;font-weight:600;margin-top:1px;}.arch-badge{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:999px;border:1px solid #ffb347;background:#fff8f0;font-family:'Orbitron',sans-serif;font-size:7.5px;font-weight:700;color:#b35000;letter-spacing:0.5px;}.section-label{font-size:6.5px;color:#e06000;letter-spacing:2.5px;text-transform:uppercase;font-weight:700;margin-bottom:6px;}.card{border:1px solid #f0f0f0;border-left:2.5px solid #ff6000;border-radius:4px;padding:8px 12px;}.plan-text{font-size:9.5px;line-height:1.55;color:#222;}.plan-text p{margin-bottom:0;}.plan-text h3{font-size:7.5px;font-weight:700;color:#c05000;letter-spacing:1.5px;text-transform:uppercase;margin:8px 0 3px;padding-top:6px;border-top:1px solid #f5f5f5;}.plan-text h3:first-child{margin-top:0;padding-top:0;border-top:none;}.plan-text hr{border:none;border-top:1px solid #f5f5f5;margin:5px 0;}.plan-text strong{color:#b35000;font-weight:700;}.plan-text div[style]{height:3px!important;}.footer{display:flex;justify-content:space-between;padding:5px 0 0;border-top:1px solid #f5f5f5;margin-top:6px;font-size:6.5px;color:#ccc;}.watermark{position:fixed;bottom:-10px;right:-5px;font-family:'Orbitron',sans-serif;font-size:100px;font-weight:900;color:rgba(255,100,0,.03);pointer-events:none;line-height:1;}.print-btn{position:fixed;top:10px;right:10px;background:linear-gradient(135deg,#ff9500,#ff5000);border:none;color:#fff;padding:7px 18px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;z-index:999;}@media print{.print-btn{display:none!important;}}@media screen{body{max-width:680px;margin:0 auto;padding:20px;background:#f8f8f8;}.page{background:#fff;padding:0.35in 0.45in;box-shadow:0 2px 20px rgba(0,0,0,.1);border-radius:4px;}}</style></head><body><button class="print-btn" onclick="window.print()">⬇ Save as PDF</button><div class="watermark">S</div><div class="page"><div class="header"><div class="brand"><div class="brand-logo">S</div><div><div class="brand-name">SYNAPSE</div><div class="brand-tagline">Dopamine Recovery Protocol</div></div></div><div style="text-align:right"><div class="doc-title">BATTLE PLAN</div><div class="doc-subtitle">Personalized Recovery Protocol — Classified</div></div></div><div class="meta"><div><div class="meta-label">Soldier</div><div class="meta-value">${user.name||"Anonymous"}</div></div><div><div class="meta-label">Streak</div><div class="meta-value">Day ${streakVal}</div></div><div><div class="meta-label">Issued</div><div class="meta-value">${date}</div></div><div><div class="meta-label">Archetype</div><div class="arch-badge">${archSymbol} ${archName}</div></div></div><div class="content"><div class="section-label">Mission Briefing</div><div class="card"><div class="plan-text">${formatted}</div></div></div><div class="footer"><div>Generated by SYNAPSE • synapserewire@gmail.com</div><div>synapse-parth.vercel.app • ${date}</div></div></div></body></html>`);
+                w.document.close();
+              }} style={{flexShrink:0,background:"var(--accent3)",border:"1px solid var(--border)",color:"var(--accent2)",padding:"10px 14px",borderRadius:10,fontSize:11,fontWeight:600,cursor:"none",transition:"all .25s",whiteSpace:"nowrap"}}>⬇ Plan</button>
+            </div>}
+
+            {/* Submit button */}
+            <button onClick={submit} disabled={!canSubmit}
+              style={{width:"100%",background:canSubmit?"linear-gradient(135deg,#ff9500,#ff5000)":"rgba(255,140,0,0.06)",border:canSubmit?"none":"1px solid rgba(255,140,0,0.12)",color:canSubmit?"#fff":"rgba(255,255,255,0.2)",padding:"18px",borderRadius:14,fontFamily:"'Orbitron',sans-serif",fontSize:13,fontWeight:800,letterSpacing:1,transition:"all .3s",boxShadow:canSubmit?"0 0 40px rgba(255,140,0,0.35)":"none",marginBottom:8}}>
+              {loading?"Synapse is reading your day...":!mood?"Select your mood to submit":"Submit Day "+( streak+1)+" Report ⚡"}
+            </button>
+            {!mood&&<div style={{textAlign:"center",fontSize:11,color:"var(--text4)",marginBottom:8}}>Select how you're feeling above to unlock submit</div>}
+          </>
+        ):(
+          <>
+            {/* Done state — show results */}
             {status==="CRISIS"&&reply?(
-              <div className="glass" style={{padding:"clamp(28px,5vw,44px)",marginTop:24,border:"1px solid rgba(100,180,255,0.25)",background:"linear-gradient(135deg,rgba(70,150,255,0.07),rgba(40,100,255,0.03))",animation:"fadeUp .6s ease both"}}>
-                <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:18}}>
-                  <span style={{fontSize:20}}>🤝</span>
-                  <span style={{fontSize:10,letterSpacing:2.5,color:"rgba(140,200,255,0.7)",textTransform:"uppercase",fontWeight:600}}>A moment, soldier</span>
-                </div>
+              <div className="glass" style={{padding:"clamp(24px,5vw,44px)",marginBottom:20,border:"1px solid rgba(100,180,255,0.25)",background:"linear-gradient(135deg,rgba(70,150,255,0.07),rgba(40,100,255,0.03))",animation:"fadeUp .6s ease both"}}>
+                <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:18}}><span style={{fontSize:20}}>🤝</span><span style={{fontSize:10,letterSpacing:2.5,color:"rgba(140,200,255,0.7)",textTransform:"uppercase",fontWeight:600}}>A moment, soldier</span></div>
                 <p style={{fontSize:14,lineHeight:2.1,color:"rgba(255,255,255,0.7)",fontWeight:300,whiteSpace:"pre-wrap"}}>{parseBold(reply)}</p>
               </div>
-            ):reply&&<div className="glass" style={{padding:"40px 44px",marginTop:24,position:"relative",animation:"fadeUp .6s ease both"}}><div style={{position:"absolute",top:-14,left:32,background:"var(--bg)",padding:"0 12px"}}><div className="tag" style={{fontSize:9,padding:"5px 12px"}}><span className="d"/>Synapse Response</div></div><p style={{fontSize:14,lineHeight:2.1,color:"rgba(255,255,255,0.58)",fontWeight:300,whiteSpace:"pre-wrap"}}>{parseBold(reply)}</p></div>}
+            ):null}
+            {status==="WIN"&&(<div className="glass" style={{padding:"clamp(24px,5vw,52px) clamp(16px,4vw,48px)",textAlign:"center",marginBottom:16,background:"linear-gradient(135deg,rgba(255,140,0,0.08),rgba(255,80,0,0.04))"}}><div style={{fontSize:48,marginBottom:16}}>🔥</div><h3 style={{fontFamily:"'Orbitron',sans-serif",fontSize:36,fontWeight:800,background:"linear-gradient(135deg,#ff9500,#ffcc00)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",marginBottom:8,letterSpacing:-1}}>MISSION COMPLETE</h3><p style={{fontSize:13,color:"var(--text3)",letterSpacing:1}}>Day {streak} locked in. Your brain rewired a little more today.</p></div>)}
+            {status==="SLIP"&&(<div className="glass" style={{padding:"clamp(24px,5vw,52px) clamp(16px,4vw,48px)",textAlign:"center",marginBottom:16,background:"linear-gradient(135deg,rgba(255,50,50,0.07),rgba(200,20,20,0.03))",border:"1px solid rgba(255,80,80,0.2)"}}><div style={{fontSize:48,marginBottom:16}}>⚔️</div><h3 style={{fontFamily:"'Orbitron',sans-serif",fontSize:32,fontWeight:800,color:"#ff4444",marginBottom:8,letterSpacing:-1}}>STREAK RESET</h3><p style={{fontSize:13,color:"var(--text3)",letterSpacing:.5,lineHeight:1.8}}>Every soldier falls. The ones who win are the ones who get back up.<br/><span style={{color:"rgba(255,140,0,0.5)"}}>Your mission doesn't end here — it restarts.</span></p></div>)}
+            {reply&&(<div className="glass" style={{padding:"36px 40px",marginBottom:16,position:"relative",animation:"fadeUp .6s ease both",border:`1px solid ${status==="WIN"?"rgba(255,140,0,0.18)":status==="SLIP"?"rgba(255,80,80,0.18)":"rgba(255,200,0,0.15)"}`}}><div style={{position:"absolute",top:-14,left:28,background:"var(--bg)",padding:"0 12px"}}><div className="tag" style={{fontSize:9,padding:"5px 12px",borderColor:status==="SLIP"?"rgba(255,80,80,0.3)":"rgba(255,140,0,0.18)"}}><span className="d" style={{background:status==="WIN"?"#ff8c00":status==="SLIP"?"#ff4444":"#ffcc00",boxShadow:`0 0 7px ${status==="WIN"?"#ff8c00":status==="SLIP"?"#ff4444":"#ffcc00"}`}}/>{status==="WIN"?"Synapse — Coach Response":status==="SLIP"?"Synapse — Get Back Up":"Synapse — Keep Fighting"}</div></div><p style={{fontSize:14,lineHeight:2.1,color:"var(--text2)",fontWeight:300,whiteSpace:"pre-wrap"}}>{parseBold(reply)}</p></div>)}
+
+            {/* Inline follow-up chat */}
+            {reply&&status!=="CRISIS"&&(
+              <div style={{marginBottom:16,animation:"fadeUp .6s ease .2s both"}}>
+                <div className="tag" style={{marginBottom:14,display:"inline-flex"}}><span className="d"/>Continue with Coach</div>
+                {chatMsgs.map((m,i)=>(
+                  <div key={i} style={{display:"flex",justifyContent:m.role==="user"?"flex-end":"flex-start",marginBottom:12,animation:"fadeUp .4s ease both"}}>
+                    {m.role!=="user"&&<div style={{width:26,height:26,borderRadius:"50%",background:m.crisis?"rgba(70,150,255,.12)":"rgba(255,140,0,.1)",border:`1px solid ${m.crisis?"rgba(100,180,255,.3)":"rgba(255,140,0,.2)"}`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,marginRight:8,marginTop:2,fontSize:11}}>{m.crisis?"🤝":"⚡"}</div>}
+                    <div style={{maxWidth:"80%",padding:"11px 16px",borderRadius:m.role==="user"?"14px 14px 4px 14px":"14px 14px 14px 4px",background:m.role==="user"?"linear-gradient(135deg,rgba(255,140,0,.16),rgba(255,80,0,.1))":m.crisis?"linear-gradient(135deg,rgba(70,150,255,.08),rgba(40,100,255,.04))":"var(--surface3)",border:`1px solid ${m.role==="user"?"rgba(255,140,0,.22)":m.crisis?"rgba(100,180,255,.22)":"var(--border2)"}`,fontSize:13,lineHeight:1.8,color:"var(--text2)",fontWeight:300}}>{parseBold(m.text)}</div>
+                  </div>
+                ))}
+                {chatLoading&&<div style={{display:"flex",gap:5,padding:"10px 14px"}}><Dots label=""/></div>}
+                <div ref={chatBottomRef}/>
+                <div style={{display:"flex",gap:10,marginTop:8}}>
+                  <input value={chatInput} onChange={e=>setChatInput(e.target.value)} onKeyDown={e=>e.key==="Enter"&&!e.shiftKey&&sendChat()} placeholder="Ask your coach anything..."
+                    style={{flex:1,background:"var(--input-bg)",border:"1px solid var(--border)",borderRadius:10,color:"var(--text)",fontFamily:"'Inter',sans-serif",fontSize:13,padding:"12px 16px",outline:"none",transition:"border-color .3s",caretColor:"var(--accent)"}}/>
+                  <button onClick={sendChat} disabled={!chatInput.trim()||chatLoading}
+                    style={{background:"linear-gradient(135deg,#ff9500,#ff5000)",border:"none",color:"#fff",padding:"12px 20px",borderRadius:10,fontSize:13,fontWeight:600,opacity:chatInput.trim()&&!chatLoading?1:0.4,transition:"opacity .2s"}}>⚡</button>
+                </div>
+              </div>
+            )}
+
+            {/* Share + go to full coach */}
+            {status!=="SLIP"&&streak>0&&(<div style={{marginBottom:16,display:"flex",flexDirection:"column",gap:10,animation:"fadeUp .6s ease .3s both"}}><button onClick={()=>doShare(streak,lv,setSharing)} disabled={sharing} style={{width:"100%",background:"var(--surface2)",border:"1px solid var(--border2)",color:"var(--text3)",padding:"15px 28px",borderRadius:12,fontFamily:"'Inter',sans-serif",fontSize:13,fontWeight:500,display:"flex",alignItems:"center",justifyContent:"center",gap:10,transition:"all .3s"}}><span style={{fontSize:16}}>{sharing?"⏳":"📤"}</span>{sharing?"Generating card...":`Share Day ${streak} 🔥`}</button></div>)}
+            <button onClick={()=>onGoChat&&onGoChat()} style={{width:"100%",background:"var(--accent3)",border:"1px solid var(--border3)",borderRadius:12,padding:"14px",color:"var(--accent2)",fontSize:12,fontWeight:600,letterSpacing:1,textTransform:"uppercase",fontFamily:"'Orbitron',sans-serif",marginBottom:8}}>⚡ Open Full Coach</button>
+            <div ref={bottomRef}/>
           </>
         )}
-        <div ref={bottomRef}/>
       </div>
     </div>
   );
@@ -3036,8 +3215,32 @@ export default function App() {
         const arch = JSON.parse(ls.get("syn_archetype","null"));
         if(arch) archetypeCtx = `\n\nUser's chosen archetype: ${arch.title} (${arch.sub}) — weave this into your response naturally.`;
       } catch{}
+      // Build recurring trigger pattern summary from last 14 days — lets the AI notice
+      // patterns itself (e.g. "you slip mostly late at night when bored") without the
+      // user having to articulate it.
+      let patternCtx = "";
+      try {
+        const log = JSON.parse(ls.get("syn_trigger_log","[]"));
+        const recent = log.slice(-14);
+        const triggerCounts = {}; const timeCounts = {};
+        recent.forEach(entry=>{
+          (entry.addictions||[]).forEach(a=>{
+            (a.triggers||[]).forEach(t=>{ triggerCounts[t]=(triggerCounts[t]||0)+1; });
+            if(a.timeOfDay) timeCounts[a.timeOfDay]=(timeCounts[a.timeOfDay]||0)+1;
+          });
+        });
+        const topTriggers=Object.entries(triggerCounts).sort((a,b)=>b[1]-a[1]).slice(0,3).filter(([,c])=>c>=2);
+        const topTimes=Object.entries(timeCounts).sort((a,b)=>b[1]-a[1]).slice(0,2).filter(([,c])=>c>=2);
+        if(topTriggers.length||topTimes.length){
+          const trigNames={bored:"boredom",stressed:"stress",lonely:"loneliness",alone_room:"being alone in their room",phone_bed:"phone in bed",after_argument:"arguments",tired:"tiredness/late nights",social_media:"social media exposure",friends_around:"certain friends",failure:"feeling like a failure",free_time:"too much free time",habit_cue:"autopilot/habit"};
+          const timeNames={morning:"mornings",afternoon:"afternoons",evening:"evenings",late_night:"late nights"};
+          const trigStr=topTriggers.map(([id])=>trigNames[id]||id).join(", ");
+          const timeStr=topTimes.map(([id])=>timeNames[id]||id).join(", ");
+          patternCtx=`\n\nPATTERN DATA (last 14 days, for your awareness only — mention naturally if relevant, don't force it every time): Recurring triggers: ${trigStr||"none significant"}. Recurring slip times: ${timeStr||"none significant"}.`;
+        }
+      } catch{}
       rawReply=await callAI([
-        {role:"user",content:savedPlan + archetypeCtx},
+        {role:"user",content:savedPlan + archetypeCtx + patternCtx},
         {role:"assistant",content:"Your mission begins now. Show up every day."},
         {role:"user",content:`Day ${streak+1} check-in: ${msg}`}
       ],getCheckinPrompt());
