@@ -723,32 +723,98 @@ const G=`
 @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;800;900&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500&display=swap');
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
 svg{background:transparent!important;overflow:visible;}
+
+/* ── THEME VARIABLES ── */
+:root{
+  --bg:#07040a;
+  --bg2:#0d0910;
+  --bg3:#130e18;
+  --surface:rgba(255,140,0,.06);
+  --surface2:rgba(255,255,255,.025);
+  --surface3:rgba(255,255,255,.04);
+  --border:rgba(255,140,0,.12);
+  --border2:rgba(255,255,255,.07);
+  --border3:rgba(255,140,0,.22);
+  --text:#ffffff;
+  --text2:rgba(255,255,255,.62);
+  --text3:rgba(255,255,255,.28);
+  --text4:rgba(255,255,255,.15);
+  --accent:#ff8c00;
+  --accent2:#ffb347;
+  --accent3:rgba(255,140,0,.08);
+  --accent4:rgba(255,180,80,.65);
+  --glass-bg:linear-gradient(135deg,rgba(255,140,0,.06) 0%,rgba(255,60,0,.02) 100%);
+  --glass-before:rgba(255,255,255,.03);
+  --nav-text:rgba(255,170,60,.4);
+  --tag-bg:rgba(255,140,0,.08);
+  --tag-border:rgba(255,140,0,.18);
+  --tag-text:rgba(255,180,80,.65);
+  --input-bg:rgba(255,255,255,.025);
+  --input-border:rgba(255,140,0,.12);
+  --input-placeholder:rgba(255,255,255,.15);
+  --selection:#ff8c0030;
+  --danger:rgba(255,50,50,.18);
+  --danger-text:rgba(255,80,80,.35);
+  --shadow:rgba(0,0,0,.5);
+}
+.light{
+  --bg:#f5f3f7;
+  --bg2:#ede9f2;
+  --bg3:#e6e0ee;
+  --surface:rgba(180,100,0,.05);
+  --surface2:rgba(0,0,0,.025);
+  --surface3:rgba(0,0,0,.03);
+  --border:rgba(180,100,0,.15);
+  --border2:rgba(0,0,0,.08);
+  --border3:rgba(180,100,0,.28);
+  --text:#1a1020;
+  --text2:rgba(20,10,30,.65);
+  --text3:rgba(20,10,30,.38);
+  --text4:rgba(20,10,30,.18);
+  --accent:#d4700a;
+  --accent2:#b35500;
+  --accent3:rgba(180,100,0,.07);
+  --accent4:rgba(160,80,0,.7);
+  --glass-bg:linear-gradient(135deg,rgba(180,100,0,.05) 0%,rgba(120,40,0,.02) 100%);
+  --glass-before:rgba(255,255,255,.6);
+  --nav-text:rgba(140,70,0,.5);
+  --tag-bg:rgba(180,100,0,.07);
+  --tag-border:rgba(180,100,0,.2);
+  --tag-text:rgba(140,70,0,.8);
+  --input-bg:rgba(0,0,0,.03);
+  --input-border:rgba(180,100,0,.18);
+  --input-placeholder:rgba(20,10,30,.25);
+  --selection:rgba(212,112,10,.15);
+  --danger:rgba(200,30,30,.12);
+  --danger-text:rgba(180,40,40,.5);
+  --shadow:rgba(0,0,0,.15);
+}
+
 html{scroll-behavior:auto;overflow-x:hidden;width:100%;margin:0;padding:0;box-sizing:border-box;scrollbar-width:none;-ms-overflow-style:none;}
 html::-webkit-scrollbar{width:0!important;height:0!important;display:none!important;}
-body{background:#07040a;color:#fff;font-family:'Inter',sans-serif;overflow-x:hidden;overflow-y:auto;cursor:none!important;width:100%;max-width:100%;min-height:100vh;margin:0;padding:0;scrollbar-width:none;-ms-overflow-style:none;}
+body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;overflow-x:hidden;overflow-y:auto;cursor:none!important;width:100%;max-width:100%;min-height:100vh;margin:0;padding:0;scrollbar-width:none;-ms-overflow-style:none;transition:background .35s ease,color .35s ease;}
 body::-webkit-scrollbar{width:0!important;height:0!important;display:none!important;}
 *{cursor:none!important;scrollbar-width:none;-ms-overflow-style:none;}
 @media (hover:none),(pointer:coarse){body,*{cursor:auto!important;}}
-
 *::-webkit-scrollbar{width:0!important;height:0!important;display:none!important;}
-::selection{background:#ff8c0030;}
-.glass{background:linear-gradient(135deg,rgba(255,140,0,.06) 0%,rgba(255,60,0,.02) 100%);border:1px solid rgba(255,140,0,.12);border-radius:18px;backdrop-filter:blur(16px);position:relative;overflow:hidden;}
-.glass::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,255,255,.03) 0%,transparent 60%);pointer-events:none;border-radius:18px;}
-.btn-primary{background:linear-gradient(135deg,#ff9500,#ff4d00);border:none;color:#fff;padding:14px 40px;border-radius:999px;font-family:'Inter',sans-serif;font-size:13px;font-weight:600;letter-spacing:.3px;cursor:none!important;transition:all .35s cubic-bezier(.16,1,.3,1);box-shadow:0 0 40px rgba(255,140,0,.35),0 4px 24px rgba(0,0,0,.5);position:relative;overflow:hidden;white-space:nowrap;}
+::selection{background:var(--selection);}
+.glass{background:var(--glass-bg);border:1px solid var(--border);border-radius:18px;backdrop-filter:blur(16px);position:relative;overflow:hidden;}
+.glass::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,var(--glass-before) 0%,transparent 60%);pointer-events:none;border-radius:18px;}
+.btn-primary{background:linear-gradient(135deg,#ff9500,#ff4d00);border:none;color:#fff;padding:14px 40px;border-radius:999px;font-family:'Inter',sans-serif;font-size:13px;font-weight:600;letter-spacing:.3px;cursor:none!important;transition:all .35s cubic-bezier(.16,1,.3,1);box-shadow:0 0 40px rgba(255,140,0,.35),0 4px 24px var(--shadow);position:relative;overflow:hidden;white-space:nowrap;}
 .btn-primary::after{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,255,255,.18),transparent);opacity:0;transition:opacity .3s;border-radius:999px;}
-.btn-primary:hover{transform:translateY(-2px) scale(1.02);box-shadow:0 0 60px rgba(255,140,0,.55),0 8px 32px rgba(0,0,0,.5);}
+.btn-primary:hover{transform:translateY(-2px) scale(1.02);box-shadow:0 0 60px rgba(255,140,0,.55),0 8px 32px var(--shadow);}
 .btn-primary:hover::after{opacity:1;}.btn-primary:active{transform:scale(.98);}.btn-primary:disabled{opacity:.3;transform:none!important;}
-.btn-ghost{background:rgba(255,140,0,.07);border:1px solid rgba(255,140,0,.22);color:rgba(255,180,80,.75);padding:14px 40px;border-radius:999px;font-family:'Inter',sans-serif;font-size:13px;font-weight:500;cursor:none!important;transition:all .3s;white-space:nowrap;}
-.btn-ghost:hover{background:rgba(255,140,0,.14);border-color:rgba(255,140,0,.5);color:#ffb347;transform:translateY(-1px);}
-.syn-textarea{width:100%;background:rgba(255,255,255,.025);border:1px solid rgba(255,140,0,.12);border-radius:12px;color:#fff;font-family:'Inter',sans-serif;font-size:15px;font-weight:300;padding:22px;outline:none;resize:none;line-height:1.85;transition:all .4s;caret-color:#ff8c00;cursor:none!important;}
-.syn-textarea:focus{border-color:rgba(255,140,0,.45);background:rgba(255,140,0,.04);box-shadow:0 0 0 4px rgba(255,140,0,.07),0 0 40px rgba(255,140,0,.06);}
-.syn-textarea::placeholder{color:rgba(255,255,255,.15);}
-.nav-pill{background:transparent;border:1px solid rgba(255,140,0,.15);color:rgba(255,170,60,.4);padding:8px 20px;border-radius:999px;font-family:'Inter',sans-serif;font-size:11px;font-weight:500;letter-spacing:.8px;cursor:none!important;transition:all .25s;text-transform:uppercase;}
-.nav-pill:hover,.nav-pill.active{border-color:rgba(255,140,0,.55);color:#ffb347;background:rgba(255,140,0,.09);}
-.nav-pill.danger{border-color:rgba(255,50,50,.18);color:rgba(255,80,80,.35);}
+.btn-ghost{background:var(--accent3);border:1px solid var(--border3);color:var(--accent4);padding:14px 40px;border-radius:999px;font-family:'Inter',sans-serif;font-size:13px;font-weight:500;cursor:none!important;transition:all .3s;white-space:nowrap;}
+.btn-ghost:hover{background:rgba(255,140,0,.14);border-color:rgba(255,140,0,.5);color:var(--accent2);transform:translateY(-1px);}
+.syn-textarea{width:100%;background:var(--input-bg);border:1px solid var(--input-border);border-radius:12px;color:var(--text);font-family:'Inter',sans-serif;font-size:15px;font-weight:300;padding:22px;outline:none;resize:none;line-height:1.85;transition:all .4s;caret-color:var(--accent);cursor:none!important;}
+.syn-textarea:focus{border-color:var(--border3);background:var(--accent3);box-shadow:0 0 0 4px rgba(255,140,0,.07),0 0 40px rgba(255,140,0,.06);}
+.syn-textarea::placeholder{color:var(--input-placeholder);}
+.nav-pill{background:transparent;border:1px solid var(--border);color:var(--nav-text);padding:8px 20px;border-radius:999px;font-family:'Inter',sans-serif;font-size:11px;font-weight:500;letter-spacing:.8px;cursor:none!important;transition:all .25s;text-transform:uppercase;}
+.nav-pill:hover,.nav-pill.active{border-color:rgba(255,140,0,.55);color:var(--accent2);background:var(--accent3);}
+.nav-pill.danger{border-color:var(--danger);color:var(--danger-text);}
 .nav-pill.danger:hover{border-color:rgba(255,50,50,.55);color:#ff6060;background:rgba(255,50,50,.08);}
-.tag{display:inline-flex;align-items:center;gap:8px;background:rgba(255,140,0,.08);border:1px solid rgba(255,140,0,.18);border-radius:999px;padding:6px 16px;font-size:11px;font-weight:500;letter-spacing:1.2px;color:rgba(255,180,80,.65);text-transform:uppercase;}
-.tag .d{width:5px;height:5px;border-radius:50%;background:#ff8c00;box-shadow:0 0 7px #ff8c00;flex-shrink:0;}
+.tag{display:inline-flex;align-items:center;gap:8px;background:var(--tag-bg);border:1px solid var(--tag-border);border-radius:999px;padding:6px 16px;font-size:11px;font-weight:500;letter-spacing:1.2px;color:var(--tag-text);text-transform:uppercase;}
+.tag .d{width:5px;height:5px;border-radius:50%;background:var(--accent);box-shadow:0 0 7px var(--accent);flex-shrink:0;}
 @keyframes fadeUp{from{opacity:0;transform:translateY(32px);}to{opacity:1;transform:translateY(0);}}
 @keyframes scaleIn{from{opacity:0;transform:scale(.93);}to{opacity:1;transform:scale(1);}}
 @keyframes shimmer{from{transform:translateX(-100%);}to{transform:translateX(200%)}}
@@ -773,8 +839,54 @@ body::-webkit-scrollbar{width:0!important;height:0!important;display:none!import
 .s4{animation:fadeUp .7s cubic-bezier(.16,1,.3,1) .35s both;}
 .s5{animation:fadeUp .7s cubic-bezier(.16,1,.3,1) .45s both;}
 input{cursor:none!important;background:transparent;}
-input::placeholder{color:rgba(255,255,255,0.15);}
+input::placeholder{color:var(--input-placeholder);}
 input[type=range]{-webkit-appearance:none;appearance:none;background:transparent;}
+
+/* ── LIGHT MODE OVERRIDES ── */
+.light [style*="background:\"#07040a\""],.light [style*='background:"#07040a"']{background:var(--bg)!important;}
+.light [style*="color:\"#fff\""],.light [style*="color:\"rgba(255,255,255"]{color:var(--text)!important;}
+.light [style*="rgba(7,4,10"]{--dark-surface:rgba(230,224,238,0.9);}
+.light canvas{opacity:.55;filter:saturate(0.7) brightness(1.1);}
+.light .glass{background:rgba(180,100,0,.04)!important;border-color:rgba(180,100,0,.15)!important;}
+.light .glass::before{background:linear-gradient(135deg,rgba(255,255,255,.7) 0%,transparent 60%)!important;}
+.light .syn-textarea{color:var(--text)!important;background:rgba(0,0,0,.03)!important;}
+.light .syn-textarea::placeholder{color:rgba(20,10,30,.25)!important;}
+.light .tag{background:rgba(180,100,0,.07)!important;border-color:rgba(180,100,0,.2)!important;color:rgba(140,70,0,.8)!important;}
+.light .tag .d{background:var(--accent)!important;box-shadow:0 0 7px var(--accent)!important;}
+.light .btn-ghost{background:rgba(180,100,0,.07)!important;border-color:rgba(180,100,0,.25)!important;color:rgba(140,70,0,.8)!important;}
+
+/* Light mode — screen backgrounds */
+.light [style*="minHeight:\"100vh\""]{background:var(--bg)!important;}
+.light [style*="background:\"rgba(7,4,10"]{background:var(--bg)!important;}
+
+/* Light mode — text color overrides for major text elements */
+.light [style*="color:\"rgba(255,255,255,.62)\""]{color:var(--text2)!important;}
+.light [style*="color:\"rgba(255,255,255,.28)\""]{color:var(--text3)!important;}
+.light [style*="color:\"rgba(255,255,255,.15)\""]{color:var(--text4)!important;}
+.light [style*="color:\"rgba(255,255,255,.5)\""]{color:var(--text2)!important;}
+.light [style*="color:\"rgba(255,255,255,.4)\""]{color:var(--text3)!important;}
+.light [style*="color:\"rgba(255,255,255,.3)\""]{color:var(--text3)!important;}
+.light [style*="color:\"rgba(255,255,255,.7)\""]{color:var(--text2)!important;}
+.light [style*="color:\"rgba(255,255,255,.65)\""]{color:var(--text2)!important;}
+.light [style*="color:\"rgba(255,255,255,.6)\""]{color:var(--text2)!important;}
+.light [style*="color:\"rgba(255,255,255,.58)\""]{color:var(--text2)!important;}
+.light [style*="color:\"rgba(255,255,255,.75)\""]{color:var(--text)!important;}
+.light [style*="color:\"rgba(255,255,255,.8)\""]{color:var(--text)!important;}
+.light [style*="color:\"rgba(255,255,255,.25)\""]{color:var(--text4)!important;}
+.light [style*="color:\"rgba(255,255,255,.2)\""]{color:var(--text4)!important;}
+
+/* Light mode — WebkitTextFillColor reset for gradient text headings */
+.light [style*="WebkitTextFillColor:\"transparent\""]{opacity:.9;}
+
+/* Light mode — surface/card backgrounds */
+.light [style*="background:\"rgba(255,255,255,.025)\""]{background:rgba(0,0,0,.03)!important;}
+.light [style*="background:\"rgba(255,255,255,.04)\""]{background:rgba(0,0,0,.04)!important;}
+.light [style*="background:\"rgba(255,255,255,.03)\""]{background:rgba(0,0,0,.03)!important;}
+.light [style*="border:\"1px solid rgba(255,255,255,.07)\""]{border-color:rgba(0,0,0,.08)!important;}
+.light [style*="border:\"1px solid rgba(255,255,255,.08)\""]{border-color:rgba(0,0,0,.09)!important;}
+
+/* Light mode — gradient lock overlay in BattlePlanPreview */
+.light [style*="rgba(7,4,10,1)"]{background:linear-gradient(0deg,var(--bg) 0%,rgba(245,243,247,.9) 40%,rgba(245,243,247,0) 100%)!important;}
 
 /* ── MOBILE RESPONSIVE ── */
 .step-inner{box-sizing:border-box;width:100%;}
@@ -850,23 +962,31 @@ input[type=range]{-webkit-appearance:none;appearance:none;background:transparent
 `;
 
 /* ─── NAV ────────────────────────────────────────────────────────────────── */
-function Nav({screen,goTo,savedPlan,onReset}) {
+function Nav({screen,goTo,savedPlan,onReset,theme,onThemeToggle}) {
   const [scrolled,setScrolled]=useState(false);
   useEffect(()=>{const h=()=>setScrolled(window.scrollY>40);window.addEventListener("scroll",h);return()=>window.removeEventListener("scroll",h);},[]);
+  const isLight=theme==="light";
   return(
-    <nav style={{position:"fixed",top:0,left:0,right:0,zIndex:500,background:scrolled?"rgba(7,4,10,0.92)":"rgba(7,4,10,0.75)",backdropFilter:"blur(20px)",borderBottom:"1px solid rgba(255,140,0,0.07)",transition:"all .5s ease"}}>
-      {/* Row 1 — Logo + Reset */}
+    <nav style={{position:"fixed",top:0,left:0,right:0,zIndex:500,background:scrolled?`rgba(${isLight?"240,236,245":"7,4,10"},0.95)`:`rgba(${isLight?"240,236,245":"7,4,10"},0.80)`,backdropFilter:"blur(20px)",borderBottom:"1px solid var(--border)",transition:"all .5s ease"}}>
+      {/* Row 1 — Logo + controls */}
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px clamp(12px,4vw,48px)"}}>
         <div onClick={()=>goTo("boot")} style={{cursor:"none",display:"flex",alignItems:"center",gap:8,flexShrink:0}}>
           <NeuralMark size={32}/>
           <div className="nav-logo-text">
-            <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:13,fontWeight:800,letterSpacing:2.5,color:"#fff",lineHeight:1}}>SYNAPSE</div>
-            <div style={{fontSize:7,letterSpacing:2.5,color:"rgba(255,140,0,0.35)",marginTop:2}}>RESET · REWIRE · RISE</div>
+            <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:13,fontWeight:800,letterSpacing:2.5,color:"var(--text)",lineHeight:1}}>SYNAPSE</div>
+            <div style={{fontSize:7,letterSpacing:2.5,color:"var(--accent)",opacity:.5,marginTop:2}}>RESET · REWIRE · RISE</div>
           </div>
         </div>
-        <button className="nav-pill danger" onClick={onReset} style={{flexShrink:0}}>Reset</button>
+        <div style={{display:"flex",gap:8,alignItems:"center"}}>
+          {/* Theme toggle */}
+          <button onClick={onThemeToggle} title={isLight?"Switch to Dark":"Switch to Light"}
+            style={{background:"var(--surface2)",border:"1px solid var(--border)",borderRadius:999,width:34,height:34,display:"flex",alignItems:"center",justifyContent:"center",fontSize:15,transition:"all .25s",flexShrink:0}}>
+            {isLight?"🌙":"☀️"}
+          </button>
+          <button className="nav-pill danger" onClick={onReset} style={{flexShrink:0}}>Reset</button>
+        </div>
       </div>
-      {/* Row 2 — Screen tabs (scrollable on mobile) */}
+      {/* Row 2 — Screen tabs */}
       <div style={{display:"flex",gap:6,alignItems:"center",padding:"0 clamp(12px,4vw,48px) 10px",overflowX:"auto",WebkitOverflowScrolling:"touch",scrollbarWidth:"none",msOverflowStyle:"none",whiteSpace:"nowrap"}}>
         {savedPlan&&[["checkin","Check-In"],["plan","My Plan"],["chat","Coach"],["report","Report"],["history","Log"],["urge","⚡ Urge"]].map(([s,l])=>(
           <button key={s} className={`nav-pill${screen===s?" active":""}`} onClick={()=>goTo(s)} style={{flexShrink:0}}>{l}</button>
@@ -1627,9 +1747,9 @@ function Confess({onSubmit,loading}) {
 
   const steps=["Archetype","Poisons","Damage","Cost","Plan"];
   return(
-    <div style={{minHeight:"100vh",background:"#07040a",position:"relative",overflowX:"hidden",width:"100%"}}>
+    <div style={{minHeight:"100vh",background:"var(--bg)",position:"relative",overflowX:"hidden",width:"100%"}}>
       {/* Full-screen background - no gaps */}
-      <div style={{position:"fixed",inset:0,background:"#07040a",zIndex:-1,pointerEvents:"none"}}/>
+      <div style={{position:"fixed",inset:0,background:"var(--bg)",zIndex:-1,pointerEvents:"none"}}/>
       <div style={{position:"fixed",inset:0,pointerEvents:"none",zIndex:0}}>
         <div style={{position:"absolute",top:"-10%",right:"-5%",width:700,height:700,background:"radial-gradient(circle,rgba(255,90,0,.07) 0%,transparent 65%)"}}/>
         <div style={{position:"absolute",bottom:"10%",left:"-8%",width:500,height:500,background:"radial-gradient(circle,rgba(255,140,0,.04) 0%,transparent 70%)"}}/>
@@ -1938,55 +2058,40 @@ function Plan({plan,loading,onBegin,onRetry}) {
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Inter:wght@300;400;500;600;700&display=swap');
   *{margin:0;padding:0;box-sizing:border-box;}
-  html,body{background:#fff;color:#111;font-family:'Inter',sans-serif;font-size:13px;}
-  body{max-width:720px;margin:0 auto;padding:0;}
-  /* HEADER */
-  .header{padding:36px 48px 28px;border-bottom:2px solid #f0f0f0;position:relative;background:#fff;}
-  .brand{display:flex;align-items:center;gap:12px;margin-bottom:20px;}
-  .brand-logo{width:36px;height:36px;border-radius:8px;background:linear-gradient(135deg,#ff9500,#ff5000);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:900;font-family:'Orbitron',sans-serif;color:#fff;}
-  .brand-name{font-family:'Orbitron',sans-serif;font-size:18px;font-weight:900;letter-spacing:2px;color:#ff6000;}
-  .brand-tagline{font-size:9px;color:#999;letter-spacing:3px;text-transform:uppercase;margin-top:2px;}
-  .doc-title{font-family:'Orbitron',sans-serif;font-size:32px;font-weight:900;letter-spacing:-1px;line-height:1;color:#111;margin-bottom:4px;}
-  .doc-subtitle{font-size:10px;color:#ff6000;letter-spacing:2px;text-transform:uppercase;font-weight:600;}
-  /* META */
-  .meta{display:flex;flex-wrap:wrap;gap:28px;padding:20px 48px;border-bottom:1px solid #f0f0f0;background:#fafafa;align-items:center;}
-  .meta-item{display:flex;flex-direction:column;gap:2px;}
-  .meta-label{font-size:8px;color:#999;letter-spacing:2px;text-transform:uppercase;font-weight:600;}
-  .meta-value{font-size:13px;color:#111;font-weight:600;}
-  .arch-badge{display:inline-flex;align-items:center;gap:6px;padding:4px 12px;border-radius:999px;border:1px solid #ffb347;background:#fff8f0;font-family:'Orbitron',sans-serif;font-size:10px;font-weight:700;color:#b35000;letter-spacing:1px;}
-  /* PLAN CONTENT */
-  .content{padding:28px 48px 24px;}
-  .section-label{font-size:8px;color:#ff6000;letter-spacing:3px;text-transform:uppercase;font-weight:700;margin-bottom:16px;}
-  .card{border:1px solid #efefef;border-left:3px solid #ff6000;border-radius:8px;padding:24px 28px;background:#fff;}
-  .plan-text{font-size:13px;line-height:1.9;color:#333;font-weight:400;}
-  .plan-text p{margin-bottom:1px;}
-  .plan-text h3{font-size:10px;font-weight:700;color:#b35000;letter-spacing:2px;text-transform:uppercase;margin:16px 0 6px;padding-top:14px;border-top:1px solid #f0f0f0;}
+  html,body{background:#fff;color:#111;font-family:'Inter',sans-serif;font-size:12px;}
+  body{max-width:680px;margin:0 auto;padding:0;}
+  .header{padding:20px 32px 16px;border-bottom:2px solid #f0f0f0;display:flex;align-items:center;justify-content:space-between;}
+  .brand{display:flex;align-items:center;gap:10px;}
+  .brand-logo{width:28px;height:28px;border-radius:6px;background:linear-gradient(135deg,#ff9500,#ff5000);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900;font-family:'Orbitron',sans-serif;color:#fff;}
+  .brand-name{font-family:'Orbitron',sans-serif;font-size:14px;font-weight:900;letter-spacing:2px;color:#ff6000;}
+  .brand-tagline{font-size:8px;color:#bbb;letter-spacing:2px;text-transform:uppercase;margin-top:1px;}
+  .header-right{text-align:right;}
+  .doc-title{font-family:'Orbitron',sans-serif;font-size:18px;font-weight:900;color:#111;letter-spacing:-0.5px;}
+  .doc-subtitle{font-size:8px;color:#ff6000;letter-spacing:2px;text-transform:uppercase;font-weight:600;margin-top:2px;}
+  .meta{display:flex;flex-wrap:wrap;gap:20px;padding:10px 32px;border-bottom:1px solid #f0f0f0;background:#fafafa;align-items:center;}
+  .meta-item{display:flex;flex-direction:column;gap:1px;}
+  .meta-label{font-size:7px;color:#bbb;letter-spacing:2px;text-transform:uppercase;font-weight:600;}
+  .meta-value{font-size:12px;color:#111;font-weight:600;}
+  .arch-badge{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:999px;border:1px solid #ffb347;background:#fff8f0;font-family:'Orbitron',sans-serif;font-size:9px;font-weight:700;color:#b35000;letter-spacing:1px;}
+  .content{padding:16px 32px 16px;}
+  .section-label{font-size:7px;color:#ff6000;letter-spacing:3px;text-transform:uppercase;font-weight:700;margin-bottom:10px;}
+  .card{border:1px solid #efefef;border-left:3px solid #ff6000;border-radius:6px;padding:16px 20px;}
+  .plan-text{font-size:12px;line-height:1.65;color:#333;}
+  .plan-text p{margin-bottom:0;}
+  .plan-text h3{font-size:9px;font-weight:700;color:#b35000;letter-spacing:2px;text-transform:uppercase;margin:12px 0 4px;padding-top:10px;border-top:1px solid #f0f0f0;}
   .plan-text h3:first-child{margin-top:0;padding-top:0;border-top:none;}
-  .plan-text hr{border:none;border-top:1px solid #f0f0f0;margin:14px 0;}
+  .plan-text hr{border:none;border-top:1px solid #f0f0f0;margin:10px 0;}
   .plan-text strong{color:#b35000;font-weight:700;}
-  /* FOOTER */
-  .footer{padding:16px 48px 28px;border-top:1px solid #f0f0f0;display:flex;justify-content:space-between;align-items:center;background:#fafafa;}
-  .footer-left{font-size:9px;color:#aaa;line-height:1.8;}
-  .footer-right{font-size:9px;color:#ccc;text-align:right;}
-  /* WATERMARK */
-  .watermark{position:fixed;bottom:-20px;right:-20px;font-family:'Orbitron',sans-serif;font-size:160px;font-weight:900;color:rgba(255,100,0,.04);pointer-events:none;line-height:1;z-index:0;}
-  /* PRINT BUTTON */
-  .print-btn{position:fixed;top:16px;right:16px;background:linear-gradient(135deg,#ff9500,#ff5000);border:none;color:#fff;padding:10px 24px;border-radius:8px;font-family:'Inter',sans-serif;font-size:12px;font-weight:600;cursor:pointer;box-shadow:0 4px 16px rgba(255,140,0,.35);z-index:999;}
-  @media print{
-    .print-btn{display:none!important;}
-    .watermark{position:fixed;}
-    body{font-size:12px;}
-    .header{padding:24px 36px 20px;}
-    .meta{padding:14px 36px;}
-    .content{padding:20px 36px 16px;}
-    .footer{padding:12px 36px 20px;}
-  }
+  .footer{padding:10px 32px 16px;border-top:1px solid #f0f0f0;display:flex;justify-content:space-between;background:#fafafa;font-size:8px;color:#bbb;}
+  .watermark{position:fixed;bottom:-20px;right:-10px;font-family:'Orbitron',sans-serif;font-size:120px;font-weight:900;color:rgba(255,100,0,.035);pointer-events:none;line-height:1;}
+  .print-btn{position:fixed;top:12px;right:12px;background:linear-gradient(135deg,#ff9500,#ff5000);border:none;color:#fff;padding:8px 20px;border-radius:7px;font-size:11px;font-weight:600;cursor:pointer;z-index:999;}
+  @page{margin:0.4in 0.5in;}
+  @media print{.print-btn{display:none!important;}.watermark{position:fixed;}}
 </style>
 </head>
 <body>
 <button class="print-btn" onclick="window.print()">⬇ Save as PDF</button>
 <div class="watermark">S</div>
-
 <div class="header">
   <div class="brand">
     <div class="brand-logo">S</div>
@@ -1995,45 +2100,24 @@ function Plan({plan,loading,onBegin,onRetry}) {
       <div class="brand-tagline">Dopamine Recovery Protocol</div>
     </div>
   </div>
-  <div class="doc-title">BATTLE PLAN</div>
-  <div class="doc-subtitle">Personalized Recovery Protocol — Classified</div>
+  <div class="header-right">
+    <div class="doc-title">BATTLE PLAN</div>
+    <div class="doc-subtitle">Personalized Recovery Protocol — Classified</div>
+  </div>
 </div>
-
 <div class="meta">
-  <div class="meta-item">
-    <div class="meta-label">Soldier</div>
-    <div class="meta-value">${user.name||"Anonymous"}</div>
-  </div>
-  <div class="meta-item">
-    <div class="meta-label">Current Streak</div>
-    <div class="meta-value">Day ${streak}</div>
-  </div>
-  <div class="meta-item">
-    <div class="meta-label">Issued</div>
-    <div class="meta-value">${date}</div>
-  </div>
-  <div class="meta-item">
-    <div class="meta-label">Archetype</div>
-    <div class="arch-badge">${archSymbol} ${archName}</div>
-  </div>
+  <div class="meta-item"><div class="meta-label">Soldier</div><div class="meta-value">${user.name||"Anonymous"}</div></div>
+  <div class="meta-item"><div class="meta-label">Streak</div><div class="meta-value">Day ${streak}</div></div>
+  <div class="meta-item"><div class="meta-label">Issued</div><div class="meta-value">${date}</div></div>
+  <div class="meta-item"><div class="meta-label">Archetype</div><div class="arch-badge">${archSymbol} ${archName}</div></div>
 </div>
-
 <div class="content">
   <div class="section-label">Mission Briefing</div>
-  <div class="card">
-    <div class="plan-text">${formatted}</div>
-  </div>
+  <div class="card"><div class="plan-text">${formatted}</div></div>
 </div>
-
 <div class="footer">
-  <div class="footer-left">
-    Generated by SYNAPSE • synapserewire@gmail.com<br/>
-    This document is your personal recovery protocol. Keep it close.
-  </div>
-  <div class="footer-right">
-    synapse-parth.vercel.app<br/>
-    ${date}
-  </div>
+  <div>Generated by SYNAPSE • synapserewire@gmail.com</div>
+  <div>synapse-parth.vercel.app • ${date}</div>
 </div>
 </body>
 </html>`;
@@ -2234,7 +2318,7 @@ function Checkin({streak,savedPlan,lastCheckin,onCheckin,onGoChat}) {
             const archSymbol=arch?.symbol||"⚡";
             const formatted=savedPlan.replace(/\*\*(.+?)\*\*/g,"<strong>$1</strong>").split("\n").map(line=>line.startsWith("**")&&line.endsWith("**")?`<h3>${line.replace(/\*\*/g,"")}</h3>`:line.trim()==="---"?`<hr/>`:`<p>${line||"&nbsp;"}</p>`).join("");
             const w=window.open("","_blank","width=900,height=800");
-            w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"/><title>SYNAPSE — Battle Plan</title><style>@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Inter:wght@300;400;500;600;700&display=swap');*{margin:0;padding:0;box-sizing:border-box;}html,body{background:#fff;color:#111;font-family:'Inter',sans-serif;font-size:13px;}body{max-width:720px;margin:0 auto;}.header{padding:36px 48px 28px;border-bottom:2px solid #f0f0f0;}.brand{display:flex;align-items:center;gap:12px;margin-bottom:20px;}.brand-logo{width:36px;height:36px;border-radius:8px;background:linear-gradient(135deg,#ff9500,#ff5000);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:900;font-family:'Orbitron',sans-serif;color:#fff;}.brand-name{font-family:'Orbitron',sans-serif;font-size:18px;font-weight:900;letter-spacing:2px;color:#ff6000;}.brand-tagline{font-size:9px;color:#999;letter-spacing:3px;text-transform:uppercase;margin-top:2px;}.doc-title{font-family:'Orbitron',sans-serif;font-size:32px;font-weight:900;color:#111;margin-bottom:4px;}.doc-subtitle{font-size:10px;color:#ff6000;letter-spacing:2px;text-transform:uppercase;font-weight:600;}.meta{display:flex;flex-wrap:wrap;gap:28px;padding:20px 48px;border-bottom:1px solid #f0f0f0;background:#fafafa;}.meta-label{font-size:8px;color:#999;letter-spacing:2px;text-transform:uppercase;font-weight:600;}.meta-value{font-size:13px;color:#111;font-weight:600;}.arch-badge{display:inline-flex;align-items:center;gap:6px;padding:4px 12px;border-radius:999px;border:1px solid #ffb347;background:#fff8f0;font-family:'Orbitron',sans-serif;font-size:10px;font-weight:700;color:#b35000;}.content{padding:28px 48px 24px;}.section-label{font-size:8px;color:#ff6000;letter-spacing:3px;text-transform:uppercase;font-weight:700;margin-bottom:16px;}.card{border:1px solid #efefef;border-left:3px solid #ff6000;border-radius:8px;padding:24px 28px;}.plan-text{font-size:13px;line-height:1.9;color:#333;}.plan-text p{margin-bottom:1px;}.plan-text h3{font-size:10px;font-weight:700;color:#b35000;letter-spacing:2px;text-transform:uppercase;margin:16px 0 6px;padding-top:14px;border-top:1px solid #f0f0f0;}.plan-text h3:first-child{margin-top:0;padding-top:0;border-top:none;}.plan-text hr{border:none;border-top:1px solid #f0f0f0;margin:14px 0;}.plan-text strong{color:#b35000;font-weight:700;}.footer{padding:16px 48px 28px;border-top:1px solid #f0f0f0;display:flex;justify-content:space-between;background:#fafafa;font-size:9px;color:#aaa;}.watermark{position:fixed;bottom:-20px;right:-20px;font-family:'Orbitron',sans-serif;font-size:160px;font-weight:900;color:rgba(255,100,0,.04);pointer-events:none;}.print-btn{position:fixed;top:16px;right:16px;background:linear-gradient(135deg,#ff9500,#ff5000);border:none;color:#fff;padding:10px 24px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;z-index:999;}@media print{.print-btn{display:none!important;}}</style></head><body><button class="print-btn" onclick="window.print()">⬇ Save as PDF</button><div class="watermark">S</div><div class="header"><div class="brand"><div class="brand-logo">S</div><div><div class="brand-name">SYNAPSE</div><div class="brand-tagline">Dopamine Recovery Protocol</div></div></div><div class="doc-title">BATTLE PLAN</div><div class="doc-subtitle">Personalized Recovery Protocol — Classified</div></div><div class="meta"><div><div class="meta-label">Soldier</div><div class="meta-value">${user.name||"Anonymous"}</div></div><div><div class="meta-label">Streak</div><div class="meta-value">Day ${streakVal}</div></div><div><div class="meta-label">Issued</div><div class="meta-value">${date}</div></div><div><div class="meta-label">Archetype</div><div class="arch-badge">${archSymbol} ${archName}</div></div></div><div class="content"><div class="section-label">Mission Briefing</div><div class="card"><div class="plan-text">${formatted}</div></div></div><div class="footer"><div>Generated by SYNAPSE • synapserewire@gmail.com</div><div>synapse-parth.vercel.app</div></div></body></html>`);
+            w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"/><title>SYNAPSE — Battle Plan</title><style>@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Inter:wght@300;400;500;600;700&display=swap');*{margin:0;padding:0;box-sizing:border-box;}html,body{background:#fff;color:#111;font-family:'Inter',sans-serif;font-size:12px;}body{max-width:680px;margin:0 auto;}.header{padding:20px 32px 16px;border-bottom:2px solid #f0f0f0;display:flex;align-items:center;justify-content:space-between;}.brand{display:flex;align-items:center;gap:10px;}.brand-logo{width:28px;height:28px;border-radius:6px;background:linear-gradient(135deg,#ff9500,#ff5000);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900;font-family:'Orbitron',sans-serif;color:#fff;}.brand-name{font-family:'Orbitron',sans-serif;font-size:14px;font-weight:900;letter-spacing:2px;color:#ff6000;}.brand-tagline{font-size:8px;color:#bbb;letter-spacing:2px;text-transform:uppercase;margin-top:1px;}.doc-title{font-family:'Orbitron',sans-serif;font-size:18px;font-weight:900;color:#111;}.doc-subtitle{font-size:8px;color:#ff6000;letter-spacing:2px;text-transform:uppercase;font-weight:600;margin-top:2px;}.meta{display:flex;flex-wrap:wrap;gap:20px;padding:10px 32px;border-bottom:1px solid #f0f0f0;background:#fafafa;align-items:center;}.meta-label{font-size:7px;color:#bbb;letter-spacing:2px;text-transform:uppercase;font-weight:600;}.meta-value{font-size:12px;color:#111;font-weight:600;}.arch-badge{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:999px;border:1px solid #ffb347;background:#fff8f0;font-family:'Orbitron',sans-serif;font-size:9px;font-weight:700;color:#b35000;}.content{padding:16px 32px;}.section-label{font-size:7px;color:#ff6000;letter-spacing:3px;text-transform:uppercase;font-weight:700;margin-bottom:10px;}.card{border:1px solid #efefef;border-left:3px solid #ff6000;border-radius:6px;padding:16px 20px;}.plan-text{font-size:12px;line-height:1.65;color:#333;}.plan-text p{margin-bottom:0;}.plan-text h3{font-size:9px;font-weight:700;color:#b35000;letter-spacing:2px;text-transform:uppercase;margin:12px 0 4px;padding-top:10px;border-top:1px solid #f0f0f0;}.plan-text h3:first-child{margin-top:0;padding-top:0;border-top:none;}.plan-text hr{border:none;border-top:1px solid #f0f0f0;margin:10px 0;}.plan-text strong{color:#b35000;font-weight:700;}.footer{padding:10px 32px 16px;border-top:1px solid #f0f0f0;display:flex;justify-content:space-between;background:#fafafa;font-size:8px;color:#bbb;}.watermark{position:fixed;bottom:-20px;right:-10px;font-family:'Orbitron',sans-serif;font-size:120px;font-weight:900;color:rgba(255,100,0,.035);pointer-events:none;line-height:1;}.print-btn{position:fixed;top:12px;right:12px;background:linear-gradient(135deg,#ff9500,#ff5000);border:none;color:#fff;padding:8px 20px;border-radius:7px;font-size:11px;font-weight:600;cursor:pointer;z-index:999;}@media print{.print-btn{display:none!important;}}@page{margin:0.4in 0.5in;}</style></head><body><button class="print-btn" onclick="window.print()">⬇ Save as PDF</button><div class="watermark">S</div><div class="header"><div class="brand"><div class="brand-logo">S</div><div><div class="brand-name">SYNAPSE</div><div class="brand-tagline">Dopamine Recovery Protocol</div></div></div><div style="text-align:right"><div class="doc-title">BATTLE PLAN</div><div class="doc-subtitle">Personalized Recovery Protocol — Classified</div></div></div><div class="meta"><div><div class="meta-label">Soldier</div><div class="meta-value">${user.name||"Anonymous"}</div></div><div><div class="meta-label">Streak</div><div class="meta-value">Day ${streakVal}</div></div><div><div class="meta-label">Issued</div><div class="meta-value">${date}</div></div><div><div class="meta-label">Archetype</div><div class="arch-badge">${archSymbol} ${archName}</div></div></div><div class="content"><div class="section-label">Mission Briefing</div><div class="card"><div class="plan-text">${formatted}</div></div></div><div class="footer"><div>Generated by SYNAPSE • synapserewire@gmail.com</div><div>synapse-parth.vercel.app • ${date}</div></div></body></html>`);
             w.document.close();
           }} style={{flexShrink:0,background:"rgba(255,140,0,0.06)",border:"1px solid rgba(255,140,0,0.2)",color:"rgba(255,180,80,0.7)",padding:"10px 16px",borderRadius:10,fontSize:11,fontWeight:600,cursor:"none",transition:"all .25s",letterSpacing:.5,whiteSpace:"nowrap",alignSelf:"flex-start",marginTop:0}} onMouseEnter={e=>{e.currentTarget.style.background="rgba(255,140,0,0.12)";}} onMouseLeave={e=>{e.currentTarget.style.background="rgba(255,140,0,0.06)";}}>⬇ Plan</button>
         </div>}
@@ -2281,7 +2365,7 @@ function Checkin({streak,savedPlan,lastCheckin,onCheckin,onGoChat}) {
             {reply&&(
               <div className="glass" style={{padding:"36px 40px",marginTop:16,position:"relative",animation:"fadeUp .6s ease both",
                 border:`1px solid ${status==="WIN"?"rgba(255,140,0,0.18)":status==="SLIP"?"rgba(255,80,80,0.18)":"rgba(255,200,0,0.15)"}`}}>
-                <div style={{position:"absolute",top:-14,left:28,background:"#07040a",padding:"0 12px"}}>
+                <div style={{position:"absolute",top:-14,left:28,background:"var(--bg)",padding:"0 12px"}}>
                   <div className="tag" style={{fontSize:9,padding:"5px 12px",
                     borderColor:status==="SLIP"?"rgba(255,80,80,0.3)":"rgba(255,140,0,0.18)"}}>
                     <span className="d" style={{background:status==="WIN"?"#ff8c00":status==="SLIP"?"#ff4444":"#ffcc00",boxShadow:`0 0 7px ${status==="WIN"?"#ff8c00":status==="SLIP"?"#ff4444":"#ffcc00"}`}}/>
@@ -2333,7 +2417,7 @@ function Checkin({streak,savedPlan,lastCheckin,onCheckin,onGoChat}) {
                 </div>
                 <p style={{fontSize:14,lineHeight:2.1,color:"rgba(255,255,255,0.7)",fontWeight:300,whiteSpace:"pre-wrap"}}>{parseBold(reply)}</p>
               </div>
-            ):reply&&<div className="glass" style={{padding:"40px 44px",marginTop:24,position:"relative",animation:"fadeUp .6s ease both"}}><div style={{position:"absolute",top:-14,left:32,background:"#07040a",padding:"0 12px"}}><div className="tag" style={{fontSize:9,padding:"5px 12px"}}><span className="d"/>Synapse Response</div></div><p style={{fontSize:14,lineHeight:2.1,color:"rgba(255,255,255,0.58)",fontWeight:300,whiteSpace:"pre-wrap"}}>{parseBold(reply)}</p></div>}
+            ):reply&&<div className="glass" style={{padding:"40px 44px",marginTop:24,position:"relative",animation:"fadeUp .6s ease both"}}><div style={{position:"absolute",top:-14,left:32,background:"var(--bg)",padding:"0 12px"}}><div className="tag" style={{fontSize:9,padding:"5px 12px"}}><span className="d"/>Synapse Response</div></div><p style={{fontSize:14,lineHeight:2.1,color:"rgba(255,255,255,0.58)",fontWeight:300,whiteSpace:"pre-wrap"}}>{parseBold(reply)}</p></div>}
           </>
         )}
         <div ref={bottomRef}/>
@@ -2811,7 +2895,19 @@ export default function App() {
   const [emergency,setEmergency]=useState(false);
   const [milestone,setMilestone]=useState(null);
   const [toured,setToured]  =useState(()=>ls.get("syn_toured","")!=="1");
+  const [theme,setTheme]    =useState(()=>ls.get("syn_theme","dark"));
   const audioPlayRef = useRef(null);
+
+  // Apply theme class to root element
+  useEffect(()=>{
+    const root=document.documentElement;
+    if(theme==="light"){root.classList.add("light");document.body.classList.add("light");}
+    else{root.classList.remove("light");document.body.classList.remove("light");}
+  },[theme]);
+
+  const handleThemeToggle=useCallback(()=>{
+    setTheme(t=>{const next=t==="dark"?"light":"dark";ls.set("syn_theme",next);return next;});
+  },[]);
 
   useEffect(()=>{const s=document.createElement("style");s.textContent=G;document.head.appendChild(s);return()=>document.head.removeChild(s);},[]);
   useEffect(()=>{"serviceWorker" in navigator&&navigator.serviceWorker.register("/sw.js",{scope:"/"}).catch(()=>{});},[]);
@@ -2974,13 +3070,13 @@ export default function App() {
   };
 
   return(
-    <div style={{background:"#07040a",minHeight:"100vh",width:"100%",overflowX:"hidden",color:"#fff",position:"relative"}}>
+    <div style={{background:"var(--bg)",minHeight:"100vh",width:"100%",overflowX:"hidden",color:"#fff",position:"relative"}}>
       {toured&&<OnboardingTour onComplete={()=>setToured(false)}/>}
       <AmbientAudio onReady={fn=>audioPlayRef.current=fn}/>
       <CustomCursor/>
       <SynapseBackground intensity={screen==="checkin"?"heavy":"normal"}/>
       <FloatingNeurons/>
-      <div style={{position:"fixed",inset:0,background:"#07040a",zIndex:900,pointerEvents:"none",opacity:tr?1:0,transition:"opacity .26s ease"}}/>
+      <div style={{position:"fixed",inset:0,background:"var(--bg)",zIndex:900,pointerEvents:"none",opacity:tr?1:0,transition:"opacity .26s ease"}}/>
 
       {authLoading ? (
         <div style={{position:"fixed",inset:0,display:"flex",alignItems:"center",justifyContent:"center",zIndex:10}}>
@@ -2992,7 +3088,7 @@ export default function App() {
 
       ) : authed ? (
         <>
-          <Nav screen={screen} goTo={goTo} savedPlan={savedPlan} onReset={handleReset}/>
+          <Nav screen={screen} goTo={goTo} savedPlan={savedPlan} onReset={handleReset} theme={theme} onThemeToggle={handleThemeToggle}/>
           <div key={screen} ref={topRef} style={{position:"relative",zIndex:2,opacity:tr?0:1,transition:"opacity .26s ease"}}>
             {screen==="confess" &&<Confess onSubmit={handleConfess} loading={planLoading}/>}
             {screen==="plan"    &&<Plan plan={plan||savedPlan} loading={planLoading} onBegin={handleBeginDay1} onRetry={()=>goTo("confess")}/>}
