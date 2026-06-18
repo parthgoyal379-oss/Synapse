@@ -1018,7 +1018,7 @@ function RotatingTaglines() {
    SPLIT LAYOUT — Boot (branding left) + Auth (form right) simultaneously
    This is the first page the user sees. No separate screens.
 ══════════════════════════════════════════════════════════════════════════ */
-function Boot({ onBegin, hasPlan }) {
+function Boot({ onBegin, hasPlan, theme, onThemeToggle }) {
   const [step, setStep] = useState(0);
   const [ready, setReady] = useState(false);
   const lines = ["Neural scanner............ONLINE","Dopamine analyzer.........ACTIVE","Recovery protocol engine..LOADED","Confession vault..........ARMED"];
@@ -1029,6 +1029,11 @@ function Boot({ onBegin, hasPlan }) {
 
   return(
     <div style={{minHeight:"100vh",display:"flex",flexDirection:"column",position:"relative",overflow:"hidden",width:"100%",boxSizing:"border-box"}}>
+      {/* Theme toggle — top right */}
+      <button onClick={onThemeToggle} title={theme==="light"?"Switch to Dark":"Switch to Light"}
+        style={{position:"fixed",top:16,right:16,zIndex:600,background:"var(--surface2)",border:"1px solid var(--border)",borderRadius:999,width:36,height:36,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,transition:"all .25s",boxShadow:"0 2px 12px var(--shadow)"}}>
+        {theme==="light"?"🌙":"☀️"}
+      </button>
       <div className="boot-inner" style={{flex:1,display:"flex",alignItems:"center",padding:"120px 8vw 80px",position:"relative",zIndex:3,width:"100%",boxSizing:"border-box"}}>
         <div style={{maxWidth:760,width:"100%"}}>
           {/* Terminal lines */}
@@ -3137,7 +3142,7 @@ export default function App() {
         <div style={{position:"relative",zIndex:2}}>
           {screen==="confess" && <Confess onSubmit={handleConfess} loading={planLoading}/>}
           {screen==="plan"    && <Plan plan={plan} loading={planLoading} onBegin={()=>setShowAuth(true)} onRetry={()=>goTo("confess")}/>}
-          {screen==="boot"    && <Boot onBegin={handleBegin} hasPlan={false}/>}
+          {screen==="boot"    && <Boot onBegin={handleBegin} hasPlan={false} theme={theme} onThemeToggle={handleThemeToggle}/>}
         </div>
       )}
     </div>
