@@ -2679,6 +2679,45 @@ function Report({history,savedPlan,streak,planHistory}) {
   const rewireLabel=rewire<20?"Early Detox":rewire<40?"Rewiring Begins":rewire<60?"Pathways Forming":rewire<80?"Deep Rewire":"Neural Reset Complete";
   const [entered,setEntered]=useState(false);
   useEffect(()=>{setTimeout(()=>setEntered(true),60);},[]);
+
+  // Load trigger log + confess data for analytics
+  const triggerLog = useMemo(()=>{ try{ return JSON.parse(ls.get("syn_trigger_log","[]")); }catch{ return []; } },[]);
+  const confessData = useMemo(()=>{ try{ return JSON.parse(ls.get("syn_confess","null")); }catch{ return null; } },[]);
+  const allAddictions = confessData?.addictions||[];
+
+  const TRIGGER_LABELS={bored:"😑 Bored",stressed:"😰 Stressed",lonely:"🫤 Lonely",alone_room:"🚪 Alone in room",phone_bed:"📱 Phone in bed",after_argument:"💢 Argument",tired:"😴 Tired",social_media:"📲 Social media",friends_around:"👥 Friends around",failure:"📉 Felt failure",free_time:"⏳ Free time",habit_cue:"🔁 Habit/autopilot"};
+  const TIME_LABELS={morning:"🌅 Morning",afternoon:"☀️ Afternoon",evening:"🌆 Evening",late_night:"🌙 Late Night"};
+
+  // Aggregate: trigger frequency across all addictions, last 30 entries
+  const triggerCounts=useMemo(()=>{
+    const counts={};
+    triggerLog.slice(-30).forEach(e=>(e.addictions||[]).forEach(a=>(a.triggers||[]).forEach(t=>{counts[t]=(counts[t]||0)+1;})));
+    return Object.entries(counts).sort((a,b)=>b[1]-a[1]).slice(0,6);
+  },[triggerLog]);
+
+  // Aggregate: time of day frequency
+  const timeCounts=useMemo(()=>{
+    const counts={morning:0,afternoon:0,evening:0,late_night:0};
+    triggerLog.slice(-30).forEach(e=>(e.addictions||[]).forEach(a=>{if(a.timeOfDay)counts[a.timeOfDay]=(counts[a.timeOfDay]||0)+1;}));
+    return counts;
+  },[triggerLog]);
+  const maxTimeCount=Math.max(1,...Object.values(timeCounts));
+
+  // Per-addiction last-14-day usage trend
+  const last14=triggerLog.slice(-14);
+  const addictionTrends=useMemo(()=>{
+    return allAddictions.map(ad=>{
+      const points=last14.map(e=>{
+        const entry=(e.addictions||[]).find(a=>a.id===ad.id);
+        return entry?(entry.status==="clean"?0:entry.usage||0):0;
+      });
+      const cleanDays=last14.filter(e=>!((e.addictions||[]).find(a=>a.id===ad.id))).length;
+      return {...ad,points,cleanDays,total14:last14.length};
+    });
+  },[allAddictions,last14]);
+
+  const maxTrigger=triggerCounts.length?triggerCounts[0][1]:1;
+
   return(
     <div style={{minHeight:"100vh",paddingTop:80,position:"relative",overflowX:"hidden",opacity:entered?1:0,transform:entered?"translateY(0)":"translateY(24px)",transition:"all .8s cubic-bezier(.16,1,.3,1)"}}>
       <div style={{padding:"clamp(60px,8vw,80px) clamp(20px,8vw,100px) clamp(40px,5vw,64px)",borderBottom:"1px solid rgba(255,140,0,0.07)",position:"relative",zIndex:1}}>
@@ -2693,18 +2732,18 @@ function Report({history,savedPlan,streak,planHistory}) {
         <div className="glass" style={{padding:"36px 40px",marginBottom:16,animation:"borderGlow 4s ease-in-out infinite"}}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-end",marginBottom:16}}>
             <div>
-              <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:48,fontWeight:800,color:"#fff",lineHeight:1}}>{rewire}<span style={{fontSize:20,color:"rgba(255,140,0,0.5)"}}>%</span></div>
+              <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:48,fontWeight:800,color:"var(--text)",lineHeight:1}}>{rewire}<span style={{fontSize:20,color:"rgba(255,140,0,0.5)"}}>%</span></div>
               <div style={{fontSize:11,letterSpacing:3,color:"rgba(255,140,0,0.5)",textTransform:"uppercase",marginTop:6}}>{rewireLabel}</div>
             </div>
             <div style={{textAlign:"right"}}>
-              <div style={{fontSize:11,color:"rgba(255,255,255,0.2)",letterSpacing:1}}>TARGET</div>
+              <div style={{fontSize:11,color:"var(--text4)",letterSpacing:1}}>TARGET</div>
               <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:20,color:"rgba(255,140,0,0.4)",fontWeight:700}}>90 DAYS</div>
             </div>
           </div>
           <div style={{height:6,background:"rgba(255,255,255,0.04)",borderRadius:4,overflow:"hidden",marginBottom:12}}>
             <div style={{height:"100%",borderRadius:4,background:"linear-gradient(90deg,rgba(255,80,0,0.8),rgba(255,180,50,1))",boxShadow:"0 0 20px rgba(255,140,0,0.4)",width:`${rewire}%`,transition:"width 2s cubic-bezier(.16,1,.3,1) .3s"}}/>
           </div>
-          <div style={{fontSize:11,color:"rgba(255,255,255,0.15)",letterSpacing:1}}>
+          <div style={{fontSize:11,color:"var(--text4)",letterSpacing:1}}>
             {90-streak>0?`${90-streak} days to full neural reset`:"Full dopamine baseline restored 🔥"}
           </div>
         </div>
@@ -2721,7 +2760,7 @@ function Report({history,savedPlan,streak,planHistory}) {
           ].map(({label,val,color})=>(
             <div key={label} className="glass" style={{padding:"20px 22px",textAlign:"center"}}>
               <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:32,fontWeight:800,color,marginBottom:6,lineHeight:1}}>{val}</div>
-              <div style={{fontSize:9,letterSpacing:2,color:"rgba(255,255,255,0.2)",textTransform:"uppercase"}}>{label}</div>
+              <div style={{fontSize:9,letterSpacing:2,color:"var(--text4)",textTransform:"uppercase"}}>{label}</div>
             </div>
           ))}
         </div>
@@ -2739,11 +2778,109 @@ function Report({history,savedPlan,streak,planHistory}) {
               {[["🔥 Win",wins,"rgba(255,140,0,0.6)"],["⚡ Held",mids,"rgba(255,200,0,0.5)"],["⚔️ Reset",slips,"rgba(255,80,80,0.5)"]].map(([l,v,c])=>(
                 <div key={l} style={{display:"flex",alignItems:"center",gap:6}}>
                   <div style={{width:8,height:8,borderRadius:2,background:c}}/>
-                  <span style={{fontSize:11,color:"rgba(255,255,255,0.3)"}}>{l}: <span style={{color:"rgba(255,255,255,0.55)"}}>{v}</span></span>
+                  <span style={{fontSize:11,color:"var(--text3)"}}>{l}: <span style={{color:"var(--text2)"}}>{v}</span></span>
                 </div>
               ))}
             </div>
           </div>
+        )}
+
+        {/* ═══ ADDICTION ANALYTICS ═══ */}
+        {addictionTrends.length>0&&(
+          <>
+            <div className="tag s1" style={{marginBottom:16,marginTop:8}}><span className="d"/>Addiction Breakdown — Last 14 Days</div>
+
+            {/* Per-addiction usage trend cards */}
+            <div style={{display:"flex",flexDirection:"column",gap:14,marginBottom:32}}>
+              {addictionTrends.map(ad=>{
+                const slipDays=ad.points.filter(p=>p>0).length;
+                const cleanRate=ad.total14>0?Math.round(((ad.total14-slipDays)/ad.total14)*100):100;
+                const maxPoint=Math.max(1,...ad.points,ad.value||1);
+                const w=280,h=56,pad=4;
+                const stepX=ad.points.length>1?(w-pad*2)/(ad.points.length-1):0;
+                const pathPoints=ad.points.map((p,i)=>{
+                  const x=pad+i*stepX;
+                  const y=h-pad-((p/maxPoint)*(h-pad*2));
+                  return `${x},${y}`;
+                }).join(" ");
+                const areaPath=`M${pad},${h-pad} L${pathPoints.split(" ").join(" L")} L${w-pad},${h-pad} Z`;
+                return(
+                  <div key={ad.id} className="glass" style={{padding:"22px 26px"}}>
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14,flexWrap:"wrap",gap:10}}>
+                      <div style={{display:"flex",alignItems:"center",gap:10}}>
+                        <span style={{fontSize:20}}>{ad.emoji}</span>
+                        <div>
+                          <div style={{fontSize:13,fontWeight:600,color:"var(--text)"}}>{ad.label}</div>
+                          <div style={{fontSize:10,color:"var(--text4)"}}>{cleanRate}% clean rate · last 14 days</div>
+                        </div>
+                      </div>
+                      <div style={{display:"flex",gap:14,fontSize:10,color:"var(--text3)"}}>
+                        <span><span style={{color:"#88ff44",fontWeight:700}}>{ad.total14-slipDays}</span> clean</span>
+                        <span><span style={{color:"#ff5050",fontWeight:700}}>{slipDays}</span> slipped</span>
+                      </div>
+                    </div>
+                    {/* Mini trend chart */}
+                    <svg width="100%" height="56" viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" style={{display:"block"}}>
+                      <defs>
+                        <linearGradient id={`grad-${ad.id}`} x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor={ad.color} stopOpacity="0.35"/>
+                          <stop offset="100%" stopColor={ad.color} stopOpacity="0"/>
+                        </linearGradient>
+                      </defs>
+                      <path d={areaPath} fill={`url(#grad-${ad.id})`}/>
+                      <polyline points={pathPoints} fill="none" stroke={ad.color} strokeWidth="1.5" strokeLinejoin="round" strokeLinecap="round"/>
+                      {ad.points.map((p,i)=>{
+                        const x=pad+i*stepX; const y=h-pad-((p/maxPoint)*(h-pad*2));
+                        return p>0?<circle key={i} cx={x} cy={y} r="2" fill={ad.color}/>:null;
+                      })}
+                    </svg>
+                    <div style={{display:"flex",justifyContent:"space-between",fontSize:8,color:"var(--text4)",marginTop:2}}>
+                      <span>14 days ago</span><span>Today</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Trigger frequency chart */}
+            {triggerCounts.length>0&&(
+              <div className="glass" style={{padding:"26px 30px",marginBottom:20}}>
+                <div style={{fontSize:10,letterSpacing:3,color:"rgba(255,140,0,0.45)",textTransform:"uppercase",marginBottom:18}}>⚡ Top Triggers — Last 30 Days</div>
+                <div style={{display:"flex",flexDirection:"column",gap:12}}>
+                  {triggerCounts.map(([id,count])=>(
+                    <div key={id}>
+                      <div style={{display:"flex",justifyContent:"space-between",marginBottom:5}}>
+                        <span style={{fontSize:12,color:"var(--text2)"}}>{TRIGGER_LABELS[id]||id}</span>
+                        <span style={{fontSize:11,fontWeight:700,color:"var(--accent)",fontFamily:"'JetBrains Mono',monospace"}}>{count}×</span>
+                      </div>
+                      <div style={{height:7,background:"rgba(255,255,255,0.04)",borderRadius:4,overflow:"hidden"}}>
+                        <div style={{height:"100%",borderRadius:4,width:`${(count/maxTrigger)*100}%`,background:"linear-gradient(90deg,rgba(255,100,0,0.7),rgba(255,180,50,0.95))",transition:"width 1s ease"}}/>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Time of day heatmap */}
+            {Object.values(timeCounts).some(v=>v>0)&&(
+              <div className="glass" style={{padding:"26px 30px",marginBottom:32}}>
+                <div style={{fontSize:10,letterSpacing:3,color:"rgba(255,140,0,0.45)",textTransform:"uppercase",marginBottom:18}}>🕐 When Slips Happen Most</div>
+                <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:10}}>
+                  {Object.entries(timeCounts).map(([id,count])=>{
+                    const intensity=count/maxTimeCount;
+                    return(
+                      <div key={id} style={{textAlign:"center",padding:"16px 8px",borderRadius:10,background:`rgba(255,${Math.round(140-intensity*60)},0,${0.04+intensity*0.14})`,border:`1px solid rgba(255,140,0,${0.1+intensity*0.3})`,transition:"all .5s"}}>
+                        <div style={{fontSize:18,marginBottom:6}}>{TIME_LABELS[id].split(" ")[0]}</div>
+                        <div style={{fontSize:9,color:"var(--text3)",marginBottom:4,letterSpacing:.5}}>{TIME_LABELS[id].split(" ")[1]}</div>
+                        <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:18,fontWeight:800,color:intensity>0.6?"#ff8c00":"var(--text3)"}}>{count}</div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </>
         )}
 
         {/* Battle Plan — always accessible */}
@@ -2756,13 +2893,13 @@ function Report({history,savedPlan,streak,planHistory}) {
             </button>
             {planOpen&&(
               <div className="glass" style={{padding:"36px 40px",marginBottom:32,borderTop:"none",borderRadius:"0 0 12px 12px",animation:"fadeUp .4s ease both"}}>
-                <div style={{fontSize:14,lineHeight:2.15,color:"rgba(255,255,255,0.62)",fontWeight:300,whiteSpace:"pre-wrap",borderLeft:"2px solid rgba(255,140,0,0.22)",paddingLeft:24}}>{parseBold(savedPlan)}</div>
+                <div style={{fontSize:14,lineHeight:2.15,color:"var(--text2)",fontWeight:300,whiteSpace:"pre-wrap",borderLeft:"2px solid rgba(255,140,0,0.22)",paddingLeft:24}}>{parseBold(savedPlan)}</div>
               </div>
             )}
           </>
         ):(
           <div className="glass s2" style={{padding:40,textAlign:"center",marginBottom:32}}>
-            <p style={{fontSize:13,color:"rgba(255,255,255,0.2)"}}>No battle plan yet. Complete the Confess flow to generate yours.</p>
+            <p style={{fontSize:13,color:"var(--text4)"}}>No battle plan yet. Complete the Confess flow to generate yours.</p>
           </div>
         )}
 
@@ -2774,9 +2911,9 @@ function Report({history,savedPlan,streak,planHistory}) {
               <div key={i} className="glass" style={{padding:"20px 24px",marginBottom:10,cursor:"none"}} onClick={()=>setOldPlanIdx(oldPlanIdx===i?null:i)}>
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
                   <span style={{fontSize:11,color:"rgba(255,140,0,0.4)",letterSpacing:1}}>Plan from {new Date(p.date).toLocaleDateString()}</span>
-                  <span style={{fontSize:12,color:"rgba(255,255,255,0.2)"}}>{oldPlanIdx===i?"▲":"▼"}</span>
+                  <span style={{fontSize:12,color:"var(--text4)"}}>{oldPlanIdx===i?"▲":"▼"}</span>
                 </div>
-                {oldPlanIdx===i&&<div style={{fontSize:13,lineHeight:2,color:"rgba(255,255,255,0.4)",fontWeight:300,whiteSpace:"pre-wrap",borderLeft:"2px solid rgba(255,140,0,0.12)",paddingLeft:20,marginTop:16}}>{parseBold(p.plan)}</div>}
+                {oldPlanIdx===i&&<div style={{fontSize:13,lineHeight:2,color:"var(--text3)",fontWeight:300,whiteSpace:"pre-wrap",borderLeft:"2px solid rgba(255,140,0,0.12)",paddingLeft:20,marginTop:16}}>{parseBold(p.plan)}</div>}
               </div>
             ))}
           </>
