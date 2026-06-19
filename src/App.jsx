@@ -773,38 +773,40 @@ svg{background:transparent!important;overflow:visible;}
   --danger:rgba(255,50,50,.18);
   --danger-text:rgba(255,80,80,.35);
   --shadow:rgba(0,0,0,.5);
+  --gradient-text:linear-gradient(145deg,#fff 40%,rgba(255,180,80,0.65) 100%);
 }
 .light{
-  --bg:#f5f3f7;
-  --bg2:#ede9f2;
-  --bg3:#e6e0ee;
-  --surface:rgba(180,100,0,.05);
-  --surface2:rgba(0,0,0,.025);
-  --surface3:rgba(0,0,0,.03);
-  --border:rgba(180,100,0,.15);
-  --border2:rgba(0,0,0,.08);
-  --border3:rgba(180,100,0,.28);
-  --text:#1a1020;
-  --text2:rgba(20,10,30,.65);
-  --text3:rgba(20,10,30,.38);
-  --text4:rgba(20,10,30,.18);
-  --accent:#d4700a;
-  --accent2:#b35500;
-  --accent3:rgba(180,100,0,.07);
-  --accent4:rgba(160,80,0,.7);
-  --glass-bg:linear-gradient(135deg,rgba(180,100,0,.05) 0%,rgba(120,40,0,.02) 100%);
-  --glass-before:rgba(255,255,255,.6);
-  --nav-text:rgba(140,70,0,.5);
-  --tag-bg:rgba(180,100,0,.07);
-  --tag-border:rgba(180,100,0,.2);
-  --tag-text:rgba(140,70,0,.8);
-  --input-bg:rgba(0,0,0,.03);
-  --input-border:rgba(180,100,0,.18);
-  --input-placeholder:rgba(20,10,30,.25);
-  --selection:rgba(212,112,10,.15);
-  --danger:rgba(200,30,30,.12);
-  --danger-text:rgba(180,40,40,.5);
-  --shadow:rgba(0,0,0,.15);
+  --bg:#faf7f2;
+  --bg2:#f3eee5;
+  --bg3:#ece4d6;
+  --surface:rgba(180,90,20,.045);
+  --surface2:rgba(40,28,16,.035);
+  --surface3:rgba(40,28,16,.045);
+  --border:rgba(150,80,20,.14);
+  --border2:rgba(40,28,16,.09);
+  --border3:rgba(180,90,20,.26);
+  --text:#241c14;
+  --text2:rgba(36,28,20,.68);
+  --text3:rgba(36,28,20,.42);
+  --text4:rgba(36,28,20,.24);
+  --accent:#b8540f;
+  --accent2:#8f3f0a;
+  --accent3:rgba(184,84,15,.08);
+  --accent4:rgba(143,63,10,.78);
+  --glass-bg:linear-gradient(135deg,rgba(255,255,255,.85) 0%,rgba(250,244,232,.6) 100%);
+  --glass-before:rgba(255,255,255,.5);
+  --nav-text:rgba(143,63,10,.55);
+  --tag-bg:rgba(184,84,15,.07);
+  --tag-border:rgba(184,84,15,.22);
+  --tag-text:rgba(143,63,10,.85);
+  --input-bg:rgba(255,255,255,.6);
+  --input-border:rgba(150,80,20,.2);
+  --input-placeholder:rgba(36,28,20,.3);
+  --selection:rgba(184,84,15,.18);
+  --danger:rgba(190,40,30,.14);
+  --danger-text:rgba(170,40,30,.65);
+  --shadow:rgba(80,50,20,.1);
+  --gradient-text:linear-gradient(150deg,#241c14 25%,#b8540f 100%);
 }
 
 html{scroll-behavior:auto;overflow-x:hidden;width:100%;margin:0;padding:0;box-sizing:border-box;scrollbar-width:none;-ms-overflow-style:none;}
@@ -863,14 +865,17 @@ input[type=range]{-webkit-appearance:none;appearance:none;background:transparent
 .light [style*="background:\"#07040a\""],.light [style*='background:"#07040a"']{background:var(--bg)!important;}
 .light [style*="color:\"#fff\""],.light [style*="color:\"rgba(255,255,255"]{color:var(--text)!important;}
 .light [style*="rgba(7,4,10"]{--dark-surface:rgba(230,224,238,0.9);}
-.light canvas{opacity:.55;filter:saturate(0.7) brightness(1.1);}
-.light .glass{background:rgba(180,100,0,.04)!important;border-color:rgba(180,100,0,.15)!important;}
-.light .glass::before{background:linear-gradient(135deg,rgba(255,255,255,.7) 0%,transparent 60%)!important;}
-.light .syn-textarea{color:var(--text)!important;background:rgba(0,0,0,.03)!important;}
-.light .syn-textarea::placeholder{color:rgba(20,10,30,.25)!important;}
-.light .tag{background:rgba(180,100,0,.07)!important;border-color:rgba(180,100,0,.2)!important;color:rgba(140,70,0,.8)!important;}
+.light canvas{opacity:.4;filter:sepia(.15) saturate(1.15) brightness(1.08) hue-rotate(-6deg);mix-blend-mode:multiply;}
+.light .glass{background:var(--glass-bg)!important;border-color:var(--border)!important;box-shadow:0 1px 2px rgba(80,50,20,.04),0 8px 24px -8px rgba(80,50,20,.12),inset 0 1px 0 rgba(255,255,255,.8)!important;}
+.light .glass::before{background:linear-gradient(135deg,rgba(255,255,255,.55) 0%,transparent 60%)!important;}
+.light .syn-textarea{color:var(--text)!important;background:var(--input-bg)!important;box-shadow:inset 0 1px 3px rgba(80,50,20,.05)!important;}
+.light .syn-textarea::placeholder{color:var(--input-placeholder)!important;}
+.light .tag{background:var(--tag-bg)!important;border-color:var(--tag-border)!important;color:var(--tag-text)!important;}
 .light .tag .d{background:var(--accent)!important;box-shadow:0 0 7px var(--accent)!important;}
-.light .btn-ghost{background:rgba(180,100,0,.07)!important;border-color:rgba(180,100,0,.25)!important;color:rgba(140,70,0,.8)!important;}
+.light .btn-ghost{background:var(--accent3)!important;border-color:var(--border3)!important;color:var(--accent4)!important;}
+.light .btn-primary{box-shadow:0 2px 8px rgba(184,84,15,.25),0 8px 28px -6px rgba(184,84,15,.4)!important;}
+.light .nav-pill{border-color:var(--border)!important;color:var(--nav-text)!important;}
+.light .nav-pill:hover,.light .nav-pill.active{border-color:var(--border3)!important;color:var(--accent2)!important;background:var(--accent3)!important;}
 
 /* Light mode — screen backgrounds */
 .light [style*="minHeight:\"100vh\""]{background:var(--bg)!important;}
@@ -891,19 +896,33 @@ input[type=range]{-webkit-appearance:none;appearance:none;background:transparent
 .light [style*="color:\"rgba(255,255,255,.8)\""]{color:var(--text)!important;}
 .light [style*="color:\"rgba(255,255,255,.25)\""]{color:var(--text4)!important;}
 .light [style*="color:\"rgba(255,255,255,.2)\""]{color:var(--text4)!important;}
+.light [style*="color:\"rgba(255,255,255,.35)\""]{color:var(--text3)!important;}
+.light [style*="color:\"rgba(255,255,255,.45)\""]{color:var(--text2)!important;}
+.light [style*="color:\"rgba(255,255,255,.55)\""]{color:var(--text2)!important;}
+.light [style*="color:\"rgba(255,255,255,.85)\""]{color:var(--text)!important;}
+.light [style*="color:\"rgba(255,255,255,.9)\""]{color:var(--text)!important;}
 
-/* Light mode — WebkitTextFillColor reset for gradient text headings */
-.light [style*="WebkitTextFillColor:\"transparent\""]{opacity:.9;}
+/* Light mode — THE CRITICAL FIX: gradient text headings were white→orange,
+   invisible on a light background. Force them to a deep charcoal→burnt-amber
+   gradient instead — this is what was making everything look washed out/inverted. */
+.light [style*="WebkitTextFillColor:\"transparent\""]{
+  background:var(--gradient-text)!important;
+  -webkit-background-clip:text!important;
+  background-clip:text!important;
+}
 
 /* Light mode — surface/card backgrounds */
-.light [style*="background:\"rgba(255,255,255,.025)\""]{background:rgba(0,0,0,.03)!important;}
-.light [style*="background:\"rgba(255,255,255,.04)\""]{background:rgba(0,0,0,.04)!important;}
-.light [style*="background:\"rgba(255,255,255,.03)\""]{background:rgba(0,0,0,.03)!important;}
-.light [style*="border:\"1px solid rgba(255,255,255,.07)\""]{border-color:rgba(0,0,0,.08)!important;}
-.light [style*="border:\"1px solid rgba(255,255,255,.08)\""]{border-color:rgba(0,0,0,.09)!important;}
+.light [style*="background:\"rgba(255,255,255,.025)\""]{background:rgba(40,28,16,.035)!important;}
+.light [style*="background:\"rgba(255,255,255,.04)\""]{background:rgba(40,28,16,.045)!important;}
+.light [style*="background:\"rgba(255,255,255,.03)\""]{background:rgba(40,28,16,.035)!important;}
+.light [style*="border:\"1px solid rgba(255,255,255,.07)\""]{border-color:rgba(40,28,16,.1)!important;}
+.light [style*="border:\"1px solid rgba(255,255,255,.08)\""]{border-color:rgba(40,28,16,.11)!important;}
 
 /* Light mode — gradient lock overlay in BattlePlanPreview */
-.light [style*="rgba(7,4,10,1)"]{background:linear-gradient(0deg,var(--bg) 0%,rgba(245,243,247,.9) 40%,rgba(245,243,247,0) 100%)!important;}
+.light [style*="rgba(7,4,10,1)"]{background:linear-gradient(0deg,var(--bg) 0%,rgba(250,247,242,.92) 40%,rgba(250,247,242,0) 100%)!important;}
+
+/* Light mode — premium touch: soft warm vignette instead of harsh white */
+.light body{background:radial-gradient(ellipse 80% 60% at 50% -10%,rgba(184,84,15,.05),transparent),var(--bg);}
 
 /* ── MOBILE RESPONSIVE ── */
 .step-inner{box-sizing:border-box;width:100%;}
