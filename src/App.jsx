@@ -265,6 +265,21 @@ const MODES = {
   },
 };
 const getMode=()=>MODES[ls.get("syn_mode","commander")]||MODES.commander;
+
+/* ─── SHARED CHAT HISTORY ─────────────────────────────────────────────────
+   Checkin's inline follow-up chat and the full Coach screen share ONE
+   continuous conversation log, so the AI never starts from zero — it
+   always has today's structured check-in report, notes, and prior
+   messages in context, regardless of where the user enters from.
+──────────────────────────────────────────────────────────────────────────── */
+const loadChatHistory=()=>{ try{ return JSON.parse(ls.get("syn_chat_history","[]")); }catch{ return []; } };
+const saveChatHistory=(msgs)=>{ try{ ls.set("syn_chat_history",JSON.stringify(msgs.slice(-60))); }catch{} };
+const appendChatHistory=(...newMsgs)=>{
+  const log=loadChatHistory();
+  const updated=[...log,...newMsgs];
+  saveChatHistory(updated);
+  return updated;
+};
 const getConfessPrompt=()=>({operator:SYSTEM_CONFESS_OPERATOR,commander:SYSTEM_CONFESS_COMMANDER,warlord:SYSTEM_CONFESS_WARLORD}[ls.get("syn_mode","commander")]||SYSTEM_CONFESS_COMMANDER);
 const getCheckinPrompt=()=>({operator:SYSTEM_CHECKIN_OPERATOR,commander:SYSTEM_CHECKIN_COMMANDER,warlord:SYSTEM_CHECKIN_WARLORD}[ls.get("syn_mode","commander")]||SYSTEM_CHECKIN_COMMANDER);
 const withTone=(prompt)=>prompt; // Emergency/Chat still use single prompt + this is now a passthrough for those
@@ -913,7 +928,6 @@ input[type=range]{-webkit-appearance:none;appearance:none;background:transparent
   .step-label{display:none !important;}
 
   /* ── Grids ── */
-  .archetype-grid{grid-template-columns:1fr 1fr !important;gap:10px !important;}
   .addiction-grid{grid-template-columns:1fr 1fr !important;gap:8px !important;}
 
   /* ── Content pads ── */
@@ -941,7 +955,6 @@ input[type=range]{-webkit-appearance:none;appearance:none;background:transparent
 
 @media(max-width:480px){
   /* ── Single column grids ── */
-  .archetype-grid{grid-template-columns:1fr !important;}
   .addiction-grid{grid-template-columns:1fr !important;}
 
   /* ── Nav pills — shorter ── */
@@ -1362,7 +1375,7 @@ function ArchetypeStep({ onSelect, selected }) {
       </p>
 
       {/* Archetype cards grid */}
-      <div className="archetype-grid" style={{display:"grid",gridTemplateColumns:"repeat(4,minmax(0,1fr))",gap:16,marginBottom:52,width:"100%",boxSizing:"border-box",overflow:"hidden"}}>
+      <div className="archetype-grid" style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(200px,1fr))",gap:16,marginBottom:52,width:"100%",boxSizing:"border-box"}}>
         {ARCHETYPES.map((a, i) => {
           const isSel = selected === a.id;
           const isHov = hovered === a.id;
@@ -2385,6 +2398,11 @@ function Checkin({streak,savedPlan,lastCheckin,onCheckin,onGoChat}) {
     setReply(result.reply);
     setStatus(result.status);
     setLoading(false);
+    // Seed shared chat history with today's structured report + AI's response,
+    // so the full Coach screen (and tomorrow's checkin) has full context.
+    if(result.status!=="CRISIS"){
+      appendChatHistory({role:"user",text:report},{role:"ai",text:result.reply});
+    }
   };
 
   const sendChat=async()=>{
@@ -2392,22 +2410,27 @@ function Checkin({streak,savedPlan,lastCheckin,onCheckin,onGoChat}) {
     if(!txt||chatLoading) return;
     setChatInput("");
     setChatMsgs(m=>[...m,{role:"user",text:txt}]);
-    if(detectCrisis(txt)){ setChatMsgs(m=>[...m,{role:"ai",text:CRISIS_RESPONSE,crisis:true}]); return; }
+    if(detectCrisis(txt)){
+      setChatMsgs(m=>[...m,{role:"ai",text:CRISIS_RESPONSE,crisis:true}]);
+      appendChatHistory({role:"user",text:txt},{role:"ai",text:CRISIS_RESPONSE,crisis:true});
+      return;
+    }
     setChatLoading(true);
     try{
       const arch=JSON.parse(ls.get("syn_archetype","null"));
       const archetypeCtx=arch?`\n\nUser archetype: ${arch.title} — ${arch.sub}`:"";
+      // Pull full shared history for context — includes today's report, past days, everything
+      const sharedHistory=loadChatHistory();
       const ctx=[
         {role:"user",content:savedPlan+archetypeCtx},
         {role:"assistant",content:"Your mission begins now."},
-        {role:"user",content:buildReport()},
-        {role:"assistant",content:reply},
-        ...chatMsgs.map(m=>({role:m.role==="user"?"user":"assistant",content:m.text})),
+        ...sharedHistory.slice(-12).map(m=>({role:m.role==="user"?"user":"assistant",content:m.text})),
         {role:"user",content:txt}
       ];
       const r=await callAI(ctx,withTone(SYSTEM_CHAT));
       const aiText=r.startsWith("[OFF_TOPIC]")?"That's outside my scope — I only coach on recovery topics. What's on your mind about your mission?":r;
       setChatMsgs(m=>[...m,{role:"ai",text:aiText}]);
+      appendChatHistory({role:"user",text:txt},{role:"ai",text:aiText});
     }catch(e){ setChatMsgs(m=>[...m,{role:"ai",text:"Connection issue — try again."}]); }
     setChatLoading(false);
   };
@@ -2940,7 +2963,11 @@ function ChatBubble({msg,idx}){
 }
 
 function Chat({streak,savedPlan}){
-  const [msgs,setMsgs]=useState([{role:"ai",text:`Day ${streak} — I'm here. What's on your mind? Ask me anything about your recovery, urges, or the battle ahead.`}]);
+  const [msgs,setMsgs]=useState(()=>{
+    const history=loadChatHistory();
+    if(history.length>0) return history;
+    return [{role:"ai",text:`Day ${streak} — I'm here. What's on your mind? Ask me anything about your recovery, urges, or the battle ahead.`}];
+  });
   const [input,setInput]=useState("");
   const [loading,setLoading]=useState(false);
   const [vis,setVis]=useState(false);
@@ -2963,25 +2990,25 @@ function Chat({streak,savedPlan}){
     if(!txt||loading) return;
     setInput("");
     const userMsg={role:"user",text:txt};
-    setMsgs(m=>[...m,userMsg]);
+    setMsgs(m=>{ const next=[...m,userMsg]; saveChatHistory(next); return next; });
     if(detectCrisis(txt)){
-      setMsgs(m=>[...m,{role:"ai",text:CRISIS_RESPONSE,crisis:true}]);
+      setMsgs(m=>{ const next=[...m,{role:"ai",text:CRISIS_RESPONSE,crisis:true}]; saveChatHistory(next); return next; });
       return;
     }
     setLoading(true);
     try{
-      // Build context — last 6 messages for memory
-      const ctx=([...msgs,userMsg]).slice(-6).map(m=>({role:m.role==="user"?"user":"assistant",content:m.text}));
+      // Build context — last 12 messages for memory, includes checkin reports too
+      const ctx=([...msgs,userMsg]).slice(-12).map(m=>({role:m.role==="user"?"user":"assistant",content:m.text}));
       // Add streak context to first message
       ctx[0]={...ctx[0],content:`[User context: Day ${streak} of recovery. Plan: ${savedPlan?savedPlan.slice(0,120)+"...":"not set yet"}]\n\n${ctx[0].content}`};
       const reply=await callAI(ctx,withTone(SYSTEM_CHAT));
       if(reply.includes("[OFF_TOPIC]")){
-        setMsgs(m=>[...m,{role:"ai",text:OFF_TOPIC_MSG,offTopic:true}]);
+        setMsgs(m=>{ const next=[...m,{role:"ai",text:OFF_TOPIC_MSG,offTopic:true}]; saveChatHistory(next); return next; });
       } else {
-        setMsgs(m=>[...m,{role:"ai",text:reply}]);
+        setMsgs(m=>{ const next=[...m,{role:"ai",text:reply}]; saveChatHistory(next); return next; });
       }
     }catch(e){
-      setMsgs(m=>[...m,{role:"ai",text:"Connection error. Stay strong — try again."}]);
+      setMsgs(m=>{ const next=[...m,{role:"ai",text:"Connection error. Stay strong — try again."}]; saveChatHistory(next); return next; });
     }
     setLoading(false);
   };
@@ -3419,7 +3446,7 @@ export default function App() {
 
   const handleReset=()=>{
     if(!confirm("Reset all progress? This cannot be undone."))return;
-    ["syn_streak","syn_last","syn_plan","syn_plan_history","syn_history","syn_user","syn_archetype","syn_milestones","syn_confess","syn_trigger_log"].forEach(k=>ls.remove(k));
+    ["syn_streak","syn_last","syn_plan","syn_plan_history","syn_history","syn_user","syn_archetype","syn_milestones","syn_confess","syn_trigger_log","syn_chat_history"].forEach(k=>ls.remove(k));
     setStreak(0);setLastCI(null);setSP("");setPlanHist([]);setHistory([]);setPlan("");
     setPendingPlan("");setPendingArch(null);
     setAuthed(false);setShowAuth(false);
