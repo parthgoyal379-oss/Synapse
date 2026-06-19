@@ -1750,11 +1750,14 @@ function Confess({onSubmit,loading}) {
     if(arch) ls.set("syn_archetype", JSON.stringify(archData));
     // Save addiction data for structured checkin screen
     const confessData = {
-      addictions: selected.map(a=>({
-        id:a.id, label:a.label, emoji:a.emoji, color:a.color,
-        isFreq:FREQ_ADDICTIONS.has(a.id),
-        value:hours[a.id]||0
-      }))
+      addictions: selected.map(id=>{
+        const full = ADDICTIONS.find(a=>a.id===id);
+        return {
+          id, label:full?.label||id, emoji:full?.emoji||"⚡", color:full?.color||"#ff8c00",
+          isFreq:FREQ_ADDICTIONS.has(id),
+          value:hours[id]||0
+        };
+      })
     };
     ls.set("syn_confess", JSON.stringify(confessData));
     const enriched = arch ? `User Archetype: ${arch.title} (${arch.sub})\n\n${prompt}` : prompt;
@@ -3279,7 +3282,7 @@ export default function App() {
 
   const handleReset=()=>{
     if(!confirm("Reset all progress? This cannot be undone."))return;
-    ["syn_streak","syn_last","syn_plan","syn_plan_history","syn_history","syn_user","syn_archetype","syn_milestones"].forEach(k=>ls.remove(k));
+    ["syn_streak","syn_last","syn_plan","syn_plan_history","syn_history","syn_user","syn_archetype","syn_milestones","syn_confess","syn_trigger_log"].forEach(k=>ls.remove(k));
     setStreak(0);setLastCI(null);setSP("");setPlanHist([]);setHistory([]);setPlan("");
     setPendingPlan("");setPendingArch(null);
     setAuthed(false);setShowAuth(false);
