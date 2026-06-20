@@ -773,42 +773,42 @@ svg{background:transparent!important;overflow:visible;}
   --danger:rgba(255,50,50,.18);
   --danger-text:rgba(255,80,80,.35);
   --shadow:rgba(0,0,0,.5);
-  --gradient-text:linear-gradient(145deg,#fff 40%,rgba(255,180,80,0.65) 100%);
+  --gradient-text:linear-gradient(135deg,#ffffff 0%,#ffcc00 60%,#ff9500 100%);
 }
 .light{
-  --bg:#f7f5f2;
-  --bg2:#efebe4;
-  --bg3:#e6dfd3;
-  --surface:rgba(220,80,30,.06);
-  --surface2:rgba(30,25,20,.04);
-  --surface3:rgba(30,25,20,.055);
-  --border:rgba(210,80,30,.18);
-  --border2:rgba(30,25,20,.1);
-  --border3:rgba(220,80,30,.32);
-  --text:#1c1815;
-  --text2:rgba(28,24,21,.68);
-  --text3:rgba(28,24,21,.44);
-  --text4:rgba(28,24,21,.26);
-  --accent:#e0540f;
-  --accent2:#b8420a;
-  --accent3:rgba(224,84,15,.1);
-  --accent4:rgba(184,66,10,.85);
-  --glass-bg:linear-gradient(135deg,rgba(255,255,255,.9) 0%,rgba(247,243,237,.65) 100%);
-  --glass-before:rgba(255,255,255,.6);
-  --nav-text:rgba(184,66,10,.65);
-  --tag-bg:rgba(224,84,15,.1);
-  --tag-border:rgba(224,84,15,.3);
-  --tag-text:rgba(168,55,5,.92);
-  --input-bg:rgba(255,255,255,.8);
-  --input-border:rgba(210,80,30,.25);
-  --input-placeholder:rgba(28,24,21,.35);
-  --selection:rgba(224,84,15,.22);
-  --danger:rgba(190,40,30,.16);
-  --danger-text:rgba(170,40,30,.7);
-  --shadow:rgba(40,30,20,.1);
-  --gradient-text:linear-gradient(150deg,#1c1815 15%,#e0540f 100%);
-  --teal-accent:#0a8f80;
-  --coral-accent:#e8552f;
+  --bg:#f6f4e8;
+  --bg2:#e5eee4;
+  --bg3:#c0e1d2;
+  --surface:rgba(220,155,155,.1);
+  --surface2:rgba(192,225,210,.15);
+  --surface3:rgba(229,238,228,.2);
+  --border:rgba(180,120,120,.2);
+  --border2:rgba(192,225,210,.35);
+  --border3:rgba(220,155,155,.45);
+  --text:#1a1a1a;
+  --text2:rgba(26,26,26,.65);
+  --text3:rgba(26,26,26,.42);
+  --text4:rgba(26,26,26,.24);
+  --accent:#c47a7a;
+  --accent2:#a85c5c;
+  --accent3:rgba(220,155,155,.12);
+  --accent4:rgba(180,100,100,.8);
+  --glass-bg:linear-gradient(135deg,rgba(246,244,232,.92) 0%,rgba(229,238,228,.75) 100%);
+  --glass-before:rgba(255,255,255,.55);
+  --nav-text:rgba(164,90,90,.7);
+  --tag-bg:rgba(220,155,155,.12);
+  --tag-border:rgba(220,155,155,.3);
+  --tag-text:rgba(160,85,85,.9);
+  --input-bg:rgba(246,244,232,.9);
+  --input-border:rgba(192,225,210,.5);
+  --input-placeholder:rgba(26,26,26,.32);
+  --selection:rgba(220,155,155,.25);
+  --danger:rgba(190,40,30,.14);
+  --danger-text:rgba(170,40,30,.65);
+  --shadow:rgba(60,40,40,.08);
+  --gradient-text:linear-gradient(150deg,#1a1a1a 0%,#a85c5c 100%);
+  --teal-accent:#5a9e8a;
+  --coral-accent:#dc9b9b;
 }
 
 html{scroll-behavior:auto;overflow-x:hidden;width:100%;margin:0;padding:0;box-sizing:border-box;scrollbar-width:none;-ms-overflow-style:none;}
@@ -867,17 +867,18 @@ input[type=range]{-webkit-appearance:none;appearance:none;background:transparent
 .light [style*="background:\"#07040a\""],.light [style*='background:"#07040a"']{background:var(--bg)!important;}
 .light [style*="color:\"#fff\""],.light [style*="color:\"rgba(255,255,255"]{color:var(--text)!important;}
 .light [style*="rgba(7,4,10"]{--dark-surface:rgba(230,224,238,0.9);}
-.light canvas{opacity:.45;filter:sepia(.2) saturate(1.3) brightness(1.08) hue-rotate(-5deg);mix-blend-mode:multiply;}
-.light .glass{background:var(--glass-bg)!important;border-color:var(--border)!important;box-shadow:0 1px 2px rgba(80,50,20,.04),0 8px 24px -8px rgba(80,50,20,.12),inset 0 1px 0 rgba(255,255,255,.8)!important;}
-.light .glass::before{background:linear-gradient(135deg,rgba(255,255,255,.55) 0%,transparent 60%)!important;}
-.light .syn-textarea{color:var(--text)!important;background:var(--input-bg)!important;box-shadow:inset 0 1px 3px rgba(80,50,20,.05)!important;}
+.light canvas{opacity:.35;filter:sepia(.1) saturate(0.9) brightness(1.05) hue-rotate(100deg);mix-blend-mode:multiply;}
+.light .glass{background:var(--glass-bg)!important;border-color:var(--border2)!important;box-shadow:0 1px 2px rgba(192,225,210,.15),0 8px 32px -8px rgba(150,190,175,.2),inset 0 1px 0 rgba(255,255,255,.75)!important;}
+.light .glass::before{background:linear-gradient(135deg,rgba(255,255,255,.5) 0%,rgba(229,238,228,.2) 60%,transparent 100%)!important;}
+.light .syn-textarea{color:var(--text)!important;background:rgba(246,244,232,.95)!important;border-color:rgba(192,225,210,.5)!important;box-shadow:inset 0 1px 3px rgba(150,190,175,.08)!important;}
+.light .syn-textarea:focus{border-color:rgba(220,155,155,.5)!important;box-shadow:0 0 0 4px rgba(220,155,155,.08),inset 0 1px 3px rgba(150,190,175,.06)!important;}
 .light .syn-textarea::placeholder{color:var(--input-placeholder)!important;}
-.light .tag{background:var(--tag-bg)!important;border-color:var(--tag-border)!important;color:var(--tag-text)!important;}
-.light .tag .d{background:var(--accent)!important;box-shadow:0 0 7px var(--accent)!important;}
-.light .btn-ghost{background:var(--accent3)!important;border-color:var(--border3)!important;color:var(--accent4)!important;}
-.light .btn-primary{box-shadow:0 2px 8px rgba(184,84,15,.25),0 8px 28px -6px rgba(184,84,15,.4)!important;}
-.light .nav-pill{border-color:var(--border)!important;color:var(--nav-text)!important;}
-.light .nav-pill:hover,.light .nav-pill.active{border-color:var(--border3)!important;color:var(--accent2)!important;background:var(--accent3)!important;}
+.light .tag{background:rgba(192,225,210,.18)!important;border-color:rgba(192,225,210,.45)!important;color:rgba(80,130,115,.9)!important;}
+.light .tag .d{background:var(--teal-accent)!important;box-shadow:0 0 7px rgba(90,158,138,.4)!important;}
+.light .btn-ghost{background:rgba(229,238,228,.6)!important;border-color:rgba(192,225,210,.5)!important;color:rgba(80,130,115,.85)!important;}
+.light .btn-primary{background:linear-gradient(135deg,#c47a7a,#a85c5c)!important;box-shadow:0 2px 8px rgba(196,122,122,.25),0 8px 28px -6px rgba(168,92,92,.35)!important;}
+.light .nav-pill{border-color:rgba(192,225,210,.4)!important;color:var(--nav-text)!important;}
+.light .nav-pill:hover,.light .nav-pill.active{border-color:rgba(220,155,155,.5)!important;color:var(--accent2)!important;background:rgba(220,155,155,.1)!important;}
 
 /* Light mode — screen backgrounds */
 .light [style*="minHeight:\"100vh\""]{background:var(--bg)!important;}
@@ -908,32 +909,51 @@ input[type=range]{-webkit-appearance:none;appearance:none;background:transparent
 .light [style*="color:\"rgba(255,255,255,.05)\""]{color:var(--text4)!important;}
 .light [style*="color:\"#fff\""]{color:var(--text)!important;}
 
-/* Light mode — THE CRITICAL FIX: gradient text headings were white→orange,
-   invisible on a light background. Force them to a deep charcoal→burnt-amber
-   gradient instead — this is what was making everything look washed out/inverted. */
+/* Light mode — gradient text headings: deep charcoal → dusty rose
+   Replaces the dark mode white→orange gradient that's invisible on light bg. */
 .light [style*="WebkitTextFillColor:\"transparent\""]{
-  background:var(--gradient-text)!important;
+  background:linear-gradient(135deg,#1a1a1a 0%,#8a4a4a 55%,#c47a7a 100%)!important;
   -webkit-background-clip:text!important;
   background-clip:text!important;
 }
 
 /* Light mode — surface/card backgrounds */
-.light [style*="background:\"rgba(255,255,255,.025)\""]{background:rgba(40,28,16,.035)!important;}
-.light [style*="background:\"rgba(255,255,255,.04)\""]{background:rgba(40,28,16,.045)!important;}
-.light [style*="background:\"rgba(255,255,255,.03)\""]{background:rgba(40,28,16,.035)!important;}
-.light [style*="border:\"1px solid rgba(255,255,255,.07)\""]{border-color:rgba(40,28,16,.1)!important;}
-.light [style*="border:\"1px solid rgba(255,255,255,.08)\""]{border-color:rgba(40,28,16,.11)!important;}
+.light [style*="background:\"rgba(255,255,255,.025)\""]{background:rgba(192,225,210,.12)!important;}
+.light [style*="background:\"rgba(255,255,255,.04)\""]{background:rgba(192,225,210,.16)!important;}
+.light [style*="background:\"rgba(255,255,255,.03)\""]{background:rgba(229,238,228,.14)!important;}
+.light [style*="border:\"1px solid rgba(255,255,255,.07)\""]{border-color:rgba(192,225,210,.3)!important;}
+.light [style*="border:\"1px solid rgba(255,255,255,.08)\""]{border-color:rgba(192,225,210,.35)!important;}
 
 /* Light mode — gradient lock overlay in BattlePlanPreview */
-.light [style*="rgba(7,4,10,1)"]{background:linear-gradient(0deg,var(--bg) 0%,rgba(250,247,242,.92) 40%,rgba(250,247,242,0) 100%)!important;}
+.light [style*="rgba(7,4,10,1)"]{background:linear-gradient(0deg,var(--bg) 0%,rgba(246,244,232,.92) 40%,rgba(246,244,232,0) 100%)!important;}
 
-/* Light mode — premium colorful gradient mesh, visible throughout the page (not just top) */
+/* Light mode — orange glow/border/box-shadow remaps → rose palette */
+.light [style*="rgba(255,140,0"]{--orange-gone:1;}
+.light [style*="border:\"1px solid rgba(255,140,0"]{border-color:rgba(192,225,210,.4)!important;}
+.light [style*="borderColor:\"rgba(255,140,0"]{border-color:rgba(192,225,210,.4)!important;}
+.light [style*="background:\"rgba(255,140,0,.08)\""]{background:rgba(192,225,210,.18)!important;}
+.light [style*="background:\"rgba(255,140,0,.06)\""]{background:rgba(192,225,210,.14)!important;}
+.light [style*="background:\"rgba(255,140,0,.12)\""]{background:rgba(220,155,155,.14)!important;}
+.light [style*="background:\"rgba(255,140,0,.1)\""]{background:rgba(220,155,155,.12)!important;}
+.light [style*="background:\"rgba(255,140,0,.15)\""]{background:rgba(192,225,210,.2)!important;}
+.light [style*="color:\"rgba(255,140,0"]{color:rgba(164,90,90,.8)!important;}
+.light [style*="color:\"rgba(255,180,80"]{color:rgba(164,90,90,.75)!important;}
+.light [style*="color:\"#ff8c00\""]{color:#c47a7a!important;}
+.light [style*="color:\"#ffb347\""]{color:#a85c5c!important;}
+.light [style*="color:\"#ff9500\""]{color:#c47a7a!important;}
+.light [style*="background:\"linear-gradient(135deg,#ff9500"]{background:linear-gradient(135deg,#c47a7a,#a85c5c)!important;}
+.light [style*="background:\"linear-gradient(135deg,rgba(255,140,0"]{background:linear-gradient(135deg,rgba(192,225,210,.25),rgba(229,238,228,.15))!important;}
+/* Subtle tint for section dividers and footer */
+.light [style*="borderTop:\"1px solid rgba(255,140,0"]{border-top-color:rgba(192,225,210,.3)!important;}
+
+/* Light mode — premium palette gradient mesh: cream × sage × mint × rose */
 .light body{
   background:
-    radial-gradient(ellipse 55% 45% at 12% 0%, rgba(224,84,15,.12), transparent 60%),
-    radial-gradient(ellipse 45% 40% at 92% 10%, rgba(232,85,47,.1), transparent 60%),
-    radial-gradient(ellipse 50% 55% at 50% 105%, rgba(10,143,128,.06), transparent 65%),
-    linear-gradient(160deg,#f7f5f2 0%,#efebe4 55%,#e6dfd3 100%);
+    radial-gradient(ellipse 60% 50% at 8% 0%,   rgba(192,225,210,.45), transparent 65%),
+    radial-gradient(ellipse 50% 45% at 95% 5%,   rgba(229,238,228,.55), transparent 60%),
+    radial-gradient(ellipse 55% 50% at 50% 110%, rgba(220,155,155,.18), transparent 65%),
+    radial-gradient(ellipse 40% 35% at 80% 55%,  rgba(192,225,210,.2),  transparent 55%),
+    linear-gradient(160deg,#f6f4e8 0%,#edf2ec 50%,#ddeee8 100%);
   background-attachment:fixed;
 }
 
@@ -1516,41 +1536,53 @@ function ArchetypeStep({ onSelect, selected }) {
 function ConfessStep1({selected, onToggle, onNext}) {
   const [vis,setVis]=useState(false);
   useEffect(()=>{setTimeout(()=>setVis(true),60);},[]);
+  const isL=document.documentElement.classList.contains("light");
   return(
     <div className="step-inner" style={{minHeight:"100vh",padding:"clamp(80px,12vw,120px) 6vw 80px",width:"100%",boxSizing:"border-box",position:"relative",zIndex:2,opacity:vis?1:0,transform:vis?"translateY(0)":"translateY(24px)",transition:"all .8s cubic-bezier(.16,1,.3,1)",textAlign:"center"}}>
-      <div style={{display:"inline-flex",alignItems:"center",gap:8,background:"rgba(255,140,0,.07)",border:"1px solid rgba(255,140,0,.2)",borderRadius:999,padding:"7px 18px",marginBottom:28,animation:"tagGlow 3s ease-in-out infinite"}}>
-        <div style={{width:6,height:6,borderRadius:"50%",background:"#ff8c00",boxShadow:"0 0 10px #ff8c00"}}/>
-        <span style={{fontSize:10,fontWeight:600,letterSpacing:2.5,color:"rgba(255,180,80,.65)",textTransform:"uppercase"}}>Step 02 of 05 — Select Your Poisons</span>
+      {/* Step tag */}
+      <div style={{display:"inline-flex",alignItems:"center",gap:8,background:isL?"rgba(192,225,210,.2)":"rgba(255,140,0,.07)",border:isL?"1px solid rgba(192,225,210,.5)":"1px solid rgba(255,140,0,.2)",borderRadius:999,padding:"7px 18px",marginBottom:28,animation:"tagGlow 3s ease-in-out infinite"}}>
+        <div style={{width:6,height:6,borderRadius:"50%",background:isL?"#5a9e8a":"#ff8c00",boxShadow:isL?"0 0 10px rgba(90,158,138,.6)":"0 0 10px #ff8c00"}}/>
+        <span style={{fontSize:10,fontWeight:600,letterSpacing:2.5,color:isL?"rgba(80,130,115,.8)":"rgba(255,180,80,.65)",textTransform:"uppercase"}}>Step 02 of 05 — Select Your Poisons</span>
       </div>
+      {/* Main heading */}
       <div style={{position:"relative",lineHeight:.9,marginBottom:8}}>
-        <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(28px,7.5vw,96px)",fontWeight:900,letterSpacing:-3,background:"var(--gradient-text)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",animation:"glitch1 8s ease-in-out infinite",lineHeight:.9}}>WHAT ARE</div>
-        <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(28px,7.5vw,96px)",fontWeight:900,letterSpacing:-3,color:"rgba(255,80,0,.4)",animation:"glitch2 8s ease-in-out infinite",position:"absolute",top:0,left:0,lineHeight:.9}}>WHAT ARE</div>
+        <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(28px,7.5vw,96px)",fontWeight:900,letterSpacing:-3,background:isL?"linear-gradient(135deg,#1a1a1a 0%,#8a4a4a 55%,#c47a7a 100%)":"var(--gradient-text)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",animation:"glitch1 8s ease-in-out infinite",lineHeight:.9}}>WHAT ARE</div>
+        <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(28px,7.5vw,96px)",fontWeight:900,letterSpacing:-3,color:isL?"rgba(196,122,122,.25)":"rgba(255,80,0,.4)",animation:"glitch2 8s ease-in-out infinite",position:"absolute",top:0,left:0,lineHeight:.9}}>WHAT ARE</div>
       </div>
-      <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(28px,7.5vw,96px)",fontWeight:900,letterSpacing:-3,background:"var(--gradient-text)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",lineHeight:.9,marginBottom:24}}>YOUR POISONS?</div>
+      <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(28px,7.5vw,96px)",fontWeight:900,letterSpacing:-3,background:isL?"linear-gradient(135deg,#1a1a1a 0%,#8a4a4a 55%,#c47a7a 100%)":"var(--gradient-text)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",lineHeight:.9,marginBottom:24}}>YOUR POISONS?</div>
+      {/* Subtitle */}
       <p style={{fontSize:15,color:"var(--text3)",fontWeight:300,lineHeight:1.75,maxWidth:520,marginBottom:48,marginTop:8,textAlign:"center",marginLeft:"auto",marginRight:"auto"}}>
         Be honest. Select everything that has a grip on you —{" "}
-        <span style={{color:"rgba(255,180,80,.6)",fontWeight:400}}>even if it feels embarrassing.</span>
+        <span style={{color:isL?"rgba(164,90,90,.8)":"rgba(255,180,80,.6)",fontWeight:500}}>even if it feels embarrassing.</span>
         <br/>
         <span style={{fontSize:13,color:"var(--text4)"}}>The AI only builds a real plan if you're real with it.</span>
       </p>
+      {/* Addiction cards grid */}
       <div className="addiction-grid" style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(190px,1fr))",gap:14,marginBottom:48}}>
         {ADDICTIONS.map((a,i)=>{
           const sel=selected.includes(a.id);
           const rgb=a.color.replace('#','').match(/.{2}/g).map(x=>parseInt(x,16)).join(',');
+          const cardBg   = isL ? (sel?`rgba(${rgb},0.1)`:"rgba(229,238,228,.55)") : (sel?`rgba(${rgb},0.12)`:"rgba(255,255,255,.025)");
+          const cardBdr  = isL ? (sel?a.color+"99":"rgba(192,225,210,.45)") : (sel?a.color+"88":"rgba(255,255,255,.07)");
+          const cardShad = isL ? (sel?`0 0 24px ${a.color}18,0 6px 20px rgba(100,80,80,.12)`:"0 1px 3px rgba(100,80,80,.04)") : (sel?`0 0 30px ${a.color}22,0 8px 24px rgba(0,0,0,.4)`:"none");
+          const lblClr   = isL ? (sel?"#1a1a1a":"rgba(26,26,26,.55)") : (sel?"#fff":"rgba(255,255,255,.42)");
+          const descClr  = isL ? (sel?`${a.color}dd`:"rgba(26,26,26,.32)") : (sel?`${a.color}cc`:"rgba(255,255,255,.16)");
+          const emojiFilter = isL ? (sel?"none":"grayscale(20%) opacity(.65)") : (sel?"none":"grayscale(40%) opacity(.6)");
           return(
-            <div key={a.id} onClick={()=>onToggle(a.id)} style={{padding:"20px 18px",borderRadius:16,background:sel?`rgba(${rgb},0.12)`:"rgba(255,255,255,.025)",border:`1px solid ${sel?a.color+"88":"rgba(255,255,255,.07)"}`,cursor:"none",transition:"all .25s cubic-bezier(.16,1,.3,1)",transform:sel?"translateY(-3px)":"translateY(0)",boxShadow:sel?`0 0 30px ${a.color}22,0 8px 24px rgba(0,0,0,.4)`:"none",animation:`fadeUp .6s cubic-bezier(.16,1,.3,1) ${i*.04}s both`,position:"relative",overflow:"hidden"}}>
-              {sel&&<div style={{position:"absolute",inset:0,background:`radial-gradient(ellipse at top left, ${a.color}18, transparent 65%)`,pointerEvents:"none"}}/>}
-              <div style={{fontSize:26,marginBottom:10,filter:sel?"none":"grayscale(40%) opacity(.6)",transition:"filter .25s"}}>{a.emoji}</div>
-              <div style={{fontSize:12,fontWeight:600,color:sel?"#fff":"rgba(255,255,255,.42)",marginBottom:3,transition:"color .25s"}}>{a.label}</div>
-              <div style={{fontSize:10,color:sel?`${a.color}cc`:"rgba(255,255,255,.16)",lineHeight:1.5,transition:"color .25s"}}>{a.desc}</div>
-              {sel&&<div style={{position:"absolute",top:10,right:10,width:16,height:16,borderRadius:"50%",background:a.color,display:"flex",alignItems:"center",justifyContent:"center",fontSize:9,fontWeight:800,color:"#000"}}>✓</div>}
+            <div key={a.id} onClick={()=>onToggle(a.id)} style={{padding:"20px 18px",borderRadius:16,background:cardBg,border:`1px solid ${cardBdr}`,cursor:"none",transition:"all .25s cubic-bezier(.16,1,.3,1)",transform:sel?"translateY(-3px)":"translateY(0)",boxShadow:cardShad,animation:`fadeUp .6s cubic-bezier(.16,1,.3,1) ${i*.04}s both`,position:"relative",overflow:"hidden"}}>
+              {sel&&<div style={{position:"absolute",inset:0,background:`radial-gradient(ellipse at top left, ${a.color}${isL?"12":"18"}, transparent 65%)`,pointerEvents:"none"}}/>}
+              <div style={{fontSize:26,marginBottom:10,filter:emojiFilter,transition:"filter .25s"}}>{a.emoji}</div>
+              <div style={{fontSize:12,fontWeight:600,color:lblClr,marginBottom:3,transition:"color .25s"}}>{a.label}</div>
+              <div style={{fontSize:10,color:descClr,lineHeight:1.5,transition:"color .25s"}}>{a.desc}</div>
+              {sel&&<div style={{position:"absolute",top:10,right:10,width:16,height:16,borderRadius:"50%",background:isL?"#c47a7a":a.color,display:"flex",alignItems:"center",justifyContent:"center",fontSize:9,fontWeight:800,color:"#fff"}}>✓</div>}
             </div>
           );
         })}
       </div>
-      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",paddingTop:24,borderTop:"1px solid rgba(255,140,0,.08)"}}>
+      {/* Footer */}
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",paddingTop:24,borderTop:isL?"1px solid rgba(192,225,210,.4)":"1px solid rgba(255,140,0,.08)"}}>
         <div style={{fontSize:12,color:"var(--text4)",fontFamily:"'JetBrains Mono',monospace",letterSpacing:1}}>{selected.length===0?"Select at least one":`${selected.length} poison${selected.length>1?"s":""} identified`}</div>
-        <button onClick={onNext} disabled={selected.length===0} style={{background:"linear-gradient(135deg,#ff9500,#ff5000)",border:"none",color:"var(--text)",padding:"14px 40px",borderRadius:12,fontFamily:"'Inter',sans-serif",fontSize:13,fontWeight:700,letterSpacing:.3,transition:"all .3s",boxShadow:selected.length?"0 0 40px rgba(255,140,0,.4),0 6px 24px rgba(0,0,0,.4)":"none",opacity:selected.length?1:.3,cursor:"none"}}>
+        <button onClick={onNext} disabled={selected.length===0} style={{background:isL?"linear-gradient(135deg,#c47a7a,#a85c5c)":"linear-gradient(135deg,#ff9500,#ff5000)",border:"none",color:"#fff",padding:"14px 40px",borderRadius:12,fontFamily:"'Inter',sans-serif",fontSize:13,fontWeight:700,letterSpacing:.3,transition:"all .3s",boxShadow:selected.length?(isL?"0 0 30px rgba(196,122,122,.3),0 6px 20px rgba(168,92,92,.25)":"0 0 40px rgba(255,140,0,.4),0 6px 24px rgba(0,0,0,.4)"):"none",opacity:selected.length?1:.35,cursor:"none"}}>
           Analyze Damage → Step 2
         </button>
       </div>
@@ -1810,18 +1842,26 @@ function Confess({onSubmit,loading}) {
   };
 
   const steps=["Archetype","Poisons","Damage","Cost","Plan"];
+  const isL=document.documentElement.classList.contains("light");
   return(
     <div style={{minHeight:"100vh",background:"var(--bg)",position:"relative",overflowX:"hidden",width:"100%"}}>
-      {/* Full-screen background - no gaps */}
+      {/* Full-screen background */}
       <div style={{position:"fixed",inset:0,background:"var(--bg)",zIndex:-1,pointerEvents:"none"}}/>
       <div style={{position:"fixed",inset:0,pointerEvents:"none",zIndex:0}}>
-        <div style={{position:"absolute",top:"-10%",right:"-5%",width:700,height:700,background:"radial-gradient(circle,rgba(255,90,0,.07) 0%,transparent 65%)"}}/>
-        <div style={{position:"absolute",bottom:"10%",left:"-8%",width:500,height:500,background:"radial-gradient(circle,rgba(255,140,0,.04) 0%,transparent 70%)"}}/>
+        <div style={{position:"absolute",top:"-10%",right:"-5%",width:700,height:700,background:isL?"radial-gradient(circle,rgba(192,225,210,.35) 0%,transparent 65%)":"radial-gradient(circle,rgba(255,90,0,.07) 0%,transparent 65%)"}}/>
+        <div style={{position:"absolute",bottom:"10%",left:"-8%",width:500,height:500,background:isL?"radial-gradient(circle,rgba(220,155,155,.18) 0%,transparent 70%)":"radial-gradient(circle,rgba(255,140,0,.04) 0%,transparent 70%)"}}/>
       </div>
       {/* Step progress bar */}
-      <div className="step-bar-outer" style={{position:"fixed",top:72,left:0,right:0,zIndex:400,padding:"0",background:"rgba(6,3,10,.85)",backdropFilter:"blur(20px)",borderBottom:"1px solid rgba(255,140,0,.07)"}}>
+      <div className="step-bar-outer" style={{position:"fixed",top:72,left:0,right:0,zIndex:400,padding:"0",background:isL?"rgba(246,244,232,.92)":"rgba(6,3,10,.85)",backdropFilter:"blur(20px)",borderBottom:isL?"1px solid rgba(192,225,210,.35)":"1px solid rgba(255,140,0,.07)"}}>
         <div style={{width:"100%",display:"flex",alignItems:"center",padding:"12px 6vw",gap:4,overflowX:"auto"}}>
-          {steps.map((s,i)=>{ const done=step>i,active=step===i; return(<div key={s} style={{display:"flex",alignItems:"center",gap:4,flex:i<steps.length-1?1:"auto"}}><div style={{display:"flex",alignItems:"center",gap:7}}><div style={{width:22,height:22,borderRadius:"50%",background:done?"#ff8c00":active?"rgba(255,140,0,.18)":"rgba(255,255,255,.04)",border:`1px solid ${done||active?"rgba(255,140,0,.55)":"rgba(255,255,255,.09)"}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:9,fontWeight:700,color:done?"#fff":active?"rgba(255,180,80,.75)":"rgba(255,255,255,.18)",transition:"all .3s",flexShrink:0}}>{done?"✓":i+1}</div><span style={{fontSize:10,letterSpacing:1,textTransform:"uppercase",fontWeight:500,color:active?"rgba(255,180,80,.75)":done?"rgba(255,140,0,.55)":"rgba(255,255,255,.18)",transition:"all .3s",whiteSpace:"nowrap"}} className="step-label">{s}</span></div>{i<steps.length-1&&<div style={{flex:1,height:1,background:done?"rgba(255,140,0,.35)":"rgba(255,255,255,.05)",marginLeft:6,transition:"background .3s"}}/>}</div>); })}
+          {steps.map((s,i)=>{ const done=step>i,active=step===i;
+            const dotBg  = isL ? (done?"#c47a7a":active?"rgba(196,122,122,.2)":"rgba(26,26,26,.06)") : (done?"#ff8c00":active?"rgba(255,140,0,.18)":"rgba(255,255,255,.04)");
+            const dotBdr = isL ? (done||active?"rgba(196,122,122,.6)":"rgba(26,26,26,.12)") : (done||active?"rgba(255,140,0,.55)":"rgba(255,255,255,.09)");
+            const dotClr = isL ? (done?"#fff":active?"rgba(164,90,90,.85)":"rgba(26,26,26,.22)") : (done?"#fff":active?"rgba(255,180,80,.75)":"rgba(255,255,255,.18)");
+            const lblClr = isL ? (active?"rgba(164,90,90,.9)":done?"rgba(196,122,122,.65)":"rgba(26,26,26,.25)") : (active?"rgba(255,180,80,.75)":done?"rgba(255,140,0,.55)":"rgba(255,255,255,.18)");
+            const lineBg = isL ? (done?"rgba(196,122,122,.4)":"rgba(26,26,26,.08)") : (done?"rgba(255,140,0,.35)":"rgba(255,255,255,.05)");
+            return(<div key={s} style={{display:"flex",alignItems:"center",gap:4,flex:i<steps.length-1?1:"auto"}}><div style={{display:"flex",alignItems:"center",gap:7}}><div style={{width:22,height:22,borderRadius:"50%",background:dotBg,border:`1px solid ${dotBdr}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:9,fontWeight:700,color:dotClr,transition:"all .3s",flexShrink:0}}>{done?"✓":i+1}</div><span style={{fontSize:10,letterSpacing:1,textTransform:"uppercase",fontWeight:500,color:lblClr,transition:"all .3s",whiteSpace:"nowrap"}} className="step-label">{s}</span></div>{i<steps.length-1&&<div style={{flex:1,height:1,background:lineBg,marginLeft:6,transition:"background .3s"}}/>}</div>);
+          })}
         </div>
       </div>
       {step===0&&<ArchetypeStep selected={archetype} onSelect={handleArchetypeSelect}/>}
