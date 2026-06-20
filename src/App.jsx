@@ -1195,12 +1195,17 @@ function Auth({ onAuth, context="" }) {
   const [shake, setShake]         = useState(false);
   const [googleHover, setGoogleHover] = useState(false);
   const [ready, setReady]         = useState(false);
+  const [agreed, setAgreed]       = useState(false);
+  const [showTC, setShowTC]       = useState(false);
 
   useEffect(()=>{ setTimeout(()=>setReady(true), 80); },[]);
 
   const handleSubmit = async () => {
     if(!email.trim()||!password.trim()||(mode==="signup"&&!name.trim())){
       setShake(true); setTimeout(()=>setShake(false),600); return;
+    }
+    if(mode==="signup"&&!agreed){
+      setError("Please accept the Terms & Conditions to continue."); return;
     }
     setLoading(true); setError("");
     try {
@@ -1285,7 +1290,44 @@ function Auth({ onAuth, context="" }) {
               Continue with Google
             </button>
           </div>
+          {mode==="signup"&&(
+            <div style={{marginTop:16,display:"flex",alignItems:"flex-start",gap:10}}>
+              <div onClick={()=>setAgreed(a=>!a)} style={{width:18,height:18,borderRadius:4,border:`2px solid ${agreed?"#ff8c00":"rgba(255,255,255,.2)"}`,background:agreed?"rgba(255,140,0,.18)":"transparent",flexShrink:0,marginTop:1,cursor:"none",display:"flex",alignItems:"center",justifyContent:"center",transition:"all .2s"}}>
+                {agreed&&<span style={{fontSize:11,color:"#ff8c00",fontWeight:900,lineHeight:1}}>✓</span>}
+              </div>
+              <p style={{fontSize:11,color:"var(--text4)",margin:0,lineHeight:1.7}}>
+                I agree to the{" "}
+                <span onClick={()=>setShowTC(true)} style={{color:"rgba(255,140,0,.65)",cursor:"none",textDecoration:"underline",textUnderlineOffset:2}}>Terms &amp; Conditions</span>
+                {" "}and acknowledge I have read and understood the agreement.
+              </p>
+            </div>
+          )}
           <p style={{textAlign:"center",fontSize:11,color:"var(--text4)",marginTop:20,lineHeight:1.7,letterSpacing:.2}}>By continuing, you agree to the Synapse Protocol.<br/><span style={{color:"rgba(255,140,0,0.28)"}}>Encrypted. Private. Never sold.</span><br/><span style={{color:"var(--text4)"}}>⚠ Progress stored locally. Clearing browser data erases your streak.</span></p>
+
+          {/* T&C Modal */}
+          {showTC&&(
+            <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.85)",zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center",padding:"20px"}} onClick={()=>setShowTC(false)}>
+              <div onClick={e=>e.stopPropagation()} style={{background:"#0d0a14",border:"1px solid rgba(255,140,0,.2)",borderRadius:16,width:"100%",maxWidth:640,maxHeight:"80vh",display:"flex",flexDirection:"column",overflow:"hidden"}}>
+                <div style={{padding:"20px 24px",borderBottom:"1px solid rgba(255,255,255,.07)",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+                  <span style={{fontFamily:"'Orbitron',sans-serif",fontSize:13,fontWeight:700,letterSpacing:2,color:"rgba(255,180,80,.8)",textTransform:"uppercase"}}>Terms &amp; Conditions</span>
+                  <button onClick={()=>setShowTC(false)} style={{background:"none",border:"none",color:"rgba(255,255,255,.4)",fontSize:20,cursor:"none",lineHeight:1}}>✕</button>
+                </div>
+                <div style={{overflowY:"auto",padding:"20px 24px",fontSize:11,color:"rgba(255,255,255,.55)",lineHeight:1.9,fontFamily:"'Inter',sans-serif"}}>
+                  <p><strong style={{color:"rgba(255,255,255,.75)"}}>19.4</strong> These Terms, together with the Privacy Policy and any other policies expressly incorporated by reference, constitute the entire agreement between the parties with respect to the subject matter hereof and supersede all prior or contemporaneous agreements, representations, and understandings, whether written or oral.</p>
+                  <p><strong style={{color:"rgba(255,255,255,.75)"}}>20. NOTICES AND CONTACT INFORMATION</strong><br/>20.1 All notices, requests, complaints, or communications required or permitted under this Agreement shall be made in writing and directed to:<br/><em>SYNAPSE Electronic Mail: synapserewire@gmail.com</em></p>
+                  <p>20.2 Notices to the User shall be deemed effective upon transmission to the email address associated with the User's Account.</p>
+                  <p><strong style={{color:"rgba(255,255,255,.75)"}}>21. ACKNOWLEDGMENT</strong><br/>BY USING THE SERVICE, THE USER ACKNOWLEDGES HAVING READ AND UNDERSTOOD THIS AGREEMENT IN ITS ENTIRETY, INCLUDING THE WARRANTY DISCLAIMERS, LIMITATIONS OF LIABILITY, INDEMNIFICATION OBLIGATIONS, AND BINDING ARBITRATION AND CLASS ACTION WAIVER PROVISIONS SET FORTH HEREIN, AND VOLUNTARILY AND IRREVOCABLY AGREES TO BE BOUND BY ITS TERMS.</p>
+                  <p><strong style={{color:"rgba(255,255,255,.75)"}}>22. INDIA-SPECIFIC ADDENDUM</strong><br/>22.1 <em>Governing Law:</em> For Users resident in or accessing the Service from India, this Agreement shall be governed by and construed in accordance with the laws of the Republic of India, including the Information Technology Act, 2000, the Digital Personal Data Protection Act, 2023, and the Indian Contract Act, 1872.<br/>22.2 <em>Jurisdiction:</em> Subject to Section 11, the courts at [INSERT CITY, INDIA] shall have exclusive jurisdiction over any matter not subject to mandatory arbitration.<br/>22.3 <em>Grievance Officer:</em> Email: synapserewire@gmail.com — Designation: Grievance Officer, pursuant to the Information Technology (Intermediary Guidelines and Digital Media Ethics Code) Rules, 2021.</p>
+                  <p><strong style={{color:"rgba(255,255,255,.75)"}}>23. UNITED STATES-SPECIFIC ADDENDUM</strong><br/>23.1 <em>Governing Law:</em> For Users resident in or accessing the Service from the United States, this Agreement shall be governed by and construed in accordance with the laws of the State of [INSERT STATE].<br/>23.2 <em>Jurisdiction:</em> Subject to Section 11, the state and federal courts located in [INSERT STATE] shall have exclusive jurisdiction.<br/>23.3 <em>California Residents:</em> Pursuant to the CCPA/CPRA, California residents may exercise their rights to know, delete, correct, and opt out of the sale or sharing of Personal Information by contacting synapserewire@gmail.com. The Company does not knowingly sell the Personal Information of minors under sixteen (16) years of age.<br/>23.4 <em>COPPA Compliance:</em> The Company does not knowingly collect Personal Information from children under the age of thirteen (13). Should the Company become aware that it has inadvertently collected such information, it shall take reasonable steps to delete it promptly.</p>
+                  <p style={{color:"rgba(255,255,255,.3)",fontSize:10,fontStyle:"italic"}}>This document is a draft template for informational purposes only and does not constitute legal advice. It must be reviewed and finalized by a licensed attorney prior to publication.</p>
+                </div>
+                <div style={{padding:"16px 24px",borderTop:"1px solid rgba(255,255,255,.07)",display:"flex",gap:12}}>
+                  <button onClick={()=>{setAgreed(true);setShowTC(false);}} style={{flex:1,padding:"12px",borderRadius:10,background:"linear-gradient(135deg,#ff9500,#ff5000)",border:"none",color:"#fff",fontSize:12,fontWeight:700,letterSpacing:1,cursor:"none"}}>I Agree &amp; Accept</button>
+                  <button onClick={()=>setShowTC(false)} style={{padding:"12px 20px",borderRadius:10,background:"rgba(255,255,255,.04)",border:"1px solid rgba(255,255,255,.1)",color:"rgba(255,255,255,.4)",fontSize:12,cursor:"none"}}>Close</button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
