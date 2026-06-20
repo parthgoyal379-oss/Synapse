@@ -3024,10 +3024,19 @@ const OFF_TOPIC_MSG="Stay on mission, soldier. I only respond to questions about
 
 function ChatBubble({msg,idx}){
   const isUser=msg.role==="user";
+  const isL=document.documentElement.classList.contains("light");
+  const aiBg  =isL?(msg.crisis?"linear-gradient(135deg,rgba(70,150,255,.08),rgba(40,100,255,.04))":"rgba(229,238,228,.75)"):(msg.crisis?"linear-gradient(135deg,rgba(70,150,255,.08),rgba(40,100,255,.04))":"rgba(255,255,255,.04)");
+  const aiBdr =isL?(msg.crisis?"rgba(100,180,255,.25)":msg.offTopic?"rgba(220,80,80,.2)":"rgba(192,225,210,.55)"):(msg.crisis?"rgba(100,180,255,.25)":msg.offTopic?"rgba(255,80,80,.2)":"rgba(255,255,255,.07)");
+  const aiClr =isL?(msg.offTopic?"rgba(180,60,60,.8)":"rgba(26,26,26,.78)"):(msg.offTopic?"rgba(255,120,120,.75)":"rgba(255,255,255,.65)");
+  const userBg=isL?"linear-gradient(135deg,rgba(196,122,122,.18),rgba(168,92,92,.1))":"linear-gradient(135deg,rgba(255,140,0,.18),rgba(255,80,0,.12))";
+  const userBdr=isL?"rgba(196,122,122,.35)":"rgba(255,140,0,.25)";
+  const userClr=isL?"rgba(26,26,26,.82)":"rgba(255,255,255,.75)";
+  const dotBg =isL?(msg.crisis?"rgba(70,150,255,.1)":"rgba(192,225,210,.55)"):(msg.crisis?"rgba(70,150,255,.12)":"rgba(255,140,0,.12)");
+  const dotBdr=isL?(msg.crisis?"rgba(100,180,255,.3)":"rgba(90,158,138,.45)"):(msg.crisis?"rgba(100,180,255,.3)":"rgba(255,140,0,.25)");
   return(
     <div style={{display:"flex",justifyContent:isUser?"flex-end":"flex-start",marginBottom:16,animation:`fadeUp .4s cubic-bezier(.16,1,.3,1) both`,animationDelay:`${idx*0.04}s`}}>
-      {!isUser&&<div style={{width:28,height:28,borderRadius:"50%",background:msg.crisis?"rgba(70,150,255,.12)":"rgba(255,140,0,.12)",border:`1px solid ${msg.crisis?"rgba(100,180,255,.3)":"rgba(255,140,0,.25)"}`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,marginRight:10,marginTop:2}}><span style={{fontSize:12}}>{msg.crisis?"🤝":"⚡"}</span></div>}
-      <div style={{maxWidth:"78%",padding:"13px 18px",borderRadius:isUser?"16px 16px 4px 16px":"16px 16px 16px 4px",background:isUser?"linear-gradient(135deg,rgba(255,140,0,.18),rgba(255,80,0,.12))":msg.crisis?"linear-gradient(135deg,rgba(70,150,255,.08),rgba(40,100,255,.04))":"rgba(255,255,255,.04)",border:`1px solid ${isUser?"rgba(255,140,0,.25)":msg.crisis?"rgba(100,180,255,.25)":msg.offTopic?"rgba(255,80,80,.2)":"rgba(255,255,255,.07)"}`,fontSize:13,lineHeight:1.85,color:msg.crisis?"rgba(255,255,255,.75)":msg.offTopic?"rgba(255,120,120,.75)":isUser?"rgba(255,255,255,.75)":"rgba(255,255,255,.65)",fontWeight:300}}>
+      {!isUser&&<div style={{width:28,height:28,borderRadius:"50%",background:dotBg,border:`1px solid ${dotBdr}`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,marginRight:10,marginTop:2}}><span style={{fontSize:12}}>{msg.crisis?"🤝":"⚡"}</span></div>}
+      <div style={{maxWidth:"78%",padding:"13px 18px",borderRadius:isUser?"16px 16px 4px 16px":"16px 16px 16px 4px",background:isUser?userBg:aiBg,border:`1px solid ${isUser?userBdr:aiBdr}`,fontSize:13,lineHeight:1.85,color:isUser?userClr:aiClr,fontWeight:300}}>
         {parseBold(msg.text)}
       </div>
     </div>
@@ -3085,25 +3094,28 @@ function Chat({streak,savedPlan}){
     setLoading(false);
   };
 
+  const isL=document.documentElement.classList.contains("light");
   return(
     <div style={{minHeight:"100vh",display:"flex",flexDirection:"column",opacity:vis?1:0,transition:"opacity .6s ease"}}>
 
-      {/* Header — same max-width as messages */}
+      {/* Header */}
       <div style={{maxWidth:760,width:"100%",margin:"0 auto",padding:"clamp(90px,12vw,120px) clamp(16px,5vw,48px) 24px",boxSizing:"border-box"}}>
-        <div style={{display:"inline-flex",alignItems:"center",gap:8,background:"rgba(255,140,0,.07)",border:"1px solid rgba(255,140,0,.2)",borderRadius:999,padding:"7px 18px",marginBottom:20}}>
-          <div style={{width:6,height:6,borderRadius:"50%",background:"#ff8c00",boxShadow:"0 0 10px #ff8c00",animation:"pulse 1.5s ease-in-out infinite"}}/>
-          <span style={{fontSize:10,fontWeight:600,letterSpacing:2.5,color:"rgba(255,180,80,.65)",textTransform:"uppercase"}}>SYNAPSE Coach — Live</span>
+        <div style={{display:"inline-flex",alignItems:"center",gap:8,background:isL?"rgba(192,225,210,.2)":"rgba(255,140,0,.07)",border:isL?"1px solid rgba(192,225,210,.5)":"1px solid rgba(255,140,0,.2)",borderRadius:999,padding:"7px 18px",marginBottom:20}}>
+          <div style={{width:6,height:6,borderRadius:"50%",background:isL?"#5a9e8a":"#ff8c00",boxShadow:isL?"0 0 10px rgba(90,158,138,.6)":"0 0 10px #ff8c00",animation:"pulse 1.5s ease-in-out infinite"}}/>
+          <span style={{fontSize:10,fontWeight:600,letterSpacing:2.5,color:isL?"rgba(80,130,115,.8)":"rgba(255,180,80,.65)",textTransform:"uppercase"}}>SYNAPSE Coach — Live</span>
         </div>
-        <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(24px,5.5vw,52px)",fontWeight:900,letterSpacing:-2,background:"linear-gradient(135deg,#fff,rgba(255,180,80,.7))",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",lineHeight:.95,marginBottom:14}}>TALK TO<br/>SYNAPSE</div>
-        <p style={{fontSize:13,color:"var(--text4)",lineHeight:1.8,maxWidth:"100%",margin:"0 0 24px 0"}}>Ask anything about your recovery — urges, relapses, streaks, cravings, your battle plan. I stay on topic.</p>
+        <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(24px,5.5vw,52px)",fontWeight:900,letterSpacing:-2,background:isL?"linear-gradient(135deg,#1a1a1a 0%,#8a4a4a 55%,#c47a7a 100%)":"linear-gradient(135deg,#fff,rgba(255,180,80,.7))",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",lineHeight:.95,marginBottom:14}}>TALK TO<br/>SYNAPSE</div>
+        <p style={{fontSize:13,color:"var(--text3)",lineHeight:1.8,maxWidth:"100%",margin:"0 0 24px 0"}}>Ask anything about your recovery — urges, relapses, streaks, cravings, your battle plan. I stay on topic.</p>
 
         {/* Mode selector */}
         <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
           {Object.values(MODES).map(m=>{
             const active=mode.id===m.id;
+            const inactiveBdr=isL?"rgba(26,26,26,.12)":"rgba(255,255,255,.1)";
+            const inactiveClr=isL?"rgba(26,26,26,.35)":"rgba(255,255,255,.3)";
             return(
               <button key={m.id} onClick={()=>switchMode(m)}
-                style={{display:"flex",alignItems:"center",gap:6,padding:"8px 16px",borderRadius:999,border:`1px solid ${active?m.accent:"rgba(255,255,255,.1)"}`,background:active?`rgba(${m.id==="operator"?"74,222,128":m.id==="warlord"?"239,68,68":"255,140,0"},.1)`:"transparent",color:active?m.accent:"rgba(255,255,255,.3)",fontSize:11,fontWeight:active?700:400,letterSpacing:active?2:1.5,textTransform:"uppercase",cursor:"none",transition:"all .25s",boxShadow:active?`0 0 16px ${m.accent}33`:"none"}}>
+                style={{display:"flex",alignItems:"center",gap:6,padding:"8px 16px",borderRadius:999,border:`1px solid ${active?m.accent:inactiveBdr}`,background:active?`rgba(${m.id==="operator"?"74,222,128":m.id==="warlord"?"239,68,68":"196,122,122"},.12)`:"transparent",color:active?m.accent:inactiveClr,fontSize:11,fontWeight:active?700:400,letterSpacing:active?2:1.5,textTransform:"uppercase",cursor:"none",transition:"all .25s",boxShadow:active?`0 0 16px ${m.accent}33`:"none"}}>
                 <span style={{fontSize:13}}>{m.icon}</span>
                 {m.label}
                 {active&&<span style={{fontSize:9,opacity:.7,marginLeft:2}}>●</span>}
@@ -3119,9 +3131,9 @@ function Chat({streak,savedPlan}){
         {msgs.map((m,i)=><ChatBubble key={i} msg={m} idx={i}/>)}
         {loading&&(
           <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:16}}>
-            <div style={{width:28,height:28,borderRadius:"50%",background:"rgba(255,140,0,.12)",border:"1px solid rgba(255,140,0,.25)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><span style={{fontSize:12}}>⚡</span></div>
-            <div style={{display:"flex",gap:5,padding:"12px 16px",background:"rgba(255,255,255,.04)",border:"1px solid rgba(255,255,255,.07)",borderRadius:"16px 16px 16px 4px"}}>
-              {[0,1,2].map(i=><div key={i} style={{width:5,height:5,borderRadius:"50%",background:"#ff9500",animation:`dotBlink 1s ${i*.18}s infinite`}}/>)}
+            <div style={{width:28,height:28,borderRadius:"50%",background:isL?"rgba(192,225,210,.45)":"rgba(255,140,0,.12)",border:isL?"1px solid rgba(90,158,138,.4)":"1px solid rgba(255,140,0,.25)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><span style={{fontSize:12}}>⚡</span></div>
+            <div style={{display:"flex",gap:5,padding:"12px 16px",background:isL?"rgba(229,238,228,.65)":"rgba(255,255,255,.04)",border:isL?"1px solid rgba(192,225,210,.45)":"1px solid rgba(255,255,255,.07)",borderRadius:"16px 16px 16px 4px"}}>
+              {[0,1,2].map(i=><div key={i} style={{width:5,height:5,borderRadius:"50%",background:isL?"#5a9e8a":"#ff9500",animation:`dotBlink 1s ${i*.18}s infinite`}}/>)}
             </div>
           </div>
         )}
@@ -3129,7 +3141,7 @@ function Chat({streak,savedPlan}){
       </div>
 
       {/* Input bar — fixed at bottom */}
-      <div style={{position:"fixed",bottom:0,left:0,right:0,padding:"16px clamp(16px,5vw,48px)",background:"linear-gradient(0deg,var(--bg) 70%,rgba(7,4,10,0) 100%)",zIndex:100}}>
+      <div style={{position:"fixed",bottom:0,left:0,right:0,padding:"16px clamp(16px,5vw,48px)",background:`linear-gradient(0deg,var(--bg) 70%,${isL?"rgba(246,244,232,0)":"rgba(7,4,10,0)"} 100%)`,zIndex:100}}>
         <div style={{maxWidth:760,margin:"0 auto",display:"flex",gap:12,alignItems:"flex-end"}}>
           <textarea
             value={input}
@@ -3137,12 +3149,12 @@ function Chat({streak,savedPlan}){
             onKeyDown={e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();send();}}}
             placeholder="Ask about your urges, battle plan, recovery tactics..."
             rows={1}
-            style={{flex:1,background:"rgba(255,255,255,.04)",border:"1px solid rgba(255,140,0,.2)",borderRadius:14,padding:"14px 18px",color:"var(--text)",fontSize:13,fontFamily:"'Inter',sans-serif",fontWeight:300,outline:"none",resize:"none",lineHeight:1.6,caretColor:"#ff8c00",transition:"border .3s",boxSizing:"border-box"}}
-            onFocus={e=>e.target.style.borderColor="rgba(255,140,0,.55)"}
-            onBlur={e=>e.target.style.borderColor="rgba(255,140,0,.2)"}
+            style={{flex:1,background:isL?"rgba(246,244,232,.95)":"rgba(255,255,255,.04)",border:isL?"1px solid rgba(192,225,210,.5)":"1px solid rgba(255,140,0,.2)",borderRadius:14,padding:"14px 18px",color:"var(--text)",fontSize:13,fontFamily:"'Inter',sans-serif",fontWeight:300,outline:"none",resize:"none",lineHeight:1.6,caretColor:isL?"#c47a7a":"#ff8c00",transition:"border .3s",boxSizing:"border-box"}}
+            onFocus={e=>e.target.style.borderColor=isL?"rgba(196,122,122,.55)":"rgba(255,140,0,.55)"}
+            onBlur={e=>e.target.style.borderColor=isL?"rgba(192,225,210,.5)":"rgba(255,140,0,.2)"}
           />
           <button onClick={send} disabled={!input.trim()||loading}
-            style={{background:input.trim()?"linear-gradient(135deg,#ff9500,#ff5000)":"rgba(255,255,255,.05)",border:"none",borderRadius:12,padding:"14px 20px",color:input.trim()?"#fff":"rgba(255,255,255,.2)",fontSize:16,cursor:"none",transition:"all .25s",flexShrink:0,boxShadow:input.trim()?"0 0 20px rgba(255,140,0,.3)":"none"}}>
+            style={{background:input.trim()?(isL?"linear-gradient(135deg,#c47a7a,#a85c5c)":"linear-gradient(135deg,#ff9500,#ff5000)"):(isL?"rgba(192,225,210,.3)":"rgba(255,255,255,.05)"),border:"none",borderRadius:12,padding:"14px 20px",color:input.trim()?"#fff":(isL?"rgba(26,26,26,.2)":"rgba(255,255,255,.2)"),fontSize:16,cursor:"none",transition:"all .25s",flexShrink:0,boxShadow:input.trim()?(isL?"0 0 20px rgba(196,122,122,.3)":"0 0 20px rgba(255,140,0,.3)"):"none"}}>
             ↑
           </button>
         </div>
