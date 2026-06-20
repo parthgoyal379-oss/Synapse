@@ -773,7 +773,7 @@ svg{background:transparent!important;overflow:visible;}
   --danger:rgba(255,50,50,.18);
   --danger-text:rgba(255,80,80,.35);
   --shadow:rgba(0,0,0,.5);
-  --gradient-text:var(--gradient-text);
+  --gradient-text:linear-gradient(135deg,#ffffff 0%,#ffcc00 60%,#ff9500 100%);
 }
 .light{
   --bg:#f6f4e8;
