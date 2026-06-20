@@ -390,7 +390,7 @@ const LEVELS = [
   { level:4, title:"REWIRING",     minDays:14, color:"#88ff44", hex:"136,255,68" },
   { level:5, title:"RECALIBRATED", minDays:30, color:"#44ddff", hex:"68,221,255" },
   { level:6, title:"OPTIMIZED",    minDays:60, color:"#cc88ff", hex:"204,136,255" },
-  { level:7, title:"SYNAPSED",     minDays:90, color:"#ffffff", hex:"255,255,255" },
+  { level:7, title:"SYNAPSED",     minDays:90, color:"var(--text)", hex:"255,255,255" },
 ];
 const getLevel   = s => [...LEVELS].reverse().find(l => s >= l.minDays) || LEVELS[0];
 const getNextLvl = s => LEVELS.find(l => s < l.minDays) || null;
@@ -773,7 +773,7 @@ svg{background:transparent!important;overflow:visible;}
   --danger:rgba(255,50,50,.18);
   --danger-text:rgba(255,80,80,.35);
   --shadow:rgba(0,0,0,.5);
-  --gradient-text:linear-gradient(145deg,#fff 40%,rgba(255,180,80,0.65) 100%);
+  --gradient-text:var(--gradient-text);
 }
 .light{
   --bg:#f7f5f2;
@@ -1058,7 +1058,7 @@ const TAGLINES=["Are you struggling to focus for more than 5 minutes?","Do you r
 function RotatingTaglines() {
   const [idx,setIdx]=useState(0);const [visible,setVisible]=useState(true);
   useEffect(()=>{const t=setInterval(()=>{setVisible(false);setTimeout(()=>{setIdx(i=>(i+1)%TAGLINES.length);setVisible(true);},500);},3200);return()=>clearInterval(t);},[]);
-  return(<div style={{marginBottom:8,minHeight:56}}><div style={{fontSize:15,fontWeight:300,lineHeight:1.7,color:"rgba(255,255,255,0.38)",maxWidth:520,opacity:visible?1:0,transform:visible?"translateY(0)":"translateY(8px)",transition:"all .5s cubic-bezier(.16,1,.3,1)",display:"flex",alignItems:"flex-start",gap:10}}><span style={{color:"rgba(255,140,0,0.5)",fontSize:16,marginTop:1,flexShrink:0}}>◈</span>{TAGLINES[idx]}</div></div>);
+  return(<div style={{marginBottom:8,minHeight:56}}><div style={{fontSize:15,fontWeight:300,lineHeight:1.7,color:"var(--text3)",maxWidth:520,opacity:visible?1:0,transform:visible?"translateY(0)":"translateY(8px)",transition:"all .5s cubic-bezier(.16,1,.3,1)",display:"flex",alignItems:"flex-start",gap:10}}><span style={{color:"rgba(255,140,0,0.5)",fontSize:16,marginTop:1,flexShrink:0}}>◈</span>{TAGLINES[idx]}</div></div>);
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
@@ -1105,7 +1105,7 @@ function Boot({ onBegin, hasPlan, theme, onThemeToggle }) {
 
             {/* Glitch headline */}
             <div style={{position:"relative",lineHeight:.88,marginBottom:14}}>
-              <h1 style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(32px,8vw,104px)",fontWeight:900,letterSpacing:-2,background:"linear-gradient(145deg,#ffffff 0%,rgba(255,200,100,0.85) 50%,rgba(255,100,30,0.7) 100%)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",animation:"glitch1 9s ease-in-out infinite",lineHeight:.88,whiteSpace:"nowrap",overflow:"hidden"}}>SYNAPSE</h1>
+              <h1 style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(32px,8vw,104px)",fontWeight:900,letterSpacing:-2,background:"var(--gradient-text)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",animation:"glitch1 9s ease-in-out infinite",lineHeight:.88,whiteSpace:"nowrap",overflow:"hidden"}}>SYNAPSE</h1>
               <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(32px,8vw,104px)",fontWeight:900,letterSpacing:-2,color:"rgba(255,80,0,.35)",animation:"glitch2 9s ease-in-out infinite",position:"absolute",top:0,left:0,lineHeight:.88,whiteSpace:"nowrap",overflow:"hidden"}}>SYNAPSE</div>
             </div>
 
@@ -1129,14 +1129,14 @@ function Boot({ onBegin, hasPlan, theme, onThemeToggle }) {
               {[["90+","Day Protocol"],["7","Recovery Levels"],["AI","Daily Coach"],["∞","Personalized"]].map(([n,l])=>(
                 <div key={l}>
                   <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:26,fontWeight:800,background:"linear-gradient(135deg,#ff9500,#ffcc00)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",lineHeight:1}}>{n}</div>
-                  <div style={{fontSize:11,color:"rgba(255,255,255,0.22)",marginTop:5,letterSpacing:.5}}>{l}</div>
+                  <div style={{fontSize:11,color:"var(--text4)",marginTop:5,letterSpacing:.5}}>{l}</div>
                 </div>
               ))}
             </div>
 
             {/* One-liner */}
             <div className="s5" style={{marginTop:28,padding:"16px 22px",background:"rgba(255,140,0,0.03)",border:"1px solid rgba(255,140,0,0.09)",borderRadius:12,maxWidth:560}}>
-              <p style={{fontSize:12,color:"rgba(255,255,255,0.25)",fontWeight:300,lineHeight:1.9,fontStyle:"italic",letterSpacing:.3}}>
+              <p style={{fontSize:12,color:"var(--text4)",fontWeight:300,lineHeight:1.9,fontStyle:"italic",letterSpacing:.3}}>
                 "Confess your addictions. Get your plan. Show up every day. Take your brain back."
               </p>
             </div>
@@ -1238,7 +1238,7 @@ function Auth({ onAuth, context="" }) {
           <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:26,fontWeight:900,letterSpacing:-1,background:"linear-gradient(145deg,#fff 30%,rgba(255,180,80,.75) 100%)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",marginBottom:8}}>
             {context==="lock"?"LOCK IN YOUR":"SYNAPSE"}
           </div>
-          <div style={{fontSize:12,color:"rgba(255,255,255,0.2)",letterSpacing:2,textTransform:"uppercase"}}>
+          <div style={{fontSize:12,color:"var(--text4)",letterSpacing:2,textTransform:"uppercase"}}>
             {context==="lock"?"Protocol. Begin Day 1.":mode==="signin"?"Welcome back, soldier":"Initialize your protocol"}
           </div>
         </div>
@@ -1258,14 +1258,14 @@ function Auth({ onAuth, context="" }) {
             <button className="btn-primary" onClick={handleSubmit} disabled={loading} style={{width:"100%",marginTop:8,padding:"15px",fontSize:13,borderRadius:12,justifyContent:"center",display:"flex",alignItems:"center",gap:8}}>
               {loading?<span style={{display:"flex",gap:4}}>{[0,1,2].map(i=><span key={i} style={{width:4,height:4,borderRadius:"50%",background:"#fff",animation:`dotBlink 1s ${i*.18}s infinite`}}/>)}</span>:mode==="signin"?"Enter the Protocol →":"Initialize Protocol →"}
             </button>
-            <div style={{display:"flex",alignItems:"center",gap:12,margin:"4px 0"}}><div style={{flex:1,height:1,background:"rgba(255,255,255,0.06)"}}/><span style={{fontSize:11,color:"rgba(255,255,255,0.16)",letterSpacing:1}}>OR</span><div style={{flex:1,height:1,background:"rgba(255,255,255,0.06)"}}/></div>
+            <div style={{display:"flex",alignItems:"center",gap:12,margin:"4px 0"}}><div style={{flex:1,height:1,background:"rgba(255,255,255,0.06)"}}/><span style={{fontSize:11,color:"var(--text4)",letterSpacing:1}}>OR</span><div style={{flex:1,height:1,background:"rgba(255,255,255,0.06)"}}/></div>
             <button onClick={handleGoogle} disabled={loading} onMouseEnter={()=>setGoogleHover(true)} onMouseLeave={()=>setGoogleHover(false)} style={{width:"100%",padding:"14px",borderRadius:12,background:googleHover?"rgba(255,255,255,0.06)":"rgba(255,255,255,0.03)",border:`1px solid ${googleHover?"rgba(255,255,255,0.18)":"rgba(255,255,255,0.08)"}`,color:googleHover?"rgba(255,255,255,0.85)":"rgba(255,255,255,0.4)",fontSize:13,fontWeight:500,cursor:"none",transition:"all .25s",display:"flex",alignItems:"center",justifyContent:"center",gap:10}}>
               <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z" fill={googleHover?"#4285F4":"rgba(66,133,244,0.6)"}/><path d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z" fill={googleHover?"#34A853":"rgba(52,168,83,0.6)"}/><path d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332z" fill={googleHover?"#FBBC05":"rgba(251,188,5,0.6)"}/><path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z" fill={googleHover?"#EA4335":"rgba(234,67,53,0.6)"}/>
               </svg>
               Continue with Google
             </button>
           </div>
-          <p style={{textAlign:"center",fontSize:11,color:"rgba(255,255,255,0.12)",marginTop:20,lineHeight:1.7,letterSpacing:.2}}>By continuing, you agree to the Synapse Protocol.<br/><span style={{color:"rgba(255,140,0,0.28)"}}>Encrypted. Private. Never sold.</span><br/><span style={{color:"rgba(255,255,255,0.1)"}}>⚠ Progress stored locally. Clearing browser data erases your streak.</span></p>
+          <p style={{textAlign:"center",fontSize:11,color:"var(--text4)",marginTop:20,lineHeight:1.7,letterSpacing:.2}}>By continuing, you agree to the Synapse Protocol.<br/><span style={{color:"rgba(255,140,0,0.28)"}}>Encrypted. Private. Never sold.</span><br/><span style={{color:"var(--text4)"}}>⚠ Progress stored locally. Clearing browser data erases your streak.</span></p>
         </div>
       </div>
     </div>
@@ -1396,12 +1396,12 @@ function ArchetypeStep({ onSelect, selected }) {
 
       {/* Headline */}
       <div style={{position:"relative",lineHeight:.9,marginBottom:8,width:"100%"}}>
-        <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(28px,7vw,88px)",fontWeight:900,letterSpacing:-3,background:"linear-gradient(160deg,#fff 0%,rgba(255,210,110,.8) 60%,rgba(255,100,30,.5) 100%)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",animation:"glitch1 9s ease-in-out infinite",lineHeight:.9}}>WHO ARE</div>
+        <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(28px,7vw,88px)",fontWeight:900,letterSpacing:-3,background:"var(--gradient-text)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",animation:"glitch1 9s ease-in-out infinite",lineHeight:.9}}>WHO ARE</div>
         <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(28px,7vw,88px)",fontWeight:900,letterSpacing:-3,color:"rgba(255,80,0,.35)",animation:"glitch2 9s ease-in-out infinite",position:"absolute",top:0,left:0,lineHeight:.9}}>WHO ARE</div>
       </div>
-      <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(28px,7vw,88px)",fontWeight:900,letterSpacing:-3,background:"linear-gradient(160deg,#fff 0%,rgba(255,210,110,.8) 60%,rgba(255,100,30,.5) 100%)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",lineHeight:.9,marginBottom:20}}>YOU BECOMING?</div>
+      <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(28px,7vw,88px)",fontWeight:900,letterSpacing:-3,background:"var(--gradient-text)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",lineHeight:.9,marginBottom:20}}>YOU BECOMING?</div>
 
-      <p style={{fontSize:15,color:"rgba(255,255,255,.3)",fontWeight:300,lineHeight:1.75,maxWidth:500,marginBottom:52}}>
+      <p style={{fontSize:15,color:"var(--text3)",fontWeight:300,lineHeight:1.75,maxWidth:500,marginBottom:52}}>
         Choose the archetype that resonates with the version of yourself you're fighting to become.{" "}
         <span style={{color:"rgba(255,180,80,.5)"}}>This shapes your recovery identity.</span>
       </p>
@@ -1501,7 +1501,7 @@ function ArchetypeStep({ onSelect, selected }) {
 
       {/* Footer */}
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",paddingTop:24,borderTop:"1px solid rgba(255,140,0,.08)"}}>
-        <div style={{fontSize:12,color:"rgba(255,255,255,.18)",fontFamily:"'JetBrains Mono',monospace",letterSpacing:1}}>
+        <div style={{fontSize:12,color:"var(--text4)",fontFamily:"'JetBrains Mono',monospace",letterSpacing:1}}>
           {selected ? `${ARCHETYPES.find(a=>a.id===selected)?.title} — ${ARCHETYPES.find(a=>a.id===selected)?.sub}` : "Choose your identity"}
         </div>
         <button onClick={()=>selected && onSelect(selected, true)} disabled={!selected}
@@ -1523,15 +1523,15 @@ function ConfessStep1({selected, onToggle, onNext}) {
         <span style={{fontSize:10,fontWeight:600,letterSpacing:2.5,color:"rgba(255,180,80,.65)",textTransform:"uppercase"}}>Step 02 of 05 — Select Your Poisons</span>
       </div>
       <div style={{position:"relative",lineHeight:.9,marginBottom:8}}>
-        <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(28px,7.5vw,96px)",fontWeight:900,letterSpacing:-3,background:"linear-gradient(160deg,#fff 0%,rgba(255,210,110,.8) 60%,rgba(255,100,30,.5) 100%)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",animation:"glitch1 8s ease-in-out infinite",lineHeight:.9}}>WHAT ARE</div>
+        <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(28px,7.5vw,96px)",fontWeight:900,letterSpacing:-3,background:"var(--gradient-text)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",animation:"glitch1 8s ease-in-out infinite",lineHeight:.9}}>WHAT ARE</div>
         <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(28px,7.5vw,96px)",fontWeight:900,letterSpacing:-3,color:"rgba(255,80,0,.4)",animation:"glitch2 8s ease-in-out infinite",position:"absolute",top:0,left:0,lineHeight:.9}}>WHAT ARE</div>
       </div>
-      <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(28px,7.5vw,96px)",fontWeight:900,letterSpacing:-3,background:"linear-gradient(160deg,#fff 0%,rgba(255,210,110,.8) 60%,rgba(255,100,30,.5) 100%)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",lineHeight:.9,marginBottom:24}}>YOUR POISONS?</div>
-      <p style={{fontSize:15,color:"rgba(255,255,255,.3)",fontWeight:300,lineHeight:1.75,maxWidth:520,marginBottom:48,marginTop:8,textAlign:"center",marginLeft:"auto",marginRight:"auto"}}>
+      <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(28px,7.5vw,96px)",fontWeight:900,letterSpacing:-3,background:"var(--gradient-text)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",lineHeight:.9,marginBottom:24}}>YOUR POISONS?</div>
+      <p style={{fontSize:15,color:"var(--text3)",fontWeight:300,lineHeight:1.75,maxWidth:520,marginBottom:48,marginTop:8,textAlign:"center",marginLeft:"auto",marginRight:"auto"}}>
         Be honest. Select everything that has a grip on you —{" "}
         <span style={{color:"rgba(255,180,80,.6)",fontWeight:400}}>even if it feels embarrassing.</span>
         <br/>
-        <span style={{fontSize:13,color:"rgba(255,255,255,.18)"}}>The AI only builds a real plan if you're real with it.</span>
+        <span style={{fontSize:13,color:"var(--text4)"}}>The AI only builds a real plan if you're real with it.</span>
       </p>
       <div className="addiction-grid" style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(190px,1fr))",gap:14,marginBottom:48}}>
         {ADDICTIONS.map((a,i)=>{
@@ -1549,8 +1549,8 @@ function ConfessStep1({selected, onToggle, onNext}) {
         })}
       </div>
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",paddingTop:24,borderTop:"1px solid rgba(255,140,0,.08)"}}>
-        <div style={{fontSize:12,color:"rgba(255,255,255,.2)",fontFamily:"'JetBrains Mono',monospace",letterSpacing:1}}>{selected.length===0?"Select at least one":`${selected.length} poison${selected.length>1?"s":""} identified`}</div>
-        <button onClick={onNext} disabled={selected.length===0} style={{background:"linear-gradient(135deg,#ff9500,#ff5000)",border:"none",color:"#fff",padding:"14px 40px",borderRadius:12,fontFamily:"'Inter',sans-serif",fontSize:13,fontWeight:700,letterSpacing:.3,transition:"all .3s",boxShadow:selected.length?"0 0 40px rgba(255,140,0,.4),0 6px 24px rgba(0,0,0,.4)":"none",opacity:selected.length?1:.3,cursor:"none"}}>
+        <div style={{fontSize:12,color:"var(--text4)",fontFamily:"'JetBrains Mono',monospace",letterSpacing:1}}>{selected.length===0?"Select at least one":`${selected.length} poison${selected.length>1?"s":""} identified`}</div>
+        <button onClick={onNext} disabled={selected.length===0} style={{background:"linear-gradient(135deg,#ff9500,#ff5000)",border:"none",color:"var(--text)",padding:"14px 40px",borderRadius:12,fontFamily:"'Inter',sans-serif",fontSize:13,fontWeight:700,letterSpacing:.3,transition:"all .3s",boxShadow:selected.length?"0 0 40px rgba(255,140,0,.4),0 6px 24px rgba(0,0,0,.4)":"none",opacity:selected.length?1:.3,cursor:"none"}}>
           Analyze Damage → Step 2
         </button>
       </div>
@@ -1574,9 +1574,9 @@ function ConfessStep2({selected, hours, onHoursChange, onNext, onBack}) {
         <div style={{width:6,height:6,borderRadius:"50%",background:"#ff8c00",boxShadow:"0 0 10px #ff8c00"}}/>
         <span style={{fontSize:10,fontWeight:600,letterSpacing:2.5,color:"rgba(255,180,80,.65)",textTransform:"uppercase"}}>Step 03 of 05 — Measure the Damage</span>
       </div>
-      <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(26px,7vw,84px)",fontWeight:900,letterSpacing:-3,background:"linear-gradient(160deg,#fff 0%,rgba(255,210,110,.8) 60%,rgba(255,100,30,.5) 100%)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",lineHeight:.9,marginBottom:8}}>HOW MUCH</div>
-      <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(26px,7vw,84px)",fontWeight:900,letterSpacing:-3,background:"linear-gradient(160deg,#fff 0%,rgba(255,210,110,.8) 60%,rgba(255,100,30,.5) 100%)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",lineHeight:.9,marginBottom:28}}>& HOW OFTEN?</div>
-      <p style={{fontSize:14,color:"rgba(255,255,255,.28)",fontWeight:300,lineHeight:1.9,maxWidth:440,marginBottom:40}}>Screen addictions are measured in hours per day. Urge-based addictions are measured in times per week. Be brutally honest.</p>
+      <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(26px,7vw,84px)",fontWeight:900,letterSpacing:-3,background:"var(--gradient-text)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",lineHeight:.9,marginBottom:8}}>HOW MUCH</div>
+      <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(26px,7vw,84px)",fontWeight:900,letterSpacing:-3,background:"var(--gradient-text)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",lineHeight:.9,marginBottom:28}}>& HOW OFTEN?</div>
+      <p style={{fontSize:14,color:"var(--text4)",fontWeight:300,lineHeight:1.9,maxWidth:440,marginBottom:40}}>Screen addictions are measured in hours per day. Urge-based addictions are measured in times per week. Be brutally honest.</p>
       <div style={{display:"flex",flexDirection:"column",gap:18,marginBottom:40}}>
         {selectedAddictions.map((a,i)=>{
           const v=hours[a.id]||0;
@@ -1597,7 +1597,7 @@ function ConfessStep2({selected, hours, onHoursChange, onNext, onBack}) {
                 <div style={{display:"flex",alignItems:"center",gap:12}}>
                   <div style={{fontSize:22}}>{a.emoji}</div>
                   <div>
-                    <div style={{fontSize:13,fontWeight:600,color:"rgba(255,255,255,.72)"}}>{a.label}</div>
+                    <div style={{fontSize:13,fontWeight:600,color:"var(--text)"}}>{a.label}</div>
                     <div style={{display:"flex",alignItems:"center",gap:6,marginTop:3}}>
                       <div style={{fontSize:10,color:`rgba(${rgb},.65)`,letterSpacing:.5}}>{displayVal}</div>
                       {isFreq&&<div style={{fontSize:9,background:`rgba(${rgb},.12)`,border:`1px solid rgba(${rgb},.3)`,borderRadius:999,padding:"1px 7px",color:`rgba(${rgb},.8)`,letterSpacing:.5,fontFamily:"'JetBrains Mono',monospace"}}>FREQUENCY</div>}
@@ -1606,7 +1606,7 @@ function ConfessStep2({selected, hours, onHoursChange, onNext, onBack}) {
                 </div>
                 <div style={{textAlign:"right"}}>
                   <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:28,fontWeight:900,color:a.color,letterSpacing:-1,lineHeight:1}}>{unitLabel}</div>
-                  {v>0&&<div style={{fontSize:9,color:"rgba(255,255,255,.18)",marginTop:2}}>{unitSub}</div>}
+                  {v>0&&<div style={{fontSize:9,color:"var(--text4)",marginTop:2}}>{unitSub}</div>}
                 </div>
               </div>
               <div style={{position:"relative",height:5,background:"rgba(255,255,255,.05)",borderRadius:3}}>
@@ -1614,7 +1614,7 @@ function ConfessStep2({selected, hours, onHoursChange, onNext, onBack}) {
                 <input type="range" min={0} max={max} step={step} value={v} onChange={e=>onHoursChange(a.id,parseFloat(e.target.value))} style={{position:"absolute",top:-8,left:0,width:"100%",height:22,opacity:0,zIndex:2}}/>
                 <div style={{position:"absolute",top:"50%",left:`${(v/max)*100}%`,transform:"translate(-50%,-50%)",width:16,height:16,borderRadius:"50%",background:a.color,boxShadow:`0 0 10px ${a.color}`,border:"2px solid rgba(0,0,0,.5)",transition:"left .15s",pointerEvents:"none"}}/>
               </div>
-              <div style={{display:"flex",justifyContent:"space-between",marginTop:8,fontSize:9,color:"rgba(255,255,255,.12)",fontFamily:"'JetBrains Mono',monospace",letterSpacing:1}}>
+              <div style={{display:"flex",justifyContent:"space-between",marginTop:8,fontSize:9,color:"var(--text4)",fontFamily:"'JetBrains Mono',monospace",letterSpacing:1}}>
                 {tickMarks.map(n=><span key={n}>{tickLabel(n)}</span>)}
               </div>
             </div>
@@ -1629,14 +1629,14 @@ function ConfessStep2({selected, hours, onHoursChange, onNext, onBack}) {
               [`${selectedAddictions.filter(a=>FREQ_ADDICTIONS.has(a.id)).reduce((s,a)=>s+(hours[a.id]||0),0)}x`,"urges/day"],
               [`${Math.round(totalHours*365/24)} days`,"lost per year"]
             ].map(([v,l])=>(
-              <div key={l}><div style={{fontFamily:"'Orbitron',sans-serif",fontSize:24,fontWeight:800,color:"#ff4444",letterSpacing:-1,lineHeight:1}}>{v}</div><div style={{fontSize:10,color:"rgba(255,255,255,.2)",marginTop:3,letterSpacing:.5}}>{l}</div></div>
+              <div key={l}><div style={{fontFamily:"'Orbitron',sans-serif",fontSize:24,fontWeight:800,color:"#ff4444",letterSpacing:-1,lineHeight:1}}>{v}</div><div style={{fontSize:10,color:"var(--text4)",marginTop:3,letterSpacing:.5}}>{l}</div></div>
             ))}
           </div>
         </div>
       )}
       <div style={{display:"flex",gap:14,justifyContent:"space-between",paddingTop:24,borderTop:"1px solid rgba(255,140,0,.08)"}}>
-        <button onClick={onBack} style={{background:"rgba(255,255,255,.04)",border:"1px solid rgba(255,255,255,.1)",color:"rgba(255,255,255,.4)",padding:"13px 28px",borderRadius:12,fontFamily:"'Inter',sans-serif",fontSize:13,fontWeight:500,transition:"all .25s",cursor:"none"}}>← Back</button>
-        <button onClick={onNext} disabled={!hasAnyValue} style={{background:"linear-gradient(135deg,#ff9500,#ff5000)",border:"none",color:"#fff",padding:"14px 40px",borderRadius:12,fontFamily:"'Inter',sans-serif",fontSize:13,fontWeight:700,letterSpacing:.3,transition:"all .3s",boxShadow:hasAnyValue?"0 0 40px rgba(255,140,0,.4),0 6px 24px rgba(0,0,0,.4)":"none",opacity:hasAnyValue?1:.3,cursor:"none"}}>
+        <button onClick={onBack} style={{background:"rgba(255,255,255,.04)",border:"1px solid rgba(255,255,255,.1)",color:"var(--text3)",padding:"13px 28px",borderRadius:12,fontFamily:"'Inter',sans-serif",fontSize:13,fontWeight:500,transition:"all .25s",cursor:"none"}}>← Back</button>
+        <button onClick={onNext} disabled={!hasAnyValue} style={{background:"linear-gradient(135deg,#ff9500,#ff5000)",border:"none",color:"var(--text)",padding:"14px 40px",borderRadius:12,fontFamily:"'Inter',sans-serif",fontSize:13,fontWeight:700,letterSpacing:.3,transition:"all .3s",boxShadow:hasAnyValue?"0 0 40px rgba(255,140,0,.4),0 6px 24px rgba(0,0,0,.4)":"none",opacity:hasAnyValue?1:.3,cursor:"none"}}>
           See What You're Losing → Step 3
         </button>
       </div>
@@ -1678,7 +1678,7 @@ function ConfessStep3({selected, hours, onNext, onBack}) {
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16,marginBottom:36}}>
         <div style={{background:`rgba(${rgb},.06)`,border:`1px solid rgba(${rgb},.2)`,borderRadius:16,padding:"28px 24px",animation:"scaleIn .4s cubic-bezier(.16,1,.3,1) both"}}>
           <div style={{fontSize:9,fontFamily:"'JetBrains Mono',monospace",letterSpacing:3,color:`rgba(${rgb},.55)`,textTransform:"uppercase",marginBottom:14}}>🧠 Brain Damage</div>
-          <p style={{fontSize:13,lineHeight:1.9,color:"rgba(255,255,255,.52)",fontWeight:300}}>{effects.brain}</p>
+          <p style={{fontSize:13,lineHeight:1.9,color:"var(--text2)",fontWeight:300}}>{effects.brain}</p>
           <div style={{marginTop:16,paddingTop:14,borderTop:`1px solid rgba(${rgb},.12)`,display:"flex",alignItems:"center",gap:8}}>
             <div style={{width:4,height:4,borderRadius:"50%",background:active.color,boxShadow:`0 0 6px ${active.color}`}}/>
             <span style={{fontSize:10,color:`rgba(${rgb},.65)`,fontFamily:"'JetBrains Mono',monospace",letterSpacing:.5}}>{effects.stat}</span>
@@ -1687,17 +1687,17 @@ function ConfessStep3({selected, hours, onNext, onBack}) {
         <div style={{background:"rgba(255,40,40,.04)",border:"1px solid rgba(255,40,40,.14)",borderRadius:16,padding:"28px 24px",animation:"scaleIn .4s cubic-bezier(.16,1,.3,1) .08s both"}}>
           <div style={{fontSize:9,fontFamily:"'JetBrains Mono',monospace",letterSpacing:3,color:"rgba(255,100,80,.55)",textTransform:"uppercase",marginBottom:14}}>💸 What You're Losing</div>
           <div style={{display:"flex",flexDirection:"column",gap:9}}>
-            {effects.loss.map((l,i)=>(<div key={i} style={{display:"flex",alignItems:"center",gap:10,animation:`fadeUp .4s ease ${i*.06}s both`}}><div style={{width:16,height:16,borderRadius:"50%",background:"rgba(255,40,40,.14)",border:"1px solid rgba(255,40,40,.28)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:8,color:"#ff6644",flexShrink:0}}>✕</div><span style={{fontSize:12,color:"rgba(255,255,255,.48)",fontWeight:400}}>{l}</span></div>))}
+            {effects.loss.map((l,i)=>(<div key={i} style={{display:"flex",alignItems:"center",gap:10,animation:`fadeUp .4s ease ${i*.06}s both`}}><div style={{width:16,height:16,borderRadius:"50%",background:"rgba(255,40,40,.14)",border:"1px solid rgba(255,40,40,.28)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:8,color:"#ff6644",flexShrink:0}}>✕</div><span style={{fontSize:12,color:"var(--text3)",fontWeight:400}}>{l}</span></div>))}
           </div>
         </div>
       </div>
       <div style={{background:"rgba(255,60,0,.04)",border:"1px solid rgba(255,60,0,.18)",borderRadius:14,padding:"20px 28px",marginBottom:36,display:"flex",gap:28,flexWrap:"wrap",alignItems:"center"}}>
         <div style={{fontSize:10,color:"rgba(255,140,80,.38)",fontFamily:"'JetBrains Mono',monospace",letterSpacing:2,textTransform:"uppercase",flex:"0 0 auto"}}>⏱ Time Audit</div>
-        {[[`${totalHours}h`,"stolen every day"],[`${Math.round(totalHours*30)}h`,"this month"],[`${Math.round(totalHours*365/24)} days`,"this year"],[`${Math.round(totalHours*365*10/24/365)} years`,"in 10 years"]].map(([v,l])=>(<div key={l}><div style={{fontFamily:"'Orbitron',sans-serif",fontSize:20,fontWeight:800,color:"#ff6644",letterSpacing:-1,lineHeight:1}}>{v}</div><div style={{fontSize:9,color:"rgba(255,255,255,.18)",marginTop:3,letterSpacing:.5}}>{l}</div></div>))}
+        {[[`${totalHours}h`,"stolen every day"],[`${Math.round(totalHours*30)}h`,"this month"],[`${Math.round(totalHours*365/24)} days`,"this year"],[`${Math.round(totalHours*365*10/24/365)} years`,"in 10 years"]].map(([v,l])=>(<div key={l}><div style={{fontFamily:"'Orbitron',sans-serif",fontSize:20,fontWeight:800,color:"#ff6644",letterSpacing:-1,lineHeight:1}}>{v}</div><div style={{fontSize:9,color:"var(--text4)",marginTop:3,letterSpacing:.5}}>{l}</div></div>))}
       </div>
       <div style={{display:"flex",gap:14,justifyContent:"space-between",paddingTop:24,borderTop:"1px solid rgba(255,140,0,.08)"}}>
-        <button onClick={onBack} style={{background:"rgba(255,255,255,.04)",border:"1px solid rgba(255,255,255,.1)",color:"rgba(255,255,255,.4)",padding:"13px 28px",borderRadius:12,fontFamily:"'Inter',sans-serif",fontSize:13,fontWeight:500,transition:"all .25s",cursor:"none"}}>← Back</button>
-        <button onClick={onNext} style={{background:"linear-gradient(135deg,#ff9500,#ff5000)",border:"none",color:"#fff",padding:"14px 40px",borderRadius:12,fontFamily:"'Inter',sans-serif",fontSize:13,fontWeight:700,letterSpacing:.3,transition:"all .3s",boxShadow:"0 0 40px rgba(255,140,0,.4),0 6px 24px rgba(0,0,0,.4)",cursor:"none"}}>
+        <button onClick={onBack} style={{background:"rgba(255,255,255,.04)",border:"1px solid rgba(255,255,255,.1)",color:"var(--text3)",padding:"13px 28px",borderRadius:12,fontFamily:"'Inter',sans-serif",fontSize:13,fontWeight:500,transition:"all .25s",cursor:"none"}}>← Back</button>
+        <button onClick={onNext} style={{background:"linear-gradient(135deg,#ff9500,#ff5000)",border:"none",color:"var(--text)",padding:"14px 40px",borderRadius:12,fontFamily:"'Inter',sans-serif",fontSize:13,fontWeight:700,letterSpacing:.3,transition:"all .3s",boxShadow:"0 0 40px rgba(255,140,0,.4),0 6px 24px rgba(0,0,0,.4)",cursor:"none"}}>
           I'm Ready. Build My Plan → Step 4
         </button>
       </div>
@@ -1730,11 +1730,11 @@ function ConfessStep4({selected, hours, onSubmit, loading, onBack}) {
         <span style={{fontSize:10,fontWeight:600,letterSpacing:2.5,color:"rgba(255,180,80,.65)",textTransform:"uppercase"}}>Step 05 of 05 — Final Confession</span>
       </div>
       <div style={{position:"relative",lineHeight:.9,marginBottom:8}}>
-        <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(28px,7.5vw,96px)",fontWeight:900,letterSpacing:-3,background:"linear-gradient(160deg,#fff 0%,rgba(255,210,110,.8) 60%,rgba(255,100,30,.5) 100%)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",animation:"glitch1 7s ease-in-out infinite"}}>TELL THE</div>
+        <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(28px,7.5vw,96px)",fontWeight:900,letterSpacing:-3,background:"var(--gradient-text)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",animation:"glitch1 7s ease-in-out infinite"}}>TELL THE</div>
         <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(28px,7.5vw,96px)",fontWeight:900,letterSpacing:-3,color:"rgba(255,80,0,.4)",animation:"glitch2 7s ease-in-out infinite",position:"absolute",top:0,left:0}}>TELL THE</div>
       </div>
-      <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(28px,7.5vw,96px)",fontWeight:900,letterSpacing:-3,background:"linear-gradient(160deg,#fff 0%,rgba(255,210,110,.8) 60%,rgba(255,100,30,.5) 100%)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",lineHeight:.9,marginBottom:20}}>TRUTH.</div>
-      <p style={{fontSize:14,color:"rgba(255,255,255,.28)",fontWeight:300,lineHeight:1.9,maxWidth:480,marginBottom:36}}>Anything extra SYNAPSE should know? How long, what you've tried, your biggest struggle? <span style={{color:"rgba(255,180,80,.45)"}}>Optional — your plan generates either way.</span></p>
+      <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(28px,7.5vw,96px)",fontWeight:900,letterSpacing:-3,background:"var(--gradient-text)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",lineHeight:.9,marginBottom:20}}>TRUTH.</div>
+      <p style={{fontSize:14,color:"var(--text4)",fontWeight:300,lineHeight:1.9,maxWidth:480,marginBottom:36}}>Anything extra SYNAPSE should know? How long, what you've tried, your biggest struggle? <span style={{color:"rgba(255,180,80,.45)"}}>Optional — your plan generates either way.</span></p>
       <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:28}}>
         {selectedAddictions.map(a=>{ const rgb=a.color.replace('#','').match(/.{2}/g).map(x=>parseInt(x,16)).join(','); const v=hours[a.id]||0; const unitStr=FREQ_ADDICTIONS.has(a.id)?`${v}x/d`:`${v}h/d`; return(<div key={a.id} style={{display:"flex",alignItems:"center",gap:6,background:`rgba(${rgb},.1)`,border:`1px solid rgba(${rgb},.28)`,borderRadius:999,padding:"5px 12px",fontSize:10,color:`rgba(${rgb},1)`}}><span>{a.emoji}</span><span>{a.label}</span><span style={{opacity:.4}}>·</span><span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:9}}>{unitStr}</span></div>); })}
       </div>
@@ -1753,7 +1753,7 @@ function ConfessStep4({selected, hours, onSubmit, loading, onBack}) {
           </div>
           <div style={{flex:1,position:"relative",padding:"16px 4px 16px 0"}}>
             <div style={{position:"absolute",top:18,left:12,fontFamily:"'JetBrains Mono',monospace",fontSize:12,color:"rgba(255,140,0,.45)",pointerEvents:"none",zIndex:2,lineHeight:"26px"}}>›</div>
-            <textarea value={text} onChange={e=>setText(e.target.value)} onFocus={()=>setFocused(true)} onBlur={()=>setFocused(false)} placeholder={focused?"":"(Optional) How long has this been going on? What have you tried before? Your biggest struggle..."} style={{width:"100%",minHeight:140,background:"transparent",border:"none",outline:"none",resize:"none",fontFamily:"'JetBrains Mono',monospace",fontSize:12,fontWeight:400,color:"rgba(255,255,255,.8)",lineHeight:"26px",padding:"0 18px 0 28px",caretColor:"#ff8c00",letterSpacing:.3}}/>
+            <textarea value={text} onChange={e=>setText(e.target.value)} onFocus={()=>setFocused(true)} onBlur={()=>setFocused(false)} placeholder={focused?"":"(Optional) How long has this been going on? What have you tried before? Your biggest struggle..."} style={{width:"100%",minHeight:140,background:"transparent",border:"none",outline:"none",resize:"none",fontFamily:"'JetBrains Mono',monospace",fontSize:12,fontWeight:400,color:"var(--text)",lineHeight:"26px",padding:"0 18px 0 28px",caretColor:"#ff8c00",letterSpacing:.3}}/>
             {focused&&!text&&<div style={{position:"absolute",top:20,left:40,width:7,height:12,background:"#ff8c00",animation:"termCursor .9s step-end infinite",borderRadius:1}}/>}
           </div>
         </div>
@@ -1764,10 +1764,10 @@ function ConfessStep4({selected, hours, onSubmit, loading, onBack}) {
       </div>
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:16,paddingTop:8}}>
         <div style={{display:"flex",gap:12}}>
-          <button onClick={onBack} style={{background:"rgba(255,255,255,.04)",border:"1px solid rgba(255,255,255,.1)",color:"rgba(255,255,255,.38)",padding:"13px 24px",borderRadius:12,fontFamily:"'Inter',sans-serif",fontSize:13,fontWeight:500,transition:"all .25s",cursor:"none"}}>← Back</button>
-          <div style={{fontSize:11,color:"rgba(255,255,255,.12)",fontFamily:"'JetBrains Mono',monospace",letterSpacing:.5,lineHeight:1.7,display:"flex",alignItems:"center"}}>🔒 Never stored or shared</div>
+          <button onClick={onBack} style={{background:"rgba(255,255,255,.04)",border:"1px solid rgba(255,255,255,.1)",color:"var(--text3)",padding:"13px 24px",borderRadius:12,fontFamily:"'Inter',sans-serif",fontSize:13,fontWeight:500,transition:"all .25s",cursor:"none"}}>← Back</button>
+          <div style={{fontSize:11,color:"var(--text4)",fontFamily:"'JetBrains Mono',monospace",letterSpacing:.5,lineHeight:1.7,display:"flex",alignItems:"center"}}>🔒 Never stored or shared</div>
         </div>
-        <button onClick={()=>onSubmit(buildPrompt())} disabled={loading} style={{background:"linear-gradient(135deg,#ff9500,#ff5000)",border:"none",color:"#fff",padding:"16px 48px",borderRadius:14,fontFamily:"'Inter',sans-serif",fontSize:14,fontWeight:800,letterSpacing:.5,transition:"all .3s cubic-bezier(.16,1,.3,1)",boxShadow:"0 0 50px rgba(255,140,0,.5),0 0 100px rgba(255,80,0,.2),0 8px 28px rgba(0,0,0,.5)",cursor:"none"}}>
+        <button onClick={()=>onSubmit(buildPrompt())} disabled={loading} style={{background:"linear-gradient(135deg,#ff9500,#ff5000)",border:"none",color:"var(--text)",padding:"16px 48px",borderRadius:14,fontFamily:"'Inter',sans-serif",fontSize:14,fontWeight:800,letterSpacing:.5,transition:"all .3s cubic-bezier(.16,1,.3,1)",boxShadow:"0 0 50px rgba(255,140,0,.5),0 0 100px rgba(255,80,0,.2),0 8px 28px rgba(0,0,0,.5)",cursor:"none"}}>
           {loading?"Building Your Battle Plan...":"Generate My Battle Plan 🔥"}
         </button>
       </div>
@@ -2205,7 +2205,7 @@ function Plan({plan,loading,onBegin,onRetry}) {
       <div className="hero-pad" style={{padding:"clamp(60px,8vw,80px) clamp(20px,8vw,100px) clamp(40px,5vw,64px)",borderBottom:"1px solid rgba(255,140,0,0.07)",position:"relative",zIndex:1}}>
         <div style={{position:"absolute",inset:0,background:"radial-gradient(ellipse at 30% 60%, rgba(255,100,0,0.06) 0%, transparent 60%)",pointerEvents:"none"}}/>
         <div className="tag s1" style={{marginBottom:24}}><span className="d"/>Recovery Protocol</div>
-        <h2 className="s2" style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(32px,8vw,104px)",fontWeight:800,lineHeight:.88,letterSpacing:-3,background:"linear-gradient(145deg,#fff 40%,rgba(255,180,80,0.65) 100%)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent"}}>YOUR<br/>MISSION.</h2>
+        <h2 className="s2" style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(32px,8vw,104px)",fontWeight:800,lineHeight:.88,letterSpacing:-3,background:"var(--gradient-text)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent"}}>YOUR<br/>MISSION.</h2>
       </div>
       <div className="content-pad" style={{maxWidth:820,margin:"0 auto",padding:"clamp(40px,6vw,72px) clamp(16px,8vw,100px)",position:"relative",zIndex:1}}>
         <div className="tag s1" style={{marginBottom:32}}><span className="d"/>Synapse Recovery Plan</div>
@@ -2216,7 +2216,7 @@ function Plan({plan,loading,onBegin,onRetry}) {
           </div>
         ):(
           <div className="glass s2" style={{padding:44,animation:"borderGlow 4s ease-in-out infinite"}}>
-            <div style={{fontSize:15,lineHeight:2.15,color:"rgba(255,255,255,0.62)",fontWeight:300,whiteSpace:"pre-wrap",borderLeft:"2px solid rgba(255,140,0,0.22)",paddingLeft:28}}>
+            <div style={{fontSize:15,lineHeight:2.15,color:"var(--text2)",fontWeight:300,whiteSpace:"pre-wrap",borderLeft:"2px solid rgba(255,140,0,0.22)",paddingLeft:28}}>
               {done?parseBold(plan):<>{parseBold(displayed)}<span style={{animation:"dotBlink .7s infinite",color:"#ff8c00"}}>█</span></>}
             </div>
             {done&&(isError
@@ -2247,7 +2247,7 @@ function BattlePlanAccordion({plan}) {
       </button>
       {open&&(
         <div className="glass" style={{padding:"28px 32px",borderRadius:"0 0 12px 12px",borderTop:"none",animation:"fadeUp .4s ease both"}}>
-          <div style={{fontSize:13,lineHeight:2.1,color:"rgba(255,255,255,0.55)",fontWeight:300,whiteSpace:"pre-wrap",borderLeft:"2px solid rgba(255,140,0,0.2)",paddingLeft:20}}>{parseBold(plan)}</div>
+          <div style={{fontSize:13,lineHeight:2.1,color:"var(--text2)",fontWeight:300,whiteSpace:"pre-wrap",borderLeft:"2px solid rgba(255,140,0,0.2)",paddingLeft:20}}>{parseBold(plan)}</div>
         </div>
       )}
     </div>
@@ -2639,7 +2639,7 @@ function Checkin({streak,savedPlan,lastCheckin,onCheckin,onGoChat}) {
             {status==="CRISIS"&&reply?(
               <div className="glass" style={{padding:"clamp(24px,5vw,44px)",marginBottom:20,border:"1px solid rgba(100,180,255,0.25)",background:"linear-gradient(135deg,rgba(70,150,255,0.07),rgba(40,100,255,0.03))",animation:"fadeUp .6s ease both"}}>
                 <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:18}}><span style={{fontSize:20}}>🤝</span><span style={{fontSize:10,letterSpacing:2.5,color:"rgba(140,200,255,0.7)",textTransform:"uppercase",fontWeight:600}}>A moment, soldier</span></div>
-                <p style={{fontSize:14,lineHeight:2.1,color:"rgba(255,255,255,0.7)",fontWeight:300,whiteSpace:"pre-wrap"}}>{parseBold(reply)}</p>
+                <p style={{fontSize:14,lineHeight:2.1,color:"var(--text)",fontWeight:300,whiteSpace:"pre-wrap"}}>{parseBold(reply)}</p>
               </div>
             ):null}
             {status==="WIN"&&(<div className="glass" style={{padding:"clamp(24px,5vw,52px) clamp(16px,4vw,48px)",textAlign:"center",marginBottom:16,background:"linear-gradient(135deg,rgba(255,140,0,0.08),rgba(255,80,0,0.04))"}}><div style={{fontSize:48,marginBottom:16}}>🔥</div><h3 style={{fontFamily:"'Orbitron',sans-serif",fontSize:36,fontWeight:800,background:"linear-gradient(135deg,#ff9500,#ffcc00)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",marginBottom:8,letterSpacing:-1}}>MISSION COMPLETE</h3><p style={{fontSize:13,color:"var(--text3)",letterSpacing:1}}>Day {streak} locked in. Your brain rewired a little more today.</p></div>)}
@@ -2662,7 +2662,7 @@ function Checkin({streak,savedPlan,lastCheckin,onCheckin,onGoChat}) {
                   <input value={chatInput} onChange={e=>setChatInput(e.target.value)} onKeyDown={e=>e.key==="Enter"&&!e.shiftKey&&sendChat()} placeholder="Ask your coach anything..."
                     style={{flex:1,background:"var(--input-bg)",border:"1px solid var(--border)",borderRadius:10,color:"var(--text)",fontFamily:"'Inter',sans-serif",fontSize:13,padding:"12px 16px",outline:"none",transition:"border-color .3s",caretColor:"var(--accent)"}}/>
                   <button onClick={sendChat} disabled={!chatInput.trim()||chatLoading}
-                    style={{background:"linear-gradient(135deg,#ff9500,#ff5000)",border:"none",color:"#fff",padding:"12px 20px",borderRadius:10,fontSize:13,fontWeight:600,opacity:chatInput.trim()&&!chatLoading?1:0.4,transition:"opacity .2s"}}>⚡</button>
+                    style={{background:"linear-gradient(135deg,#ff9500,#ff5000)",border:"none",color:"var(--text)",padding:"12px 20px",borderRadius:10,fontSize:13,fontWeight:600,opacity:chatInput.trim()&&!chatLoading?1:0.4,transition:"opacity .2s"}}>⚡</button>
                 </div>
               </div>
             )}
@@ -2685,12 +2685,12 @@ function History({history}) {
       <div style={{padding:"clamp(60px,8vw,80px) clamp(20px,8vw,100px) clamp(40px,5vw,64px)",borderBottom:"1px solid rgba(255,140,0,0.07)",position:"relative",zIndex:1}}>
         <div style={{position:"absolute",inset:0,background:"radial-gradient(ellipse at 80% 40%, rgba(255,100,0,0.06) 0%, transparent 60%)",pointerEvents:"none"}}/>
         <div className="tag s1" style={{marginBottom:24}}><span className="d"/>Mission Log</div>
-        <h2 className="s2" style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(32px,8vw,104px)",fontWeight:800,lineHeight:.88,letterSpacing:-3,background:"linear-gradient(145deg,#fff 40%,rgba(255,180,80,0.65) 100%)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent"}}>YOUR<br/>RECORD.</h2>
+        <h2 className="s2" style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(32px,8vw,104px)",fontWeight:800,lineHeight:.88,letterSpacing:-3,background:"var(--gradient-text)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent"}}>YOUR<br/>RECORD.</h2>
       </div>
       <div style={{maxWidth:820,margin:"0 auto",padding:"clamp(40px,6vw,72px) clamp(16px,8vw,100px)",position:"relative",zIndex:1}}>
         <div className="tag s1" style={{marginBottom:40}}><span className="d"/>{history.length} entries logged</div>
         {history.length===0?(
-          <div className="glass s2" style={{padding:72,textAlign:"center"}}><div style={{fontSize:36,marginBottom:16}}>📋</div><p style={{fontSize:14,color:"rgba(255,255,255,0.2)"}}>No entries yet. Complete your first check-in to start the log.</p></div>
+          <div className="glass s2" style={{padding:72,textAlign:"center"}}><div style={{fontSize:36,marginBottom:16}}>📋</div><p style={{fontSize:14,color:"var(--text4)"}}>No entries yet. Complete your first check-in to start the log.</p></div>
         ):history.map((e,i)=>(
           <div key={i} className="glass" style={{padding:"24px 28px",marginBottom:12,display:"grid",gridTemplateColumns:"1fr auto",gap:20,animation:`fadeUp .55s cubic-bezier(.16,1,.3,1) ${i*.06}s both`,
             borderColor:e.status==="slip"?"rgba(255,80,80,0.18)":e.status==="win"?"rgba(255,140,0,0.18)":"rgba(255,255,255,0.07)"}}>
@@ -2709,7 +2709,7 @@ function History({history}) {
                   </div>
                 )}
               </div>
-              <div style={{fontSize:13,color:"rgba(255,255,255,0.4)",lineHeight:1.8,fontWeight:300}}>{e.msg}</div>
+              <div style={{fontSize:13,color:"var(--text3)",lineHeight:1.8,fontWeight:300}}>{e.msg}</div>
             </div>
             <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:40,fontWeight:800,
               color:e.status==="slip"?"rgba(255,80,80,0.15)":"rgba(255,140,0,0.12)",
@@ -2778,7 +2778,7 @@ function Report({history,savedPlan,streak,planHistory}) {
       <div style={{padding:"clamp(60px,8vw,80px) clamp(20px,8vw,100px) clamp(40px,5vw,64px)",borderBottom:"1px solid rgba(255,140,0,0.07)",position:"relative",zIndex:1}}>
         <div style={{position:"absolute",inset:0,background:"radial-gradient(ellipse at 60% 40%, rgba(255,100,0,0.07) 0%, transparent 60%)",pointerEvents:"none"}}/>
         <div className="tag s1" style={{marginBottom:24}}><span className="d"/>Neural Report</div>
-        <h2 className="s2" style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(32px,8vw,104px)",fontWeight:800,lineHeight:.88,letterSpacing:-3,background:"linear-gradient(145deg,#fff 40%,rgba(255,180,80,0.65) 100%)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent"}}>YOUR<br/>REWIRING.</h2>
+        <h2 className="s2" style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(32px,8vw,104px)",fontWeight:800,lineHeight:.88,letterSpacing:-3,background:"var(--gradient-text)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent"}}>YOUR<br/>REWIRING.</h2>
       </div>
       <div style={{maxWidth:820,margin:"0 auto",padding:"clamp(40px,6vw,72px) clamp(16px,8vw,100px)",position:"relative",zIndex:1}}>
 
@@ -3055,7 +3055,7 @@ function Chat({streak,savedPlan}){
           <span style={{fontSize:10,fontWeight:600,letterSpacing:2.5,color:"rgba(255,180,80,.65)",textTransform:"uppercase"}}>SYNAPSE Coach — Live</span>
         </div>
         <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(24px,5.5vw,52px)",fontWeight:900,letterSpacing:-2,background:"linear-gradient(135deg,#fff,rgba(255,180,80,.7))",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",lineHeight:.95,marginBottom:14}}>TALK TO<br/>SYNAPSE</div>
-        <p style={{fontSize:13,color:"rgba(255,255,255,.25)",lineHeight:1.8,maxWidth:"100%",margin:"0 0 24px 0"}}>Ask anything about your recovery — urges, relapses, streaks, cravings, your battle plan. I stay on topic.</p>
+        <p style={{fontSize:13,color:"var(--text4)",lineHeight:1.8,maxWidth:"100%",margin:"0 0 24px 0"}}>Ask anything about your recovery — urges, relapses, streaks, cravings, your battle plan. I stay on topic.</p>
 
         {/* Mode selector */}
         <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
@@ -3070,7 +3070,7 @@ function Chat({streak,savedPlan}){
               </button>
             );
           })}
-          <span style={{fontSize:11,color:"rgba(255,255,255,.15)",alignSelf:"center",marginLeft:4}}>{mode.desc}</span>
+          <span style={{fontSize:11,color:"var(--text4)",alignSelf:"center",marginLeft:4}}>{mode.desc}</span>
         </div>
       </div>
 
@@ -3089,7 +3089,7 @@ function Chat({streak,savedPlan}){
       </div>
 
       {/* Input bar — fixed at bottom */}
-      <div style={{position:"fixed",bottom:0,left:0,right:0,padding:"16px clamp(16px,5vw,48px)",background:"linear-gradient(0deg,rgba(7,4,10,1) 70%,rgba(7,4,10,0) 100%)",zIndex:100}}>
+      <div style={{position:"fixed",bottom:0,left:0,right:0,padding:"16px clamp(16px,5vw,48px)",background:"linear-gradient(0deg,var(--bg) 70%,rgba(7,4,10,0) 100%)",zIndex:100}}>
         <div style={{maxWidth:760,margin:"0 auto",display:"flex",gap:12,alignItems:"flex-end"}}>
           <textarea
             value={input}
@@ -3106,7 +3106,7 @@ function Chat({streak,savedPlan}){
             ↑
           </button>
         </div>
-        <div style={{textAlign:"center",marginTop:8,fontSize:10,color:"rgba(255,255,255,.1)",letterSpacing:1}}>Recovery topics only · Shift+Enter for new line</div>
+        <div style={{textAlign:"center",marginTop:8,fontSize:10,color:"var(--text4)",letterSpacing:1}}>Recovery topics only · Shift+Enter for new line</div>
       </div>
     </div>
   );
@@ -3126,7 +3126,7 @@ function BattlePlanPreview({plan,loading,onAuth,onBack}){
           <span style={{fontSize:10,fontWeight:600,letterSpacing:2.5,color:"rgba(255,180,80,.65)",textTransform:"uppercase"}}>Your Battle Plan — Preview</span>
         </div>
         <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(28px,6vw,64px)",fontWeight:900,letterSpacing:-2,background:"linear-gradient(135deg,#fff,rgba(255,180,80,.7))",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",lineHeight:.92,marginBottom:16}}>YOUR PLAN<br/>IS READY.</div>
-        <p style={{fontSize:14,color:"rgba(255,255,255,.3)",lineHeight:1.8,maxWidth:480}}>SYNAPSE has built your personalized recovery protocol. Create an account to lock it in and begin Day 1.</p>
+        <p style={{fontSize:14,color:"var(--text3)",lineHeight:1.8,maxWidth:480}}>SYNAPSE has built your personalized recovery protocol. Create an account to lock it in and begin Day 1.</p>
       </div>
 
       {/* Plan preview with fade lock */}
@@ -3134,18 +3134,18 @@ function BattlePlanPreview({plan,loading,onAuth,onBack}){
         {loading?(
           <div style={{padding:"48px 0",display:"flex",alignItems:"center",gap:16}}>
             <div style={{display:"flex",gap:6}}>{[0,1,2].map(i=><div key={i} style={{width:6,height:6,borderRadius:"50%",background:"#ff9500",animation:`dotBlink 1s ${i*.18}s infinite`}}/>)}</div>
-            <span style={{fontSize:13,color:"rgba(255,255,255,.3)"}}>Building your battle plan...</span>
+            <span style={{fontSize:13,color:"var(--text3)"}}>Building your battle plan...</span>
           </div>
         ):(
           <div style={{position:"relative"}}>
             <div className="glass" style={{padding:"clamp(24px,4vw,40px)",borderRadius:16,border:"1px solid rgba(255,140,0,.15)",maxHeight:340,overflow:"hidden",position:"relative"}}>
-              <div style={{fontSize:13,lineHeight:2.1,color:"rgba(255,255,255,.6)",fontWeight:300,whiteSpace:"pre-wrap"}}>
+              <div style={{fontSize:13,lineHeight:2.1,color:"var(--text2)",fontWeight:300,whiteSpace:"pre-wrap"}}>
                 {parseBold(displayed)}{!twDone&&<span style={{color:"#ff8c00",animation:"blink 1s infinite"}}>|</span>}
               </div>
               {/* Gradient lock overlay */}
-              <div style={{position:"absolute",bottom:0,left:0,right:0,height:200,background:"linear-gradient(0deg,rgba(7,4,10,1) 0%,rgba(7,4,10,.9) 40%,rgba(7,4,10,0) 100%)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"flex-end",paddingBottom:24}}>
+              <div style={{position:"absolute",bottom:0,left:0,right:0,height:200,background:"linear-gradient(0deg,var(--bg) 0%,var(--bg) 40%,rgba(7,4,10,0) 100%)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"flex-end",paddingBottom:24}}>
                 <div style={{fontSize:22,marginBottom:8}}>🔒</div>
-                <div style={{fontSize:11,color:"rgba(255,255,255,.3)",letterSpacing:2,textTransform:"uppercase",fontFamily:"'JetBrains Mono',monospace"}}>Create account to unlock full plan</div>
+                <div style={{fontSize:11,color:"var(--text3)",letterSpacing:2,textTransform:"uppercase",fontFamily:"'JetBrains Mono',monospace"}}>Create account to unlock full plan</div>
               </div>
             </div>
           </div>
@@ -3159,7 +3159,7 @@ function BattlePlanPreview({plan,loading,onAuth,onBack}){
           🔥 Lock In My Protocol — Create Account
         </button>
         <button onClick={onBack}
-          style={{width:"100%",padding:"13px",fontSize:12,background:"transparent",border:"1px solid rgba(255,255,255,.08)",borderRadius:12,color:"rgba(255,255,255,.25)",cursor:"none"}}>
+          style={{width:"100%",padding:"13px",fontSize:12,background:"transparent",border:"1px solid rgba(255,255,255,.08)",borderRadius:12,color:"var(--text4)",cursor:"none"}}>
           ← Edit My Answers
         </button>
       </div>
@@ -3209,7 +3209,7 @@ function MilestoneCelebration({day,onClose}){
         <div style={{fontSize:10,letterSpacing:5,color:`rgba(${m.rgb},.55)`,textTransform:"uppercase",marginBottom:14,fontFamily:"'JetBrains Mono',monospace"}}>Day {day} Milestone Unlocked</div>
         <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(48px,12vw,108px)",fontWeight:900,letterSpacing:-3,background:`linear-gradient(135deg,#fff,${m.color})`,WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",lineHeight:.88,marginBottom:10}}>{day}</div>
         <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(16px,4vw,24px)",fontWeight:800,color:m.color,letterSpacing:4,marginBottom:28,textTransform:"uppercase",textShadow:`0 0 30px ${m.color}66`}}>{m.name}</div>
-        <p style={{fontSize:14,lineHeight:1.95,color:"rgba(255,255,255,.5)",fontWeight:300,marginBottom:40,maxWidth:420,marginLeft:"auto",marginRight:"auto"}}>{m.msg}</p>
+        <p style={{fontSize:14,lineHeight:1.95,color:"var(--text2)",fontWeight:300,marginBottom:40,maxWidth:420,marginLeft:"auto",marginRight:"auto"}}>{m.msg}</p>
         <button className="btn-primary" onClick={onClose} style={{fontSize:13,letterSpacing:1,padding:"16px 52px",background:`linear-gradient(135deg,${m.color},${m.color}99)`,boxShadow:`0 0 40px ${m.color}55,0 8px 32px rgba(0,0,0,.5)`}}>
           Continue The Mission →
         </button>
@@ -3245,12 +3245,12 @@ function EmergencyOverlay({savedPlan,streak,onClose,onCoach}){
             <div style={{width:10,height:10,borderRadius:"50%",background:"#ff3333",boxShadow:"0 0 14px #ff3333",animation:"pulse 1s ease-in-out infinite"}}/>
             <span style={{fontFamily:"'Orbitron',sans-serif",fontSize:11,fontWeight:700,letterSpacing:3,color:"rgba(255,80,80,.85)",textTransform:"uppercase"}}>Emergency Mode</span>
           </div>
-          <button onClick={onClose} style={{background:"rgba(255,255,255,.04)",border:"1px solid rgba(255,255,255,.1)",color:"rgba(255,255,255,.4)",width:32,height:32,borderRadius:8,cursor:"none",fontSize:15,display:"flex",alignItems:"center",justifyContent:"center"}}>✕</button>
+          <button onClick={onClose} style={{background:"rgba(255,255,255,.04)",border:"1px solid rgba(255,255,255,.1)",color:"var(--text3)",width:32,height:32,borderRadius:8,cursor:"none",fontSize:15,display:"flex",alignItems:"center",justifyContent:"center"}}>✕</button>
         </div>
         {/* Response */}
         {loading
           ?<div style={{padding:"32px 0"}}><Dots label="Synapse locking in"/></div>
-          :<div style={{fontSize:15,lineHeight:2.15,color:"rgba(255,255,255,.72)",fontWeight:300,whiteSpace:"pre-wrap",borderLeft:"2px solid rgba(255,70,70,.3)",paddingLeft:20}}>
+          :<div style={{fontSize:15,lineHeight:2.15,color:"var(--text)",fontWeight:300,whiteSpace:"pre-wrap",borderLeft:"2px solid rgba(255,70,70,.3)",paddingLeft:20}}>
             {parseBold(displayed)}{!twDone&&<span style={{color:"#ff4444",animation:"blink 1s infinite"}}>|</span>}
           </div>
         }
@@ -3518,7 +3518,7 @@ export default function App() {
           {screen!=="boot"&&<div style={{position:"relative",zIndex:2,marginTop:80,overflow:"hidden",width:"100%",maxWidth:"100%"}}><Marquee/></div>}
           {/* Emergency floating button — only on checkin screen */}
           {screen==="checkin"&&(
-            <button onClick={()=>setEmergency(true)} style={{position:"fixed",bottom:"clamp(20px,4vw,32px)",right:"clamp(12px,4vw,28px)",zIndex:800,background:"linear-gradient(135deg,#cc1111,#8b0000)",border:"1px solid rgba(255,80,80,0.4)",borderRadius:999,padding:"clamp(8px,1.5vw,13px) clamp(12px,2.5vw,22px)",color:"#fff",fontSize:"clamp(8px,1.8vw,11px)",fontWeight:700,letterSpacing:"clamp(0.5px,0.3vw,1.5px)",textTransform:"uppercase",boxShadow:"0 0 20px rgba(255,30,30,0.35),0 6px 20px rgba(0,0,0,0.5)",cursor:"none",display:"flex",alignItems:"center",gap:"clamp(5px,1vw,9px)",fontFamily:"'Orbitron',sans-serif"}}>
+            <button onClick={()=>setEmergency(true)} style={{position:"fixed",bottom:"clamp(20px,4vw,32px)",right:"clamp(12px,4vw,28px)",zIndex:800,background:"linear-gradient(135deg,#cc1111,#8b0000)",border:"1px solid rgba(255,80,80,0.4)",borderRadius:999,padding:"clamp(8px,1.5vw,13px) clamp(12px,2.5vw,22px)",color:"var(--text)",fontSize:"clamp(8px,1.8vw,11px)",fontWeight:700,letterSpacing:"clamp(0.5px,0.3vw,1.5px)",textTransform:"uppercase",boxShadow:"0 0 20px rgba(255,30,30,0.35),0 6px 20px rgba(0,0,0,0.5)",cursor:"none",display:"flex",alignItems:"center",gap:"clamp(5px,1vw,9px)",fontFamily:"'Orbitron',sans-serif"}}>
               <span style={{fontSize:"clamp(11px,2.5vw,15px)"}}>🆘</span>
               <span>I'm Struggling</span>
             </button>
@@ -3528,7 +3528,7 @@ export default function App() {
           <div className="footer-wrap" style={{position:"relative",zIndex:2,borderTop:"1px solid rgba(255,140,0,0.06)",padding:"28px clamp(16px,4vw,48px)",display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:16,background:"rgba(255,140,0,0.01)",boxSizing:"border-box",width:"100%"}}>
             <div style={{display:"flex",alignItems:"center",gap:12}}>
               <div style={{width:36,height:36,borderRadius:10,background:"linear-gradient(135deg,rgba(255,140,0,0.15),rgba(255,60,0,0.08))",border:"1px solid rgba(255,140,0,0.2)",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Orbitron',sans-serif",fontSize:11,fontWeight:800,color:"rgba(255,180,80,0.7)",letterSpacing:1}}>PG</div>
-              <div><div style={{fontSize:12,fontWeight:600,color:"rgba(255,255,255,0.5)",letterSpacing:.5}}>Parth Goyal</div><div style={{fontSize:10,color:"rgba(255,140,0,0.35)",letterSpacing:.5,marginTop:1}}>Designed & Built</div></div>
+              <div><div style={{fontSize:12,fontWeight:600,color:"var(--text2)",letterSpacing:.5}}>Parth Goyal</div><div style={{fontSize:10,color:"rgba(255,140,0,0.35)",letterSpacing:.5,marginTop:1}}>Designed & Built</div></div>
             </div>
             <div style={{display:"flex",gap:12,alignItems:"center",flexWrap:"wrap"}}>
               <a href="mailto:synapserewire@gmail.com" style={{display:"flex",alignItems:"center",gap:7,fontSize:11,color:"rgba(255,180,80,0.4)",letterSpacing:.5,textDecoration:"none",border:"1px solid rgba(255,140,0,0.12)",borderRadius:999,padding:"7px 16px",transition:"all .3s",fontWeight:500}} onMouseEnter={e=>{e.currentTarget.style.color="#ffb347";e.currentTarget.style.borderColor="rgba(255,140,0,0.45)";e.currentTarget.style.background="rgba(255,140,0,0.07)";}} onMouseLeave={e=>{e.currentTarget.style.color="rgba(255,180,80,0.4)";e.currentTarget.style.borderColor="rgba(255,140,0,0.12)";e.currentTarget.style.background="transparent;"}}><span>✉</span><span>synapserewire@gmail.com</span></a>
