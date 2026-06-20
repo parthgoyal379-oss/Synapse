@@ -776,39 +776,39 @@ svg{background:transparent!important;overflow:visible;}
   --gradient-text:linear-gradient(145deg,#fff 40%,rgba(255,180,80,0.65) 100%);
 }
 .light{
-  --bg:#fbe7cc;
-  --bg2:#f8d8ae;
-  --bg3:#f3c688;
-  --surface:rgba(214,90,10,.08);
-  --surface2:rgba(120,50,10,.06);
-  --surface3:rgba(120,50,10,.08);
-  --border:rgba(196,80,10,.22);
-  --border2:rgba(120,50,10,.14);
-  --border3:rgba(214,90,10,.38);
-  --text:#2b1606;
-  --text2:rgba(43,22,6,.72);
-  --text3:rgba(43,22,6,.48);
-  --text4:rgba(43,22,6,.3);
-  --accent:#d9580a;
-  --accent2:#a83f06;
-  --accent3:rgba(217,88,10,.13);
-  --accent4:rgba(168,63,6,.85);
-  --glass-bg:linear-gradient(135deg,rgba(255,250,242,.92) 0%,rgba(255,236,210,.7) 100%);
-  --glass-before:rgba(255,255,255,.55);
-  --nav-text:rgba(168,63,6,.65);
-  --tag-bg:rgba(217,88,10,.12);
-  --tag-border:rgba(217,88,10,.32);
-  --tag-text:rgba(150,55,5,.9);
-  --input-bg:rgba(255,250,242,.75);
-  --input-border:rgba(196,80,10,.3);
-  --input-placeholder:rgba(43,22,6,.35);
-  --selection:rgba(217,88,10,.25);
+  --bg:#f7f5f2;
+  --bg2:#efebe4;
+  --bg3:#e6dfd3;
+  --surface:rgba(220,80,30,.06);
+  --surface2:rgba(30,25,20,.04);
+  --surface3:rgba(30,25,20,.055);
+  --border:rgba(210,80,30,.18);
+  --border2:rgba(30,25,20,.1);
+  --border3:rgba(220,80,30,.32);
+  --text:#1c1815;
+  --text2:rgba(28,24,21,.68);
+  --text3:rgba(28,24,21,.44);
+  --text4:rgba(28,24,21,.26);
+  --accent:#e0540f;
+  --accent2:#b8420a;
+  --accent3:rgba(224,84,15,.1);
+  --accent4:rgba(184,66,10,.85);
+  --glass-bg:linear-gradient(135deg,rgba(255,255,255,.9) 0%,rgba(247,243,237,.65) 100%);
+  --glass-before:rgba(255,255,255,.6);
+  --nav-text:rgba(184,66,10,.65);
+  --tag-bg:rgba(224,84,15,.1);
+  --tag-border:rgba(224,84,15,.3);
+  --tag-text:rgba(168,55,5,.92);
+  --input-bg:rgba(255,255,255,.8);
+  --input-border:rgba(210,80,30,.25);
+  --input-placeholder:rgba(28,24,21,.35);
+  --selection:rgba(224,84,15,.22);
   --danger:rgba(190,40,30,.16);
   --danger-text:rgba(170,40,30,.7);
-  --shadow:rgba(120,55,10,.16);
-  --gradient-text:linear-gradient(150deg,#2b1606 20%,#d9580a 100%);
-  --teal-accent:#0d8a7c;
-  --coral-accent:#e0512f;
+  --shadow:rgba(40,30,20,.1);
+  --gradient-text:linear-gradient(150deg,#1c1815 15%,#e0540f 100%);
+  --teal-accent:#0a8f80;
+  --coral-accent:#e8552f;
 }
 
 html{scroll-behavior:auto;overflow-x:hidden;width:100%;margin:0;padding:0;box-sizing:border-box;scrollbar-width:none;-ms-overflow-style:none;}
@@ -867,7 +867,7 @@ input[type=range]{-webkit-appearance:none;appearance:none;background:transparent
 .light [style*="background:\"#07040a\""],.light [style*='background:"#07040a"']{background:var(--bg)!important;}
 .light [style*="color:\"#fff\""],.light [style*="color:\"rgba(255,255,255"]{color:var(--text)!important;}
 .light [style*="rgba(7,4,10"]{--dark-surface:rgba(230,224,238,0.9);}
-.light canvas{opacity:.5;filter:sepia(.35) saturate(1.6) brightness(1.05) hue-rotate(-8deg);mix-blend-mode:multiply;}
+.light canvas{opacity:.45;filter:sepia(.2) saturate(1.3) brightness(1.08) hue-rotate(-5deg);mix-blend-mode:multiply;}
 .light .glass{background:var(--glass-bg)!important;border-color:var(--border)!important;box-shadow:0 1px 2px rgba(80,50,20,.04),0 8px 24px -8px rgba(80,50,20,.12),inset 0 1px 0 rgba(255,255,255,.8)!important;}
 .light .glass::before{background:linear-gradient(135deg,rgba(255,255,255,.55) 0%,transparent 60%)!important;}
 .light .syn-textarea{color:var(--text)!important;background:var(--input-bg)!important;box-shadow:inset 0 1px 3px rgba(80,50,20,.05)!important;}
@@ -903,6 +903,10 @@ input[type=range]{-webkit-appearance:none;appearance:none;background:transparent
 .light [style*="color:\"rgba(255,255,255,.55)\""]{color:var(--text2)!important;}
 .light [style*="color:\"rgba(255,255,255,.85)\""]{color:var(--text)!important;}
 .light [style*="color:\"rgba(255,255,255,.9)\""]{color:var(--text)!important;}
+.light [style*="color:\"rgba(255,255,255,.1)\""]{color:var(--text4)!important;}
+.light [style*="color:\"rgba(255,255,255,.12)\""]{color:var(--text4)!important;}
+.light [style*="color:\"rgba(255,255,255,.05)\""]{color:var(--text4)!important;}
+.light [style*="color:\"#fff\""]{color:var(--text)!important;}
 
 /* Light mode — THE CRITICAL FIX: gradient text headings were white→orange,
    invisible on a light background. Force them to a deep charcoal→burnt-amber
@@ -926,10 +930,10 @@ input[type=range]{-webkit-appearance:none;appearance:none;background:transparent
 /* Light mode — premium colorful gradient mesh, visible throughout the page (not just top) */
 .light body{
   background:
-    radial-gradient(ellipse 60% 50% at 15% 0%, rgba(217,88,10,.16), transparent 60%),
-    radial-gradient(ellipse 50% 45% at 90% 15%, rgba(224,81,47,.13), transparent 60%),
-    radial-gradient(ellipse 55% 60% at 50% 100%, rgba(13,138,124,.07), transparent 65%),
-    linear-gradient(160deg,#fdf2e4 0%,#fbe5cc 55%,#f6d2a8 100%);
+    radial-gradient(ellipse 55% 45% at 12% 0%, rgba(224,84,15,.12), transparent 60%),
+    radial-gradient(ellipse 45% 40% at 92% 10%, rgba(232,85,47,.1), transparent 60%),
+    radial-gradient(ellipse 50% 55% at 50% 105%, rgba(10,143,128,.06), transparent 65%),
+    linear-gradient(160deg,#f7f5f2 0%,#efebe4 55%,#e6dfd3 100%);
   background-attachment:fixed;
 }
 
@@ -1218,7 +1222,7 @@ function Auth({ onAuth, context="" }) {
   const inputStyle = (field) => ({
     width:"100%", background:"rgba(255,255,255,0.03)",
     border:`1px solid ${focusedField===field?"rgba(255,140,0,0.55)":"rgba(255,140,0,0.12)"}`,
-    borderRadius:12, color:"#fff",
+    borderRadius:12, color:"var(--text)",
     fontFamily:"'Inter',sans-serif", fontSize:14, fontWeight:300,
     padding:"14px 18px", outline:"none",
     transition:"all .3s", caretColor:"#ff8c00",
@@ -1665,7 +1669,7 @@ function ConfessStep3({selected, hours, onNext, onBack}) {
       <div style={{marginBottom:40,height:52,display:"flex",alignItems:"center"}}>
         <div style={{display:"flex",alignItems:"center",gap:12,opacity:tagVis?1:0,transform:tagVis?"translateY(0)":"translateY(10px)",transition:"all .4s cubic-bezier(.16,1,.3,1)"}}>
           <div style={{width:4,height:4,borderRadius:"50%",background:"#ff4444",flexShrink:0,boxShadow:"0 0 8px #ff4444"}}/>
-          <span style={{fontSize:17,fontWeight:300,color:"rgba(255,255,255,.52)",letterSpacing:.3}}>You are trading <span style={{color:"#fff",fontWeight:600}}>{allLosses[tagIdx]}</span> for 5-second dopamine.</span>
+          <span style={{fontSize:17,fontWeight:300,color:"var(--text2)",letterSpacing:.3}}>You are trading <span style={{color:"var(--text)",fontWeight:600}}>{allLosses[tagIdx]}</span> for 5-second dopamine.</span>
         </div>
       </div>
       <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:24}}>
@@ -3093,7 +3097,7 @@ function Chat({streak,savedPlan}){
             onKeyDown={e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();send();}}}
             placeholder="Ask about your urges, battle plan, recovery tactics..."
             rows={1}
-            style={{flex:1,background:"rgba(255,255,255,.04)",border:"1px solid rgba(255,140,0,.2)",borderRadius:14,padding:"14px 18px",color:"#fff",fontSize:13,fontFamily:"'Inter',sans-serif",fontWeight:300,outline:"none",resize:"none",lineHeight:1.6,caretColor:"#ff8c00",transition:"border .3s",boxSizing:"border-box"}}
+            style={{flex:1,background:"rgba(255,255,255,.04)",border:"1px solid rgba(255,140,0,.2)",borderRadius:14,padding:"14px 18px",color:"var(--text)",fontSize:13,fontFamily:"'Inter',sans-serif",fontWeight:300,outline:"none",resize:"none",lineHeight:1.6,caretColor:"#ff8c00",transition:"border .3s",boxSizing:"border-box"}}
             onFocus={e=>e.target.style.borderColor="rgba(255,140,0,.55)"}
             onBlur={e=>e.target.style.borderColor="rgba(255,140,0,.2)"}
           />
