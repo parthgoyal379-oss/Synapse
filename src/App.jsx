@@ -773,42 +773,42 @@ svg{background:transparent!important;overflow:visible;}
   --danger:rgba(255,50,50,.18);
   --danger-text:rgba(255,80,80,.35);
   --shadow:rgba(0,0,0,.5);
-  --gradient-text:linear-gradient(135deg,#ffffff 0%,#ffcc00 60%,#ff9500 100%);
+  --gradient-text:linear-gradient(145deg,#fff 40%,rgba(255,180,80,0.65) 100%);
 }
 .light{
-  --bg:#f6f4e8;
-  --bg2:#e5eee4;
-  --bg3:#c0e1d2;
-  --surface:rgba(220,155,155,.1);
-  --surface2:rgba(192,225,210,.15);
-  --surface3:rgba(229,238,228,.2);
-  --border:rgba(180,120,120,.2);
-  --border2:rgba(192,225,210,.35);
-  --border3:rgba(220,155,155,.45);
-  --text:#1a1a1a;
-  --text2:rgba(26,26,26,.65);
-  --text3:rgba(26,26,26,.42);
-  --text4:rgba(26,26,26,.24);
-  --accent:#c47a7a;
-  --accent2:#a85c5c;
-  --accent3:rgba(220,155,155,.12);
-  --accent4:rgba(180,100,100,.8);
-  --glass-bg:linear-gradient(135deg,rgba(246,244,232,.92) 0%,rgba(229,238,228,.75) 100%);
-  --glass-before:rgba(255,255,255,.55);
-  --nav-text:rgba(164,90,90,.7);
-  --tag-bg:rgba(220,155,155,.12);
-  --tag-border:rgba(220,155,155,.3);
-  --tag-text:rgba(160,85,85,.9);
-  --input-bg:rgba(246,244,232,.9);
-  --input-border:rgba(192,225,210,.5);
-  --input-placeholder:rgba(26,26,26,.32);
-  --selection:rgba(220,155,155,.25);
-  --danger:rgba(190,40,30,.14);
-  --danger-text:rgba(170,40,30,.65);
-  --shadow:rgba(60,40,40,.08);
-  --gradient-text:linear-gradient(150deg,#1a1a1a 0%,#a85c5c 100%);
-  --teal-accent:#5a9e8a;
-  --coral-accent:#dc9b9b;
+  --bg:#f7f5f2;
+  --bg2:#efebe4;
+  --bg3:#e6dfd3;
+  --surface:rgba(220,80,30,.06);
+  --surface2:rgba(30,25,20,.04);
+  --surface3:rgba(30,25,20,.055);
+  --border:rgba(210,80,30,.18);
+  --border2:rgba(30,25,20,.1);
+  --border3:rgba(220,80,30,.32);
+  --text:#1c1815;
+  --text2:rgba(28,24,21,.68);
+  --text3:rgba(28,24,21,.44);
+  --text4:rgba(28,24,21,.26);
+  --accent:#e0540f;
+  --accent2:#b8420a;
+  --accent3:rgba(224,84,15,.1);
+  --accent4:rgba(184,66,10,.85);
+  --glass-bg:linear-gradient(135deg,rgba(255,255,255,.9) 0%,rgba(247,243,237,.65) 100%);
+  --glass-before:rgba(255,255,255,.6);
+  --nav-text:rgba(184,66,10,.65);
+  --tag-bg:rgba(224,84,15,.1);
+  --tag-border:rgba(224,84,15,.3);
+  --tag-text:rgba(168,55,5,.92);
+  --input-bg:rgba(255,255,255,.8);
+  --input-border:rgba(210,80,30,.25);
+  --input-placeholder:rgba(28,24,21,.35);
+  --selection:rgba(224,84,15,.22);
+  --danger:rgba(190,40,30,.16);
+  --danger-text:rgba(170,40,30,.7);
+  --shadow:rgba(40,30,20,.1);
+  --gradient-text:linear-gradient(150deg,#1c1815 15%,#e0540f 100%);
+  --teal-accent:#0a8f80;
+  --coral-accent:#e8552f;
 }
 
 html{scroll-behavior:auto;overflow-x:hidden;width:100%;margin:0;padding:0;box-sizing:border-box;scrollbar-width:none;-ms-overflow-style:none;}
@@ -867,18 +867,17 @@ input[type=range]{-webkit-appearance:none;appearance:none;background:transparent
 .light [style*="background:\"#07040a\""],.light [style*='background:"#07040a"']{background:var(--bg)!important;}
 .light [style*="color:\"#fff\""],.light [style*="color:\"rgba(255,255,255"]{color:var(--text)!important;}
 .light [style*="rgba(7,4,10"]{--dark-surface:rgba(230,224,238,0.9);}
-.light canvas{opacity:.35;filter:sepia(.1) saturate(0.9) brightness(1.05) hue-rotate(100deg);mix-blend-mode:multiply;}
-.light .glass{background:var(--glass-bg)!important;border-color:var(--border2)!important;box-shadow:0 1px 2px rgba(192,225,210,.15),0 8px 32px -8px rgba(150,190,175,.2),inset 0 1px 0 rgba(255,255,255,.75)!important;}
-.light .glass::before{background:linear-gradient(135deg,rgba(255,255,255,.5) 0%,rgba(229,238,228,.2) 60%,transparent 100%)!important;}
-.light .syn-textarea{color:var(--text)!important;background:rgba(246,244,232,.95)!important;border-color:rgba(192,225,210,.5)!important;box-shadow:inset 0 1px 3px rgba(150,190,175,.08)!important;}
-.light .syn-textarea:focus{border-color:rgba(220,155,155,.5)!important;box-shadow:0 0 0 4px rgba(220,155,155,.08),inset 0 1px 3px rgba(150,190,175,.06)!important;}
+.light canvas{opacity:.45;filter:sepia(.2) saturate(1.3) brightness(1.08) hue-rotate(-5deg);mix-blend-mode:multiply;}
+.light .glass{background:var(--glass-bg)!important;border-color:var(--border)!important;box-shadow:0 1px 2px rgba(80,50,20,.04),0 8px 24px -8px rgba(80,50,20,.12),inset 0 1px 0 rgba(255,255,255,.8)!important;}
+.light .glass::before{background:linear-gradient(135deg,rgba(255,255,255,.55) 0%,transparent 60%)!important;}
+.light .syn-textarea{color:var(--text)!important;background:var(--input-bg)!important;box-shadow:inset 0 1px 3px rgba(80,50,20,.05)!important;}
 .light .syn-textarea::placeholder{color:var(--input-placeholder)!important;}
-.light .tag{background:rgba(192,225,210,.18)!important;border-color:rgba(192,225,210,.45)!important;color:rgba(80,130,115,.9)!important;}
-.light .tag .d{background:var(--teal-accent)!important;box-shadow:0 0 7px rgba(90,158,138,.4)!important;}
-.light .btn-ghost{background:rgba(229,238,228,.6)!important;border-color:rgba(192,225,210,.5)!important;color:rgba(80,130,115,.85)!important;}
-.light .btn-primary{background:linear-gradient(135deg,#c47a7a,#a85c5c)!important;box-shadow:0 2px 8px rgba(196,122,122,.25),0 8px 28px -6px rgba(168,92,92,.35)!important;}
-.light .nav-pill{border-color:rgba(192,225,210,.4)!important;color:var(--nav-text)!important;}
-.light .nav-pill:hover,.light .nav-pill.active{border-color:rgba(220,155,155,.5)!important;color:var(--accent2)!important;background:rgba(220,155,155,.1)!important;}
+.light .tag{background:var(--tag-bg)!important;border-color:var(--tag-border)!important;color:var(--tag-text)!important;}
+.light .tag .d{background:var(--accent)!important;box-shadow:0 0 7px var(--accent)!important;}
+.light .btn-ghost{background:var(--accent3)!important;border-color:var(--border3)!important;color:var(--accent4)!important;}
+.light .btn-primary{box-shadow:0 2px 8px rgba(184,84,15,.25),0 8px 28px -6px rgba(184,84,15,.4)!important;}
+.light .nav-pill{border-color:var(--border)!important;color:var(--nav-text)!important;}
+.light .nav-pill:hover,.light .nav-pill.active{border-color:var(--border3)!important;color:var(--accent2)!important;background:var(--accent3)!important;}
 
 /* Light mode — screen backgrounds */
 .light [style*="minHeight:\"100vh\""]{background:var(--bg)!important;}
@@ -909,51 +908,32 @@ input[type=range]{-webkit-appearance:none;appearance:none;background:transparent
 .light [style*="color:\"rgba(255,255,255,.05)\""]{color:var(--text4)!important;}
 .light [style*="color:\"#fff\""]{color:var(--text)!important;}
 
-/* Light mode — gradient text headings: deep charcoal → dusty rose
-   Replaces the dark mode white→orange gradient that's invisible on light bg. */
+/* Light mode — THE CRITICAL FIX: gradient text headings were white→orange,
+   invisible on a light background. Force them to a deep charcoal→burnt-amber
+   gradient instead — this is what was making everything look washed out/inverted. */
 .light [style*="WebkitTextFillColor:\"transparent\""]{
-  background:linear-gradient(135deg,#1a1a1a 0%,#8a4a4a 55%,#c47a7a 100%)!important;
+  background:var(--gradient-text)!important;
   -webkit-background-clip:text!important;
   background-clip:text!important;
 }
 
 /* Light mode — surface/card backgrounds */
-.light [style*="background:\"rgba(255,255,255,.025)\""]{background:rgba(192,225,210,.12)!important;}
-.light [style*="background:\"rgba(255,255,255,.04)\""]{background:rgba(192,225,210,.16)!important;}
-.light [style*="background:\"rgba(255,255,255,.03)\""]{background:rgba(229,238,228,.14)!important;}
-.light [style*="border:\"1px solid rgba(255,255,255,.07)\""]{border-color:rgba(192,225,210,.3)!important;}
-.light [style*="border:\"1px solid rgba(255,255,255,.08)\""]{border-color:rgba(192,225,210,.35)!important;}
+.light [style*="background:\"rgba(255,255,255,.025)\""]{background:rgba(40,28,16,.035)!important;}
+.light [style*="background:\"rgba(255,255,255,.04)\""]{background:rgba(40,28,16,.045)!important;}
+.light [style*="background:\"rgba(255,255,255,.03)\""]{background:rgba(40,28,16,.035)!important;}
+.light [style*="border:\"1px solid rgba(255,255,255,.07)\""]{border-color:rgba(40,28,16,.1)!important;}
+.light [style*="border:\"1px solid rgba(255,255,255,.08)\""]{border-color:rgba(40,28,16,.11)!important;}
 
 /* Light mode — gradient lock overlay in BattlePlanPreview */
-.light [style*="rgba(7,4,10,1)"]{background:linear-gradient(0deg,var(--bg) 0%,rgba(246,244,232,.92) 40%,rgba(246,244,232,0) 100%)!important;}
+.light [style*="rgba(7,4,10,1)"]{background:linear-gradient(0deg,var(--bg) 0%,rgba(250,247,242,.92) 40%,rgba(250,247,242,0) 100%)!important;}
 
-/* Light mode — orange glow/border/box-shadow remaps → rose palette */
-.light [style*="rgba(255,140,0"]{--orange-gone:1;}
-.light [style*="border:\"1px solid rgba(255,140,0"]{border-color:rgba(192,225,210,.4)!important;}
-.light [style*="borderColor:\"rgba(255,140,0"]{border-color:rgba(192,225,210,.4)!important;}
-.light [style*="background:\"rgba(255,140,0,.08)\""]{background:rgba(192,225,210,.18)!important;}
-.light [style*="background:\"rgba(255,140,0,.06)\""]{background:rgba(192,225,210,.14)!important;}
-.light [style*="background:\"rgba(255,140,0,.12)\""]{background:rgba(220,155,155,.14)!important;}
-.light [style*="background:\"rgba(255,140,0,.1)\""]{background:rgba(220,155,155,.12)!important;}
-.light [style*="background:\"rgba(255,140,0,.15)\""]{background:rgba(192,225,210,.2)!important;}
-.light [style*="color:\"rgba(255,140,0"]{color:rgba(164,90,90,.8)!important;}
-.light [style*="color:\"rgba(255,180,80"]{color:rgba(164,90,90,.75)!important;}
-.light [style*="color:\"#ff8c00\""]{color:#c47a7a!important;}
-.light [style*="color:\"#ffb347\""]{color:#a85c5c!important;}
-.light [style*="color:\"#ff9500\""]{color:#c47a7a!important;}
-.light [style*="background:\"linear-gradient(135deg,#ff9500"]{background:linear-gradient(135deg,#c47a7a,#a85c5c)!important;}
-.light [style*="background:\"linear-gradient(135deg,rgba(255,140,0"]{background:linear-gradient(135deg,rgba(192,225,210,.25),rgba(229,238,228,.15))!important;}
-/* Subtle tint for section dividers and footer */
-.light [style*="borderTop:\"1px solid rgba(255,140,0"]{border-top-color:rgba(192,225,210,.3)!important;}
-
-/* Light mode — premium palette gradient mesh: cream × sage × mint × rose */
+/* Light mode — premium colorful gradient mesh, visible throughout the page (not just top) */
 .light body{
   background:
-    radial-gradient(ellipse 60% 50% at 8% 0%,   rgba(192,225,210,.45), transparent 65%),
-    radial-gradient(ellipse 50% 45% at 95% 5%,   rgba(229,238,228,.55), transparent 60%),
-    radial-gradient(ellipse 55% 50% at 50% 110%, rgba(220,155,155,.18), transparent 65%),
-    radial-gradient(ellipse 40% 35% at 80% 55%,  rgba(192,225,210,.2),  transparent 55%),
-    linear-gradient(160deg,#f6f4e8 0%,#edf2ec 50%,#ddeee8 100%);
+    radial-gradient(ellipse 55% 45% at 12% 0%, rgba(224,84,15,.12), transparent 60%),
+    radial-gradient(ellipse 45% 40% at 92% 10%, rgba(232,85,47,.1), transparent 60%),
+    radial-gradient(ellipse 50% 55% at 50% 105%, rgba(10,143,128,.06), transparent 65%),
+    linear-gradient(160deg,#f7f5f2 0%,#efebe4 55%,#e6dfd3 100%);
   background-attachment:fixed;
 }
 
