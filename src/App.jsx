@@ -1744,6 +1744,7 @@ function Auth({ onAuth, context="" }) {
   });
 
   return(
+    <>
     <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",position:"relative",padding:"80px 24px"}}>
       <div style={{position:"fixed",top:"50%",left:"50%",transform:"translate(-50%,-50%)",width:800,height:800,background:"radial-gradient(circle,rgba(255,100,0,0.07) 0%,transparent 70%)",pointerEvents:"none",zIndex:0}}/>
       <div className="auth-wrap" style={{width:"100%",maxWidth:460,position:"relative",zIndex:2,opacity:ready?1:0,transform:ready?"translateY(0)":"translateY(24px)",transition:"all .8s cubic-bezier(.16,1,.3,1)",animation:shake?"shakeX .5s ease":"none"}}>
@@ -1836,6 +1837,7 @@ function Auth({ onAuth, context="" }) {
         </div>
       );
     })()}
+    </>
   );
 }
 
