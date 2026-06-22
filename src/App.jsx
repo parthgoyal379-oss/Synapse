@@ -1,10 +1,15 @@
 import { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo } from "react";
-import { auth, googleProvider } from "./firebase";
+import { auth, googleProvider, db, storage } from "./firebase";
 import {
   signInWithEmailAndPassword, createUserWithEmailAndPassword,
   signInWithPopup, signOut, onAuthStateChanged, updateProfile,
   sendPasswordResetEmail
 } from "firebase/auth";
+import { getStorage, ref as sRef, uploadBytes, getDownloadURL } from "firebase/storage";
+import {
+  collection, doc, setDoc, getDoc, getDocs,
+  orderBy, query, serverTimestamp, limit
+} from "firebase/firestore";
 
 /* ─── GROQ API HELPER ─────────────────────────────────────────────────────
    Calls go through /api/chat (Vercel serverless function).
@@ -776,66 +781,71 @@ svg{background:transparent!important;overflow:visible;}
   --gradient-text:linear-gradient(135deg,#ffffff 0%,#ffcc00 60%,#ff9500 100%);
 }
 .light{
-  --bg:#f6f4e8;
-  --bg2:#e5eee4;
-  --bg3:#c0e1d2;
-  --surface:rgba(220,155,155,.1);
-  --surface2:rgba(192,225,210,.15);
-  --surface3:rgba(229,238,228,.2);
-  --border:rgba(180,120,120,.2);
-  --border2:rgba(192,225,210,.35);
-  --border3:rgba(220,155,155,.45);
-  --text:#1a1a1a;
-  --text2:rgba(26,26,26,.65);
-  --text3:rgba(26,26,26,.42);
-  --text4:rgba(26,26,26,.24);
-  --accent:#c47a7a;
-  --accent2:#a85c5c;
-  --accent3:rgba(220,155,155,.12);
-  --accent4:rgba(180,100,100,.8);
-  --glass-bg:linear-gradient(135deg,rgba(246,244,232,.92) 0%,rgba(229,238,228,.75) 100%);
-  --glass-before:rgba(255,255,255,.55);
-  --nav-text:rgba(164,90,90,.7);
-  --tag-bg:rgba(220,155,155,.12);
-  --tag-border:rgba(220,155,155,.3);
-  --tag-text:rgba(160,85,85,.9);
-  --input-bg:rgba(246,244,232,.9);
-  --input-border:rgba(192,225,210,.5);
-  --input-placeholder:rgba(26,26,26,.32);
-  --selection:rgba(220,155,155,.25);
-  --danger:rgba(190,40,30,.14);
-  --danger-text:rgba(170,40,30,.65);
-  --shadow:rgba(60,40,40,.08);
-  --gradient-text:linear-gradient(150deg,#1a1a1a 0%,#a85c5c 100%);
-  --teal-accent:#5a9e8a;
-  --coral-accent:#dc9b9b;
+  --bg:#f7f5f2;
+  --bg2:#efebe4;
+  --bg3:#e6dfd3;
+  --surface:rgba(220,80,30,.06);
+  --surface2:rgba(30,25,20,.04);
+  --surface3:rgba(30,25,20,.055);
+  --border:rgba(210,80,30,.18);
+  --border2:rgba(30,25,20,.1);
+  --border3:rgba(220,80,30,.32);
+  --text:#1a1209;
+  --text2:rgba(26,18,9,.82);
+  --text3:rgba(26,18,9,.62);
+  --text4:rgba(26,18,9,.45);
+  --accent:#e0540f;
+  --accent2:#b8420a;
+  --accent3:rgba(224,84,15,.1);
+  --accent4:rgba(184,66,10,.85);
+  --glass-bg:linear-gradient(135deg,rgba(255,255,255,.9) 0%,rgba(247,243,237,.65) 100%);
+  --glass-before:rgba(255,255,255,.6);
+  --nav-text:rgba(184,66,10,.65);
+  --tag-bg:rgba(224,84,15,.1);
+  --tag-border:rgba(224,84,15,.3);
+  --tag-text:rgba(168,55,5,.92);
+  --input-bg:rgba(255,255,255,.8);
+  --input-border:rgba(210,80,30,.25);
+  --input-placeholder:rgba(28,24,21,.35);
+  --selection:rgba(224,84,15,.22);
+  --danger:rgba(190,40,30,.16);
+  --danger-text:rgba(170,40,30,.7);
+  --shadow:rgba(40,30,20,.1);
+  --gradient-text:linear-gradient(150deg,#1c1815 15%,#e0540f 100%);
+  --teal-accent:#0a8f80;
+  --coral-accent:#e8552f;
 }
 
 html{scroll-behavior:auto;overflow-x:hidden;width:100%;margin:0;padding:0;box-sizing:border-box;scrollbar-width:none;-ms-overflow-style:none;}
 html::-webkit-scrollbar{width:0!important;height:0!important;display:none!important;}
-body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;overflow-x:hidden;overflow-y:auto;cursor:none!important;width:100%;max-width:100%;min-height:100vh;margin:0;padding:0;scrollbar-width:none;-ms-overflow-style:none;transition:background .35s ease,color .35s ease;}
+body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;overflow-x:hidden;overflow-y:auto;cursor:auto;width:100%;max-width:100%;min-height:100vh;margin:0;padding:0;scrollbar-width:none;-ms-overflow-style:none;transition:background .35s ease,color .35s ease;}
 body::-webkit-scrollbar{width:0!important;height:0!important;display:none!important;}
-*{cursor:none!important;scrollbar-width:none;-ms-overflow-style:none;}
+*{scrollbar-width:none;-ms-overflow-style:none;}
+button,a,[role="button"]{cursor:pointer;}
+input,textarea{cursor:text;}
+input{background:transparent;}
 @media (hover:none),(pointer:coarse){body,*{cursor:auto!important;}}
 *::-webkit-scrollbar{width:0!important;height:0!important;display:none!important;}
 ::selection{background:var(--selection);}
 .glass{background:var(--glass-bg);border:1px solid var(--border);border-radius:18px;backdrop-filter:blur(16px);position:relative;overflow:hidden;}
 .glass::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,var(--glass-before) 0%,transparent 60%);pointer-events:none;border-radius:18px;}
-.btn-primary{background:linear-gradient(135deg,#ff9500,#ff4d00);border:none;color:#fff;padding:14px 40px;border-radius:999px;font-family:'Inter',sans-serif;font-size:13px;font-weight:600;letter-spacing:.3px;cursor:none!important;transition:all .35s cubic-bezier(.16,1,.3,1);box-shadow:0 0 40px rgba(255,140,0,.35),0 4px 24px var(--shadow);position:relative;overflow:hidden;white-space:nowrap;}
+.btn-primary{background:linear-gradient(135deg,#ff9500,#ff4d00);border:none;color:#fff;padding:14px 40px;border-radius:999px;font-family:'Inter',sans-serif;font-size:13px;font-weight:600;letter-spacing:.3px;cursor:pointer;transition:all .35s cubic-bezier(.16,1,.3,1);box-shadow:0 0 40px rgba(255,140,0,.35),0 4px 24px var(--shadow);position:relative;overflow:hidden;white-space:nowrap;}
 .btn-primary::after{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,255,255,.18),transparent);opacity:0;transition:opacity .3s;border-radius:999px;}
 .btn-primary:hover{transform:translateY(-2px) scale(1.02);box-shadow:0 0 60px rgba(255,140,0,.55),0 8px 32px var(--shadow);}
 .btn-primary:hover::after{opacity:1;}.btn-primary:active{transform:scale(.98);}.btn-primary:disabled{opacity:.3;transform:none!important;}
-.btn-ghost{background:var(--accent3);border:1px solid var(--border3);color:var(--accent4);padding:14px 40px;border-radius:999px;font-family:'Inter',sans-serif;font-size:13px;font-weight:500;cursor:none!important;transition:all .3s;white-space:nowrap;}
+.btn-ghost{background:var(--accent3);border:1px solid var(--border3);color:var(--accent4);padding:14px 40px;border-radius:999px;font-family:'Inter',sans-serif;font-size:13px;font-weight:500;cursor:pointer;transition:all .3s;white-space:nowrap;}
 .btn-ghost:hover{background:rgba(255,140,0,.14);border-color:rgba(255,140,0,.5);color:var(--accent2);transform:translateY(-1px);}
-.syn-textarea{width:100%;background:var(--input-bg);border:1px solid var(--input-border);border-radius:12px;color:var(--text);font-family:'Inter',sans-serif;font-size:15px;font-weight:300;padding:22px;outline:none;resize:none;line-height:1.85;transition:all .4s;caret-color:var(--accent);cursor:none!important;}
+.syn-textarea{width:100%;background:var(--input-bg);border:1px solid var(--input-border);border-radius:12px;color:var(--text);font-family:'Inter',sans-serif;font-size:15px;font-weight:300;padding:22px;outline:none;resize:none;line-height:1.85;transition:all .4s;caret-color:var(--accent);cursor:text;}
 .syn-textarea:focus{border-color:var(--border3);background:var(--accent3);box-shadow:0 0 0 4px rgba(255,140,0,.07),0 0 40px rgba(255,140,0,.06);}
 .syn-textarea::placeholder{color:var(--input-placeholder);}
-.nav-pill{background:transparent;border:1px solid var(--border);color:var(--nav-text);padding:8px 20px;border-radius:999px;font-family:'Inter',sans-serif;font-size:11px;font-weight:500;letter-spacing:.8px;cursor:none!important;transition:all .25s;text-transform:uppercase;}
+.nav-pill{background:transparent;border:1px solid var(--border);color:var(--nav-text);padding:8px 20px;border-radius:999px;font-family:'Inter',sans-serif;font-size:11px;font-weight:500;letter-spacing:.8px;cursor:pointer;transition:all .25s;text-transform:uppercase;}
 .nav-pill:hover,.nav-pill.active{border-color:rgba(255,140,0,.55);color:var(--accent2);background:var(--accent3);}
 .nav-pill.danger{border-color:var(--danger);color:var(--danger-text);}
 .nav-pill.danger:hover{border-color:rgba(255,50,50,.55);color:#ff6060;background:rgba(255,50,50,.08);}
 .tag{display:inline-flex;align-items:center;gap:8px;background:var(--tag-bg);border:1px solid var(--tag-border);border-radius:999px;padding:6px 16px;font-size:11px;font-weight:500;letter-spacing:1.2px;color:var(--tag-text);text-transform:uppercase;}
 .tag .d{width:5px;height:5px;border-radius:50%;background:var(--accent);box-shadow:0 0 7px var(--accent);flex-shrink:0;}
+@keyframes spin{to{transform:rotate(360deg);}}
+@keyframes slideUp{from{transform:translateY(100%);opacity:0;}to{transform:translateY(0);opacity:1;}}
 @keyframes fadeUp{from{opacity:0;transform:translateY(32px);}to{opacity:1;transform:translateY(0);}}
 @keyframes scaleIn{from{opacity:0;transform:scale(.93);}to{opacity:1;transform:scale(1);}}
 @keyframes shimmer{from{transform:translateX(-100%);}to{transform:translateX(200%)}}
@@ -859,7 +869,7 @@ body::-webkit-scrollbar{width:0!important;height:0!important;display:none!import
 .s3{animation:fadeUp .7s cubic-bezier(.16,1,.3,1) .25s both;}
 .s4{animation:fadeUp .7s cubic-bezier(.16,1,.3,1) .35s both;}
 .s5{animation:fadeUp .7s cubic-bezier(.16,1,.3,1) .45s both;}
-input{cursor:none!important;background:transparent;}
+input{cursor:text;background:transparent;}
 input::placeholder{color:var(--input-placeholder);}
 input[type=range]{-webkit-appearance:none;appearance:none;background:transparent;}
 
@@ -867,18 +877,17 @@ input[type=range]{-webkit-appearance:none;appearance:none;background:transparent
 .light [style*="background:\"#07040a\""],.light [style*='background:"#07040a"']{background:var(--bg)!important;}
 .light [style*="color:\"#fff\""],.light [style*="color:\"rgba(255,255,255"]{color:var(--text)!important;}
 .light [style*="rgba(7,4,10"]{--dark-surface:rgba(230,224,238,0.9);}
-.light canvas{opacity:.35;filter:sepia(.1) saturate(0.9) brightness(1.05) hue-rotate(100deg);mix-blend-mode:multiply;}
-.light .glass{background:var(--glass-bg)!important;border-color:var(--border2)!important;box-shadow:0 1px 2px rgba(192,225,210,.15),0 8px 32px -8px rgba(150,190,175,.2),inset 0 1px 0 rgba(255,255,255,.75)!important;}
-.light .glass::before{background:linear-gradient(135deg,rgba(255,255,255,.5) 0%,rgba(229,238,228,.2) 60%,transparent 100%)!important;}
-.light .syn-textarea{color:var(--text)!important;background:rgba(246,244,232,.95)!important;border-color:rgba(192,225,210,.5)!important;box-shadow:inset 0 1px 3px rgba(150,190,175,.08)!important;}
-.light .syn-textarea:focus{border-color:rgba(220,155,155,.5)!important;box-shadow:0 0 0 4px rgba(220,155,155,.08),inset 0 1px 3px rgba(150,190,175,.06)!important;}
+.light canvas{opacity:.45;filter:sepia(.2) saturate(1.3) brightness(1.08) hue-rotate(-5deg);mix-blend-mode:multiply;}
+.light .glass{background:var(--glass-bg)!important;border-color:var(--border)!important;box-shadow:0 1px 2px rgba(80,50,20,.04),0 8px 24px -8px rgba(80,50,20,.12),inset 0 1px 0 rgba(255,255,255,.8)!important;}
+.light .glass::before{background:linear-gradient(135deg,rgba(255,255,255,.55) 0%,transparent 60%)!important;}
+.light .syn-textarea{color:var(--text)!important;background:var(--input-bg)!important;box-shadow:inset 0 1px 3px rgba(80,50,20,.05)!important;}
 .light .syn-textarea::placeholder{color:var(--input-placeholder)!important;}
-.light .tag{background:rgba(192,225,210,.18)!important;border-color:rgba(192,225,210,.45)!important;color:rgba(80,130,115,.9)!important;}
-.light .tag .d{background:var(--teal-accent)!important;box-shadow:0 0 7px rgba(90,158,138,.4)!important;}
-.light .btn-ghost{background:rgba(229,238,228,.6)!important;border-color:rgba(192,225,210,.5)!important;color:rgba(80,130,115,.85)!important;}
-.light .btn-primary{background:linear-gradient(135deg,#c47a7a,#a85c5c)!important;box-shadow:0 2px 8px rgba(196,122,122,.25),0 8px 28px -6px rgba(168,92,92,.35)!important;}
-.light .nav-pill{border-color:rgba(192,225,210,.4)!important;color:var(--nav-text)!important;}
-.light .nav-pill:hover,.light .nav-pill.active{border-color:rgba(220,155,155,.5)!important;color:var(--accent2)!important;background:rgba(220,155,155,.1)!important;}
+.light .tag{background:var(--tag-bg)!important;border-color:var(--tag-border)!important;color:var(--tag-text)!important;}
+.light .tag .d{background:var(--accent)!important;box-shadow:0 0 7px var(--accent)!important;}
+.light .btn-ghost{background:var(--accent3)!important;border-color:var(--border3)!important;color:var(--accent4)!important;}
+.light .btn-primary{box-shadow:0 2px 8px rgba(184,84,15,.25),0 8px 28px -6px rgba(184,84,15,.4)!important;}
+.light .nav-pill{border-color:var(--border)!important;color:var(--nav-text)!important;}
+.light .nav-pill:hover,.light .nav-pill.active{border-color:var(--border3)!important;color:var(--accent2)!important;background:var(--accent3)!important;}
 
 /* Light mode — screen backgrounds */
 .light [style*="minHeight:\"100vh\""]{background:var(--bg)!important;}
@@ -897,69 +906,76 @@ input[type=range]{-webkit-appearance:none;appearance:none;background:transparent
 .light [style*="color:\"rgba(255,255,255,.58)\""]{color:var(--text2)!important;}
 .light [style*="color:\"rgba(255,255,255,.75)\""]{color:var(--text)!important;}
 .light [style*="color:\"rgba(255,255,255,.8)\""]{color:var(--text)!important;}
-.light [style*="color:\"rgba(255,255,255,.25)\""]{color:var(--text4)!important;}
+.light [style*="color:\"rgba(255,255,255,.25)\""]{color:var(--text3)!important;}
 .light [style*="color:\"rgba(255,255,255,.2)\""]{color:var(--text4)!important;}
 .light [style*="color:\"rgba(255,255,255,.35)\""]{color:var(--text3)!important;}
-.light [style*="color:\"rgba(255,255,255,.45)\""]{color:var(--text2)!important;}
+.light [style*="color:\"rgba(255,255,255,.45)\""]{color:var(--text3)!important;}
 .light [style*="color:\"rgba(255,255,255,.55)\""]{color:var(--text2)!important;}
 .light [style*="color:\"rgba(255,255,255,.85)\""]{color:var(--text)!important;}
 .light [style*="color:\"rgba(255,255,255,.9)\""]{color:var(--text)!important;}
 .light [style*="color:\"rgba(255,255,255,.1)\""]{color:var(--text4)!important;}
 .light [style*="color:\"rgba(255,255,255,.12)\""]{color:var(--text4)!important;}
 .light [style*="color:\"rgba(255,255,255,.05)\""]{color:var(--text4)!important;}
+.light [style*="color:\"rgba(255,255,255,.18)\""]{color:var(--text4)!important;}
+.light [style*="color:\"rgba(255,255,255,.16)\""]{color:var(--text4)!important;}
+.light [style*="color:\"rgba(255,255,255,.42)\""]{color:var(--text3)!important;}
+.light [style*="color:\"rgba(255,255,255,.22)\""]{color:var(--text3)!important;}
+.light [style*="color:\"rgba(255,255,255,.32)\""]{color:var(--text3)!important;}
+.light [style*="color:\"rgba(255,255,255,.48)\""]{color:var(--text2)!important;}
+.light [style*="color:\"rgba(255,255,255,.52)\""]{color:var(--text2)!important;}
 .light [style*="color:\"#fff\""]{color:var(--text)!important;}
+/* orange/amber faint text → dark in light mode */
+.light [style*="color:\"rgba(255,180,80,.4)\""]{color:var(--text3)!important;}
+.light [style*="color:\"rgba(255,180,80,.5)\""]{color:var(--text3)!important;}
+.light [style*="color:\"rgba(255,180,80,.6)\""]{color:var(--text2)!important;}
+.light [style*="color:\"rgba(255,140,0,.3)\""]{color:var(--text3)!important;}
+.light [style*="color:\"rgba(255,140,0,.2)\""]{color:var(--text4)!important;}
+.light [style*="color:\"rgba(255,140,0,.35)\""]{color:var(--text3)!important;}
+.light [style*="color:\"rgba(255,140,0,.45)\""]{color:var(--text3)!important;}
+/* letter-spacing labels, small uppercase tags */
+.light [style*="letterSpacing"][style*="color:\"rgba(255,255,255"]{color:var(--text3)!important;}
+.light [style*="letterSpacing"][style*="color:\"rgba(255,180,80"]{color:var(--text3)!important;}
+.light [style*="letterSpacing"][style*="color:\"rgba(255,140,0"]{color:var(--text3)!important;}
 
-/* Light mode — gradient text headings: deep charcoal → dusty rose
-   Replaces the dark mode white→orange gradient that's invisible on light bg. */
+/* Light mode — THE CRITICAL FIX: gradient text headings were white→orange,
+   invisible on a light background. Force them to a deep charcoal→burnt-amber
+   gradient instead — this is what was making everything look washed out/inverted. */
 .light [style*="WebkitTextFillColor:\"transparent\""]{
-  background:linear-gradient(135deg,#1a1a1a 0%,#8a4a4a 55%,#c47a7a 100%)!important;
+  background:var(--gradient-text)!important;
   -webkit-background-clip:text!important;
   background-clip:text!important;
 }
 
 /* Light mode — surface/card backgrounds */
-.light [style*="background:\"rgba(255,255,255,.025)\""]{background:rgba(192,225,210,.12)!important;}
-.light [style*="background:\"rgba(255,255,255,.04)\""]{background:rgba(192,225,210,.16)!important;}
-.light [style*="background:\"rgba(255,255,255,.03)\""]{background:rgba(229,238,228,.14)!important;}
-.light [style*="border:\"1px solid rgba(255,255,255,.07)\""]{border-color:rgba(192,225,210,.3)!important;}
-.light [style*="border:\"1px solid rgba(255,255,255,.08)\""]{border-color:rgba(192,225,210,.35)!important;}
+.light [style*="background:\"rgba(255,255,255,.025)\""]{background:rgba(40,28,16,.035)!important;}
+.light [style*="background:\"rgba(255,255,255,.04)\""]{background:rgba(40,28,16,.045)!important;}
+.light [style*="background:\"rgba(255,255,255,.03)\""]{background:rgba(40,28,16,.035)!important;}
+.light [style*="border:\"1px solid rgba(255,255,255,.07)\""]{border-color:rgba(40,28,16,.1)!important;}
+.light [style*="border:\"1px solid rgba(255,255,255,.08)\""]{border-color:rgba(40,28,16,.11)!important;}
 
 /* Light mode — gradient lock overlay in BattlePlanPreview */
-.light [style*="rgba(7,4,10,1)"]{background:linear-gradient(0deg,var(--bg) 0%,rgba(246,244,232,.92) 40%,rgba(246,244,232,0) 100%)!important;}
+.light [style*="rgba(7,4,10,1)"]{background:linear-gradient(0deg,var(--bg) 0%,rgba(250,247,242,.92) 40%,rgba(250,247,242,0) 100%)!important;}
 
-/* Light mode — orange glow/border/box-shadow remaps → rose palette */
-.light [style*="rgba(255,140,0"]{--orange-gone:1;}
-.light [style*="border:\"1px solid rgba(255,140,0"]{border-color:rgba(192,225,210,.4)!important;}
-.light [style*="borderColor:\"rgba(255,140,0"]{border-color:rgba(192,225,210,.4)!important;}
-.light [style*="background:\"rgba(255,140,0,.08)\""]{background:rgba(192,225,210,.18)!important;}
-.light [style*="background:\"rgba(255,140,0,.06)\""]{background:rgba(192,225,210,.14)!important;}
-.light [style*="background:\"rgba(255,140,0,.12)\""]{background:rgba(220,155,155,.14)!important;}
-.light [style*="background:\"rgba(255,140,0,.1)\""]{background:rgba(220,155,155,.12)!important;}
-.light [style*="background:\"rgba(255,140,0,.15)\""]{background:rgba(192,225,210,.2)!important;}
-.light [style*="color:\"rgba(255,140,0"]{color:rgba(164,90,90,.8)!important;}
-.light [style*="color:\"rgba(255,180,80"]{color:rgba(164,90,90,.75)!important;}
-.light [style*="color:\"#ff8c00\""]{color:#c47a7a!important;}
-.light [style*="color:\"#ffb347\""]{color:#a85c5c!important;}
-.light [style*="color:\"#ff9500\""]{color:#c47a7a!important;}
-.light [style*="background:\"linear-gradient(135deg,#ff9500"]{background:linear-gradient(135deg,#c47a7a,#a85c5c)!important;}
-.light [style*="background:\"linear-gradient(135deg,rgba(255,140,0"]{background:linear-gradient(135deg,rgba(192,225,210,.25),rgba(229,238,228,.15))!important;}
-/* Subtle tint for section dividers and footer */
-.light [style*="borderTop:\"1px solid rgba(255,140,0"]{border-top-color:rgba(192,225,210,.3)!important;}
-
-/* Light mode — premium palette gradient mesh: cream × sage × mint × rose */
+/* Light mode — premium colorful gradient mesh, visible throughout the page (not just top) */
 .light body{
   background:
-    radial-gradient(ellipse 60% 50% at 8% 0%,   rgba(192,225,210,.45), transparent 65%),
-    radial-gradient(ellipse 50% 45% at 95% 5%,   rgba(229,238,228,.55), transparent 60%),
-    radial-gradient(ellipse 55% 50% at 50% 110%, rgba(220,155,155,.18), transparent 65%),
-    radial-gradient(ellipse 40% 35% at 80% 55%,  rgba(192,225,210,.2),  transparent 55%),
-    linear-gradient(160deg,#f6f4e8 0%,#edf2ec 50%,#ddeee8 100%);
+    radial-gradient(ellipse 55% 45% at 12% 0%, rgba(224,84,15,.12), transparent 60%),
+    radial-gradient(ellipse 45% 40% at 92% 10%, rgba(232,85,47,.1), transparent 60%),
+    radial-gradient(ellipse 50% 55% at 50% 105%, rgba(10,143,128,.06), transparent 65%),
+    linear-gradient(160deg,#f7f5f2 0%,#efebe4 55%,#e6dfd3 100%);
   background-attachment:fixed;
 }
 
 /* ── MOBILE RESPONSIVE ── */
 .step-inner{box-sizing:border-box;width:100%;}
 .archetype-grid{box-sizing:border-box;}
+@media(max-width:600px){
+  .archetype-grid{grid-template-columns:1fr 1fr!important;gap:10px!important;}
+  .archetype-grid>div{min-height:clamp(220px,55vw,280px)!important;}
+}
+@media(max-width:380px){
+  .archetype-grid{grid-template-columns:1fr!important;}
+}
 .addiction-grid{box-sizing:border-box;}
 
 @media(max-width:768px){
@@ -1029,15 +1045,480 @@ input[type=range]{-webkit-appearance:none;appearance:none;background:transparent
 `;
 
 /* ─── NAV ────────────────────────────────────────────────────────────────── */
-function Nav({screen,goTo,savedPlan,onReset,theme,onThemeToggle}) {
+// ─── ADMIN DASHBOARD ────────────────────────────────────────────────────────
+const ADMIN_UIDS=["r2JKcDHrBOgGD1A14M9ugGQ6rzc2","bOFNjETZWjOU6nDBagxKSyB4szS2"]; // Parth + Lily
+
+function AdminDashboard({theme,onClose}){
+  const isL=theme==="light";
+  const [users,setUsers]=useState([]);
+  const [checkins,setCheckins]=useState([]);
+  const [loading,setLoading]=useState(true);
+  const [tab,setTab]=useState("overview");
+  const [range,setRange]=useState("7d"); // 1d | 7d | 30d | all
+  const [selectedUser,setSelectedUser]=useState(null);
+
+  // Colors
+  const bg    = isL?"#f6f4e8":"#09070f";
+  const card  = isL?"rgba(229,238,228,0.65)":"rgba(255,255,255,0.03)";
+  const bdr   = isL?"rgba(192,225,210,0.45)":"rgba(255,255,255,0.07)";
+  const acc   = isL?"#c47a7a":"#ff9500";
+  const txt   = isL?"rgba(26,18,9,0.9)":"rgba(255,255,255,0.88)";
+  const txt2  = isL?"rgba(26,18,9,0.5)":"rgba(255,255,255,0.38)";
+  const green = "#4ade80"; const amber = "#fbbf24"; const red = "#f87171";
+
+  useEffect(()=>{
+    (async()=>{
+      try{
+        const [uSnap,cSnap]=await Promise.all([
+          getDocs(collection(db,"users")),
+          getDocs(query(collection(db,"checkins"),orderBy("timestamp","desc"),limit(500)))
+        ]);
+        setUsers(uSnap.docs.map(d=>({id:d.id,...d.data()})));
+        setCheckins(cSnap.docs.map(d=>({id:d.id,...d.data()})));
+      }catch(e){console.error("Admin fetch:",e);}
+      finally{setLoading(false);}
+    })();
+  },[]);
+
+  // ── Range filter ──
+  const now=Date.now();
+  const rangeMs={"1d":864e5,"7d":6048e5,"30d":2592e6,"all":Infinity};
+  const filteredCI=useMemo(()=>checkins.filter(c=>{
+    if(range==="all") return true;
+    const ts=c.timestamp?.toDate?.()?.getTime()||0;
+    return now-ts <= rangeMs[range];
+  }),[checkins,range]);
+
+  // ── Overview stats ──
+  const totalUsers=users.length;
+  const activeToday=users.filter(u=>u.lastCheckin===new Date().toDateString()).length;
+  const avgStreak=users.length?Math.round(users.reduce((s,u)=>s+(u.currentStreak||0),0)/users.length):0;
+  const winRate=filteredCI.length?Math.round((filteredCI.filter(c=>c.status==="win").length/filteredCI.length)*100):0;
+
+  // ── Daily check-in chart data ──
+  const dailyData=useMemo(()=>{
+    const days=range==="1d"?24:range==="7d"?7:range==="30d"?30:30;
+    const map={};
+    for(let i=days-1;i>=0;i--){
+      const d=new Date(now-(i*(range==="1d"?3600000:86400000)));
+      const key=range==="1d"?`${d.getHours()}:00`:d.toLocaleDateString("en-IN",{day:"2-digit",month:"short"});
+      map[key]={label:key,win:0,mid:0,slip:0,total:0};
+    }
+    filteredCI.forEach(c=>{
+      const ts=c.timestamp?.toDate?.();
+      if(!ts) return;
+      const key=range==="1d"?`${ts.getHours()}:00`:ts.toLocaleDateString("en-IN",{day:"2-digit",month:"short"});
+      if(map[key]){map[key][c.status]=(map[key][c.status]||0)+1;map[key].total++;}
+    });
+    return Object.values(map);
+  },[filteredCI,range]);
+
+  // ── Addiction map ──
+  const addictionMap=useMemo(()=>{
+    const map={};
+    users.forEach(u=>(u.addictions||[]).forEach(a=>{map[a]=(map[a]||0)+1;}));
+    return Object.entries(map).sort((a,b)=>b[1]-a[1]);
+  },[users]);
+
+  // ── Archetype breakdown ──
+  const archetypeMap=useMemo(()=>{
+    const map={};
+    users.forEach(u=>{if(u.archetype)map[u.archetype]=(map[u.archetype]||0)+1;});
+    return Object.entries(map).sort((a,b)=>b[1]-a[1]);
+  },[users]);
+
+  const maxBar=Math.max(...dailyData.map(d=>d.total),1);
+  const maxAdd=addictionMap[0]?.[1]||1;
+
+  const StatCard=({label,value,sub,color})=>(
+    <div style={{background:card,border:`1px solid ${bdr}`,borderRadius:14,padding:"16px 18px",flex:1,minWidth:0}}>
+      <div style={{fontSize:11,color:txt2,letterSpacing:1,textTransform:"uppercase",marginBottom:6}}>{label}</div>
+      <div style={{fontSize:28,fontWeight:800,fontFamily:"'Orbitron',sans-serif",color:color||acc,lineHeight:1}}>{value}</div>
+      {sub&&<div style={{fontSize:10,color:txt2,marginTop:4}}>{sub}</div>}
+    </div>
+  );
+
+  return(
+    <div style={{position:"fixed",inset:0,zIndex:1000,background:bg,overflowY:"auto",fontFamily:"'Inter',sans-serif"}}>
+
+      {/* ── Header ── */}
+      <div style={{position:"sticky",top:0,background:isL?"rgba(246,244,232,0.95)":"rgba(9,7,15,0.95)",backdropFilter:"blur(20px)",borderBottom:`1px solid ${bdr}`,padding:"14px 20px",display:"flex",alignItems:"center",justifyContent:"space-between",zIndex:10}}>
+        <div>
+          <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:13,fontWeight:800,color:acc,letterSpacing:2}}>⚡ SYNAPSE ADMIN</div>
+          <div style={{fontSize:10,color:txt2,marginTop:1,letterSpacing:.5}}>Founders Dashboard — Confidential</div>
+        </div>
+        <div style={{display:"flex",gap:8,alignItems:"center"}}>
+          <div style={{fontSize:10,color:txt2}}>{loading?"Loading...":new Date().toLocaleString("en-IN",{day:"2-digit",month:"short",hour:"2-digit",minute:"2-digit"})}</div>
+          <button onClick={onClose} style={{width:32,height:32,borderRadius:"50%",background:card,border:`1px solid ${bdr}`,color:txt2,fontSize:18,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",lineHeight:1}}>×</button>
+        </div>
+      </div>
+
+      {/* ── Tab bar ── */}
+      <div style={{display:"flex",gap:0,borderBottom:`1px solid ${bdr}`,padding:"0 20px",overflowX:"auto"}}>
+        {[["overview","📊 Overview"],["users","👥 Users"],["checkins","📋 Check-ins"],["addictions","🧠 Addictions"]].map(([t,l])=>(
+          <button key={t} onClick={()=>setTab(t)} style={{padding:"12px 16px",background:"none",border:"none",borderBottom:`2px solid ${tab===t?acc:"transparent"}`,color:tab===t?acc:txt2,fontSize:11,fontWeight:tab===t?700:400,cursor:"pointer",letterSpacing:.5,transition:"all .2s",whiteSpace:"nowrap",flexShrink:0}}>{l}</button>
+        ))}
+      </div>
+
+      {/* ── Range filter (shown on all tabs) ── */}
+      <div style={{display:"flex",gap:6,padding:"12px 20px",borderBottom:`1px solid ${bdr}`,alignItems:"center"}}>
+        <span style={{fontSize:10,color:txt2,letterSpacing:1,marginRight:4}}>RANGE:</span>
+        {[["1d","Today"],["7d","7 Days"],["30d","30 Days"],["all","All Time"]].map(([v,l])=>(
+          <button key={v} onClick={()=>setRange(v)} style={{padding:"5px 12px",borderRadius:999,border:`1px solid ${range===v?acc:bdr}`,background:range===v?`rgba(${isL?"196,122,122":"255,140,0"},0.12)`:"transparent",color:range===v?acc:txt2,fontSize:10,fontWeight:range===v?700:400,cursor:"pointer",transition:"all .2s"}}>{l}</button>
+        ))}
+        <span style={{marginLeft:"auto",fontSize:10,color:txt2}}>{filteredCI.length} check-ins in range</span>
+      </div>
+
+      {loading?(
+        <div style={{display:"flex",alignItems:"center",justifyContent:"center",minHeight:300,flexDirection:"column",gap:12}}>
+          <div style={{width:32,height:32,border:`2px solid ${bdr}`,borderTop:`2px solid ${acc}`,borderRadius:"50%",animation:"spin 0.7s linear infinite"}}/>
+          <div style={{fontSize:12,color:txt2}}>Fetching from Firestore...</div>
+        </div>
+      ):(
+        <div style={{padding:"16px 20px",display:"flex",flexDirection:"column",gap:16}}>
+
+          {/* ══ OVERVIEW TAB ══ */}
+          {tab==="overview"&&(<>
+            {/* Stat cards */}
+            <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
+              <StatCard label="Total Users" value={totalUsers} sub="Registered accounts"/>
+              <StatCard label="Active Today" value={activeToday} sub="Checked in today" color={green}/>
+              <StatCard label="Avg Streak" value={`${avgStreak}d`} sub="Across all users" color={amber}/>
+              <StatCard label="Win Rate" value={`${winRate}%`} sub={`In selected range`} color={winRate>60?green:winRate>30?amber:red}/>
+            </div>
+
+            {/* Daily bar chart */}
+            <div style={{background:card,border:`1px solid ${bdr}`,borderRadius:16,padding:"20px"}}>
+              <div style={{fontSize:12,fontWeight:600,color:txt,marginBottom:4}}>Check-in Activity</div>
+              <div style={{fontSize:10,color:txt2,marginBottom:16}}>{range==="1d"?"By hour — today":"Daily breakdown"}</div>
+              <div style={{display:"flex",alignItems:"flex-end",gap:4,height:120,overflowX:"auto",paddingBottom:4}}>
+                {dailyData.map((d,i)=>(
+                  <div key={i} style={{display:"flex",flexDirection:"column",alignItems:"center",gap:2,flex:"0 0 auto",minWidth:range==="30d"?18:24}}>
+                    <div style={{display:"flex",flexDirection:"column",justifyContent:"flex-end",height:100,gap:1}}>
+                      {d.win>0&&<div style={{width:"100%",height:`${(d.win/maxBar)*100}%`,minHeight:d.win>0?3:0,background:green,borderRadius:"2px 2px 0 0",opacity:.85}}/>}
+                      {d.mid>0&&<div style={{width:"100%",height:`${(d.mid/maxBar)*100}%`,minHeight:d.mid>0?3:0,background:amber,opacity:.85}}/>}
+                      {d.slip>0&&<div style={{width:"100%",height:`${(d.slip/maxBar)*100}%`,minHeight:d.slip>0?3:0,background:red,borderRadius:"0 0 2px 2px",opacity:.85}}/>}
+                      {d.total===0&&<div style={{width:"100%",height:3,background:isL?"rgba(0,0,0,0.06)":"rgba(255,255,255,0.04)",borderRadius:2}}/>}
+                    </div>
+                    <div style={{fontSize:7,color:txt2,transform:"rotate(-45deg)",transformOrigin:"center",whiteSpace:"nowrap",marginTop:4}}>{d.label}</div>
+                  </div>
+                ))}
+              </div>
+              {/* Legend */}
+              <div style={{display:"flex",gap:12,marginTop:8,flexWrap:"wrap"}}>
+                {[[green,"WIN"],[amber,"MID"],[red,"SLIP"]].map(([c,l])=>(
+                  <div key={l} style={{display:"flex",alignItems:"center",gap:4}}>
+                    <div style={{width:8,height:8,borderRadius:2,background:c}}/>
+                    <span style={{fontSize:9,color:txt2,letterSpacing:1}}>{l}: {filteredCI.filter(ci=>ci.status===l.toLowerCase()).length}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Archetype breakdown */}
+            <div style={{background:card,border:`1px solid ${bdr}`,borderRadius:16,padding:"20px"}}>
+              <div style={{fontSize:12,fontWeight:600,color:txt,marginBottom:16}}>Archetype Distribution</div>
+              <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+                {archetypeMap.length===0?<div style={{fontSize:12,color:txt2}}>No data yet.</div>:
+                archetypeMap.map(([name,count])=>{
+                  const arcColors={SOVEREIGN:"#f59e0b",ARBITER:"#60a5fa",STOIC:"#4ade80",ASCENDANT:"#c084fc"};
+                  const c=arcColors[name]||acc;
+                  return(
+                    <div key={name} style={{flex:1,minWidth:100,background:isL?"rgba(255,255,255,0.5)":"rgba(255,255,255,0.03)",border:`1px solid rgba(${c.replace("#","").match(/.{2}/g).map(x=>parseInt(x,16)).join(",")},0.25)`,borderRadius:12,padding:"14px",textAlign:"center"}}>
+                      <div style={{fontSize:20,fontWeight:800,fontFamily:"'Orbitron',sans-serif",color:c}}>{count}</div>
+                      <div style={{fontSize:9,color:c,fontWeight:600,letterSpacing:1,marginTop:2}}>{name}</div>
+                      <div style={{fontSize:9,color:txt2,marginTop:2}}>{totalUsers?Math.round(count/totalUsers*100):0}%</div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </>)}
+
+          {/* ══ USERS TAB ══ */}
+          {tab==="users"&&(
+            <div style={{display:"flex",flexDirection:"column",gap:10}}>
+              {users.length===0&&<div style={{textAlign:"center",color:txt2,padding:40,fontSize:13}}>No users yet.</div>}
+              {users.sort((a,b)=>(b.lastSeen?.seconds||0)-(a.lastSeen?.seconds||0)).map(u=>{
+                const initials=(u.name||u.email||"?").split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase();
+                const lastSeen=u.lastSeen?.toDate?.();
+                const minsAgo=lastSeen?Math.floor((Date.now()-lastSeen)/60000):null;
+                const lastSeenStr=minsAgo===null?"Never":minsAgo<60?`${minsAgo}m ago`:minsAgo<1440?`${Math.floor(minsAgo/60)}h ago`:`${Math.floor(minsAgo/1440)}d ago`;
+                const isOnline=minsAgo!==null&&minsAgo<30;
+                const userCIs=checkins.filter(c=>c.uid===u.uid);
+                return(
+                  <div key={u.id} onClick={()=>setSelectedUser(selectedUser===u.id?null:u.id)} style={{background:card,border:`1px solid ${selectedUser===u.id?acc:bdr}`,borderRadius:14,padding:"16px",cursor:"pointer",transition:"all .2s"}}>
+                    <div style={{display:"flex",alignItems:"center",gap:12}}>
+                      <div style={{position:"relative",flexShrink:0}}>
+                        {u.photoURL?<img src={u.photoURL} style={{width:44,height:44,borderRadius:"50%",objectFit:"cover",border:`2px solid ${bdr}`}}/>:
+                        <div style={{width:44,height:44,borderRadius:"50%",background:`rgba(${isL?"196,122,122":"255,140,0"},0.15)`,border:`1px solid ${bdr}`,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Orbitron',sans-serif",fontSize:13,fontWeight:700,color:acc}}>{initials}</div>}
+                        <div style={{position:"absolute",bottom:0,right:0,width:10,height:10,borderRadius:"50%",background:isOnline?green:"rgba(255,255,255,0.15)",border:`2px solid ${bg}`}}/>
+                      </div>
+                      <div style={{flex:1,minWidth:0}}>
+                        <div style={{display:"flex",alignItems:"center",gap:6}}>
+                          <span style={{fontSize:13,fontWeight:600,color:txt,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{u.name||"Unknown"}</span>
+                          {u.archetype&&<span style={{padding:"2px 8px",borderRadius:999,background:`rgba(${isL?"196,122,122":"255,140,0"},0.1)`,border:`1px solid rgba(${isL?"196,122,122":"255,140,0"},0.25)`,fontSize:9,color:acc,fontWeight:600,flexShrink:0}}>{u.archetype}</span>}
+                        </div>
+                        <div style={{fontSize:11,color:txt2,marginTop:2,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{u.email}</div>
+                      </div>
+                      <div style={{textAlign:"right",flexShrink:0}}>
+                        <div style={{fontSize:20,fontWeight:800,fontFamily:"'Orbitron',sans-serif",color:acc}}>{u.currentStreak||0}</div>
+                        <div style={{fontSize:8,color:txt2,letterSpacing:1}}>STREAK</div>
+                      </div>
+                    </div>
+                    {/* Expanded details */}
+                    {selectedUser===u.id&&(
+                      <div style={{marginTop:14,paddingTop:14,borderTop:`1px solid ${bdr}`}}>
+                        <div style={{display:"flex",gap:8,marginBottom:10,flexWrap:"wrap"}}>
+                          {(u.addictions||[]).map(a=><span key={a} style={{padding:"3px 10px",borderRadius:999,background:card,border:`1px solid ${bdr}`,fontSize:10,color:txt2}}>{a}</span>)}
+                          {(u.addictions||[]).length===0&&<span style={{fontSize:11,color:txt2}}>No addictions recorded</span>}
+                        </div>
+                        <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8,marginBottom:10}}>
+                          {[["WIN",green],["MID",amber],["SLIP",red]].map(([s,c])=>(
+                            <div key={s} style={{background:isL?"rgba(255,255,255,0.4)":"rgba(255,255,255,0.03)",border:`1px solid ${bdr}`,borderRadius:10,padding:"10px",textAlign:"center"}}>
+                              <div style={{fontSize:18,fontWeight:700,color:c}}>{userCIs.filter(ci=>ci.status===s.toLowerCase()).length}</div>
+                              <div style={{fontSize:9,color:c,letterSpacing:1}}>{s}</div>
+                            </div>
+                          ))}
+                        </div>
+                        <div style={{display:"flex",justifyContent:"space-between",fontSize:10,color:txt2}}>
+                          <span>Last check-in: <span style={{color:txt}}>{u.lastCheckin||"Never"}</span></span>
+                          <span>Last seen: <span style={{color:txt}}>{lastSeenStr}</span></span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* ══ CHECKINS TAB ══ */}
+          {tab==="checkins"&&(
+            <div style={{display:"flex",flexDirection:"column",gap:8}}>
+              {filteredCI.length===0&&<div style={{textAlign:"center",color:txt2,padding:40,fontSize:13}}>No check-ins in this range.</div>}
+              {filteredCI.map(c=>{
+                const u=users.find(us=>us.uid===c.uid);
+                const ts=c.timestamp?.toDate?.();
+                const timeStr=ts?ts.toLocaleString("en-IN",{day:"2-digit",month:"short",hour:"2-digit",minute:"2-digit"}):"—";
+                const sColor={win:green,mid:amber,slip:red,crisis:"#60a5fa"}[c.status]||"#888";
+                return(
+                  <div key={c.id} style={{background:card,border:`1px solid ${bdr}`,borderRadius:12,padding:"14px 16px"}}>
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:6}}>
+                      <div style={{display:"flex",alignItems:"center",gap:8}}>
+                        <div style={{width:7,height:7,borderRadius:"50%",background:sColor,boxShadow:`0 0 8px ${sColor}`,flexShrink:0,marginTop:2}}/>
+                        <span style={{fontSize:12,fontWeight:600,color:txt}}>{u?.name||c.uid.slice(0,8)+"..."}</span>
+                        <span style={{fontSize:10,color:sColor,fontWeight:600,textTransform:"uppercase"}}>{c.status}</span>
+                        <span style={{fontSize:10,color:txt2}}>Day {c.streak}</span>
+                      </div>
+                      <span style={{fontSize:10,color:txt2,flexShrink:0}}>{timeStr}</span>
+                    </div>
+                    <div style={{fontSize:11,color:txt2,lineHeight:1.6,paddingLeft:15,overflow:"hidden",display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical"}}>{c.msg||"—"}</div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* ══ ADDICTIONS TAB ══ */}
+          {tab==="addictions"&&(<>
+            <div style={{background:card,border:`1px solid ${bdr}`,borderRadius:16,padding:"20px"}}>
+              <div style={{fontSize:12,fontWeight:600,color:txt,marginBottom:4}}>Addiction Frequency</div>
+              <div style={{fontSize:10,color:txt2,marginBottom:16}}>Across {users.length} user profiles</div>
+              {addictionMap.length===0?<div style={{fontSize:12,color:txt2}}>No data yet.</div>:
+              addictionMap.map(([name,count])=>{
+                const pct=Math.round(count/maxAdd*100);
+                const pctUsers=Math.round(count/Math.max(users.length,1)*100);
+                return(
+                  <div key={name} style={{marginBottom:14}}>
+                    <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}>
+                      <span style={{fontSize:12,fontWeight:500,color:txt,textTransform:"capitalize"}}>{name}</span>
+                      <div style={{display:"flex",gap:10}}>
+                        <span style={{fontSize:10,color:txt2}}>{pctUsers}% of users</span>
+                        <span style={{fontSize:12,fontWeight:700,color:acc,minWidth:20,textAlign:"right"}}>{count}</span>
+                      </div>
+                    </div>
+                    <div style={{height:8,background:isL?"rgba(0,0,0,0.07)":"rgba(255,255,255,0.05)",borderRadius:4,overflow:"hidden"}}>
+                      <div style={{height:"100%",width:`${pct}%`,background:isL?"linear-gradient(90deg,#c47a7a,#dc9b9b)":"linear-gradient(90deg,#ff9500,#ffcc00)",borderRadius:4,boxShadow:`0 0 8px ${acc}55`,transition:"width 1s cubic-bezier(.16,1,.3,1)"}}/>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Hours per addiction */}
+            <div style={{background:card,border:`1px solid ${bdr}`,borderRadius:16,padding:"20px"}}>
+              <div style={{fontSize:12,fontWeight:600,color:txt,marginBottom:4}}>Avg Hours/Day Per Addiction</div>
+              <div style={{fontSize:10,color:txt2,marginBottom:16}}>How much time users report spending</div>
+              {(()=>{
+                const hoursMap={};
+                const countMap={};
+                users.forEach(u=>{
+                  const h=u.hoursPerDay||{};
+                  Object.entries(h).forEach(([k,v])=>{
+                    hoursMap[k]=(hoursMap[k]||0)+Number(v);
+                    countMap[k]=(countMap[k]||0)+1;
+                  });
+                });
+                const avgHours=Object.entries(hoursMap).map(([k,v])=>[k,+(v/countMap[k]).toFixed(1)]).sort((a,b)=>b[1]-a[1]);
+                const maxH=avgHours[0]?.[1]||1;
+                return avgHours.length===0?<div style={{fontSize:12,color:txt2}}>No hours data yet.</div>:
+                avgHours.map(([name,avg])=>(
+                  <div key={name} style={{marginBottom:12}}>
+                    <div style={{display:"flex",justifyContent:"space-between",marginBottom:5}}>
+                      <span style={{fontSize:12,color:txt,textTransform:"capitalize"}}>{name}</span>
+                      <span style={{fontSize:12,fontWeight:700,color:amber}}>{avg}h/day</span>
+                    </div>
+                    <div style={{height:6,background:isL?"rgba(0,0,0,0.07)":"rgba(255,255,255,0.05)",borderRadius:3,overflow:"hidden"}}>
+                      <div style={{height:"100%",width:`${(avg/maxH)*100}%`,background:"linear-gradient(90deg,#fbbf24,#f59e0b)",borderRadius:3,transition:"width 1s cubic-bezier(.16,1,.3,1)"}}/>
+                    </div>
+                  </div>
+                ));
+              })()}
+            </div>
+          </>)}
+
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── END ADMIN DASHBOARD ─────────────────────────────────────────────────────
+
+function ProfileSheet({user,theme,onThemeToggle,onClose,onSignOut,onPhotoUpdate,onAdminOpen}){
+  const isL=theme==="light";
+  const initials=(user?.name||user?.email||"U").split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase();
+  const [uploading,setUploading]=useState(false);
+  const [photoURL,setPhotoURL]=useState(user?.photoURL||auth.currentUser?.photoURL||null);
+  const fileRef=useRef();
+
+  const handlePhotoClick=()=>fileRef.current?.click();
+
+  const handlePhotoChange=async(e)=>{
+    const file=e.target.files?.[0];
+    if(!file||!auth.currentUser) return;
+    // Validate — max 5MB, image only
+    if(file.size>5*1024*1024){alert("Photo must be under 5MB");return;}
+    if(!file.type.startsWith("image/")) return;
+    setUploading(true);
+    try{
+      const storage=getStorage();
+      const storageRef=sRef(storage,`avatars/${auth.currentUser.uid}`);
+      await uploadBytes(storageRef,file);
+      const url=await getDownloadURL(storageRef);
+      await updateProfile(auth.currentUser,{photoURL:url});
+      setPhotoURL(url);
+      // Update local storage
+      const stored=JSON.parse(localStorage.getItem("syn_user")||"{}");
+      localStorage.setItem("syn_user",JSON.stringify({...stored,photoURL:url}));
+      onPhotoUpdate?.(url);
+    }catch(err){
+      console.error("Photo upload failed:",err);
+      alert("Upload failed — check Firebase Storage rules.");
+    }finally{setUploading(false);}
+  };
+
+  return(
+    <>
+      {/* Backdrop */}
+      <div onClick={onClose} style={{position:"fixed",inset:0,zIndex:900,background:"rgba(0,0,0,0.55)",backdropFilter:"blur(6px)"}}/>
+      {/* Sheet */}
+      <div style={{position:"fixed",bottom:0,left:0,right:0,zIndex:901,background:isL?"#f6f4e8":"#0d0b14",borderTop:isL?"1px solid rgba(192,225,210,0.5)":"1px solid rgba(255,140,0,0.15)",borderRadius:"24px 24px 0 0",padding:"8px 0 40px",animation:"slideUp .35s cubic-bezier(.16,1,.3,1)"}}>
+        {/* Handle */}
+        <div style={{width:40,height:4,borderRadius:2,background:isL?"rgba(26,18,9,0.15)":"rgba(255,255,255,0.15)",margin:"12px auto 24px"}}/>
+        {/* Avatar + info */}
+        <div style={{padding:"0 24px 24px",borderBottom:isL?"1px solid rgba(192,225,210,0.35)":"1px solid rgba(255,255,255,0.06)",display:"flex",alignItems:"center",gap:16}}>
+          {/* Avatar — tappable to change photo */}
+          <div onClick={handlePhotoClick} style={{position:"relative",flexShrink:0,cursor:"pointer"}}>
+            <input ref={fileRef} type="file" accept="image/*" onChange={handlePhotoChange} style={{display:"none"}}/>
+            {photoURL?(
+              <img src={photoURL} alt="avatar" style={{width:62,height:62,borderRadius:"50%",objectFit:"cover",border:isL?"2px solid rgba(196,122,122,0.4)":"2px solid rgba(255,140,0,0.4)",boxShadow:isL?"0 4px 16px rgba(196,122,122,0.3)":"0 4px 16px rgba(255,140,0,0.3)"}}/>
+            ):(
+              <div style={{width:62,height:62,borderRadius:"50%",background:isL?"linear-gradient(135deg,#c47a7a,#a85c5c)":"linear-gradient(135deg,#ff9500,#ff5000)",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Orbitron',sans-serif",fontSize:18,fontWeight:900,color:"#fff",boxShadow:isL?"0 4px 16px rgba(196,122,122,0.35)":"0 4px 16px rgba(255,140,0,0.35)"}}>
+                {initials}
+              </div>
+            )}
+            {/* Edit overlay */}
+            <div style={{position:"absolute",inset:0,borderRadius:"50%",background:"rgba(0,0,0,0.45)",display:"flex",alignItems:"center",justifyContent:"center",opacity:uploading?1:0,transition:"opacity .2s"}} className="avatar-edit-overlay">
+              {uploading?(
+                <div style={{width:18,height:18,border:"2px solid rgba(255,255,255,0.3)",borderTop:"2px solid #fff",borderRadius:"50%",animation:"spin 0.7s linear infinite"}}/>
+              ):(
+                <span style={{fontSize:16}}>📷</span>
+              )}
+            </div>
+            {/* Camera badge */}
+            <div style={{position:"absolute",bottom:0,right:0,width:20,height:20,borderRadius:"50%",background:isL?"#c47a7a":"#ff9500",border:isL?"2px solid #f6f4e8":"2px solid #0d0b14",display:"flex",alignItems:"center",justifyContent:"center",fontSize:10}}>📷</div>
+          </div>
+          <div style={{overflow:"hidden",flex:1}}>
+            <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:13,fontWeight:700,color:"var(--text)",letterSpacing:1,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{user?.name||"Soldier"}</div>
+            <div style={{fontSize:11,color:"var(--text3)",marginTop:3,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{user?.email||""}</div>
+            <div style={{fontSize:10,color:"var(--text4)",marginTop:4,cursor:"pointer"}} onClick={handlePhotoClick}>Tap photo to change</div>
+            <div style={{display:"inline-flex",alignItems:"center",gap:5,marginTop:6,background:isL?"rgba(192,225,210,0.2)":"rgba(255,140,0,0.08)",border:isL?"1px solid rgba(192,225,210,0.4)":"1px solid rgba(255,140,0,0.2)",borderRadius:999,padding:"3px 10px"}}>
+              <div style={{width:5,height:5,borderRadius:"50%",background:isL?"#5a9e8a":"#ff8c00",boxShadow:isL?"0 0 6px rgba(90,158,138,0.6)":"0 0 6px #ff8c00"}}/>
+              <span style={{fontSize:9,fontWeight:600,letterSpacing:1.5,color:isL?"rgba(80,130,115,0.8)":"rgba(255,180,80,0.7)",textTransform:"uppercase"}}>Active Protocol</span>
+            </div>
+          </div>
+        </div>
+        {/* Options */}
+        <div style={{padding:"16px 24px",display:"flex",flexDirection:"column",gap:4}}>
+          {/* Admin Dashboard — only for admin UIDs */}
+          {ADMIN_UIDS.includes(auth.currentUser?.uid)&&(
+            <div onClick={()=>{onClose();onAdminOpen();}} style={{display:"flex",alignItems:"center",gap:12,padding:"14px 16px",borderRadius:14,background:isL?"rgba(196,122,122,0.06)":"rgba(255,140,0,0.06)",border:isL?"1px solid rgba(196,122,122,0.2)":"1px solid rgba(255,140,0,0.15)",cursor:"pointer",transition:"all .2s"}}>
+              <span style={{fontSize:18}}>🛡️</span>
+              <div>
+                <div style={{fontSize:13,fontWeight:600,color:isL?"#c47a7a":"#ff9500"}}>Admin Dashboard</div>
+                <div style={{fontSize:11,color:"var(--text4)",marginTop:1}}>Users · Check-ins · Analytics</div>
+              </div>
+              <div style={{marginLeft:"auto",fontSize:12,color:isL?"rgba(196,122,122,0.5)":"rgba(255,140,0,0.4)"}}>→</div>
+            </div>
+          )}
+          {/* Theme toggle */}
+          <div onClick={onThemeToggle} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"14px 16px",borderRadius:14,background:isL?"rgba(229,238,228,0.5)":"rgba(255,255,255,0.03)",border:isL?"1px solid rgba(192,225,210,0.4)":"1px solid rgba(255,255,255,0.06)",cursor:"pointer",transition:"all .2s"}}>
+            <div style={{display:"flex",alignItems:"center",gap:12}}>
+              <span style={{fontSize:18}}>{isL?"🌙":"☀️"}</span>
+              <div>
+                <div style={{fontSize:13,fontWeight:500,color:"var(--text)"}}>Theme</div>
+                <div style={{fontSize:11,color:"var(--text3)",marginTop:1}}>{isL?"Switch to Dark Mode":"Switch to Light Mode"}</div>
+              </div>
+            </div>
+            <div style={{width:44,height:24,borderRadius:999,background:isL?"rgba(196,122,122,0.3)":"rgba(255,140,0,0.25)",border:isL?"1px solid rgba(196,122,122,0.5)":"1px solid rgba(255,140,0,0.4)",position:"relative",transition:"all .3s"}}>
+              <div style={{position:"absolute",top:3,left:isL?3:19,width:16,height:16,borderRadius:"50%",background:isL?"#c47a7a":"#ff9500",transition:"left .3s",boxShadow:"0 2px 4px rgba(0,0,0,0.3)"}}/>
+            </div>
+          </div>
+          {/* Sign out */}
+          <div onClick={onSignOut} style={{display:"flex",alignItems:"center",gap:12,padding:"14px 16px",borderRadius:14,background:"rgba(255,60,60,0.04)",border:"1px solid rgba(255,60,60,0.1)",cursor:"pointer",transition:"all .2s",marginTop:8}}>
+            <span style={{fontSize:18}}>🚪</span>
+            <div>
+              <div style={{fontSize:13,fontWeight:500,color:"rgba(255,90,90,0.9)"}}>Sign Out</div>
+              <div style={{fontSize:11,color:"var(--text4)",marginTop:1}}>Your progress stays saved</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
+function Nav({screen,goTo,savedPlan,onReset,theme,onThemeToggle,user}) {
   const [scrolled,setScrolled]=useState(false);
+  const [showProfile,setShowProfile]=useState(false);
+  const [showAdmin,setShowAdmin]=useState(false);
   useEffect(()=>{const h=()=>setScrolled(window.scrollY>40);window.addEventListener("scroll",h);return()=>window.removeEventListener("scroll",h);},[]);
   const isLight=theme==="light";
+  const initials=(user?.name||user?.email||"U").split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase();
+
+  const handleSignOut=()=>{
+    signOut(auth).catch(()=>{});
+    setShowProfile(false);
+  };
+
   return(
+    <>
     <nav style={{position:"fixed",top:0,left:0,right:0,zIndex:500,background:scrolled?`rgba(${isLight?"240,236,245":"7,4,10"},0.95)`:`rgba(${isLight?"240,236,245":"7,4,10"},0.80)`,backdropFilter:"blur(20px)",borderBottom:"1px solid var(--border)",transition:"all .5s ease"}}>
       {/* Row 1 — Logo + controls */}
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px clamp(12px,4vw,48px)"}}>
-        <div onClick={()=>goTo("boot")} style={{cursor:"none",display:"flex",alignItems:"center",gap:8,flexShrink:0}}>
+        <div onClick={()=>goTo("boot")} style={{cursor:"pointer",display:"flex",alignItems:"center",gap:8,flexShrink:0}}>
           <NeuralMark size={32}/>
           <div className="nav-logo-text">
             <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:13,fontWeight:800,letterSpacing:2.5,color:"var(--text)",lineHeight:1}}>SYNAPSE</div>
@@ -1045,11 +1526,16 @@ function Nav({screen,goTo,savedPlan,onReset,theme,onThemeToggle}) {
           </div>
         </div>
         <div style={{display:"flex",gap:8,alignItems:"center"}}>
-          {/* Theme toggle */}
-          <button onClick={onThemeToggle} title={isLight?"Switch to Dark":"Switch to Light"}
-            style={{background:"var(--surface2)",border:"1px solid var(--border)",borderRadius:999,width:34,height:34,display:"flex",alignItems:"center",justifyContent:"center",fontSize:15,transition:"all .25s",flexShrink:0}}>
-            {isLight?"🌙":"☀️"}
-          </button>
+          {/* Profile avatar */}
+          <div onClick={()=>setShowProfile(true)} style={{width:34,height:34,borderRadius:"50%",overflow:"hidden",flexShrink:0,cursor:"pointer",boxShadow:isLight?"0 2px 8px rgba(196,122,122,0.4)":"0 2px 8px rgba(255,140,0,0.35)",border:isLight?"2px solid rgba(196,122,122,0.3)":"2px solid rgba(255,140,0,0.3)",transition:"transform .2s"}}>
+            {(user?.photoURL||auth.currentUser?.photoURL)?(
+              <img src={user?.photoURL||auth.currentUser?.photoURL} alt="avatar" style={{width:"100%",height:"100%",objectFit:"cover"}}/>
+            ):(
+              <div style={{width:"100%",height:"100%",background:isLight?"linear-gradient(135deg,#c47a7a,#a85c5c)":"linear-gradient(135deg,#ff9500,#ff5000)",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Orbitron',sans-serif",fontSize:11,fontWeight:900,color:"#fff"}}>
+                {initials}
+              </div>
+            )}
+          </div>
           <button className="nav-pill danger" onClick={onReset} style={{flexShrink:0}}>Reset</button>
         </div>
       </div>
@@ -1061,6 +1547,9 @@ function Nav({screen,goTo,savedPlan,onReset,theme,onThemeToggle}) {
         <button className={`nav-pill${screen==="confess"?" active":""}`} onClick={()=>goTo("confess")} style={{flexShrink:0}}>Confess</button>
       </div>
     </nav>
+    {showProfile&&<ProfileSheet user={user} theme={theme} onThemeToggle={()=>{onThemeToggle();}} onClose={()=>setShowProfile(false)} onSignOut={handleSignOut} onPhotoUpdate={(url)=>{user.photoURL=url;}} onAdminOpen={()=>setShowAdmin(true)}/>}
+    {showAdmin&&<AdminDashboard theme={theme} onClose={()=>setShowAdmin(false)}/>}
+    </>
   );
 }
 
@@ -1195,8 +1684,8 @@ function Auth({ onAuth, context="" }) {
   const [shake, setShake]         = useState(false);
   const [googleHover, setGoogleHover] = useState(false);
   const [ready, setReady]         = useState(false);
-  const [agreed, setAgreed]       = useState(false);
-  const [showTC, setShowTC]       = useState(false);
+  const [termsAccepted, setTermsAccepted] = useState(false);
+  const [showTerms, setShowTerms] = useState(false);
 
   useEffect(()=>{ setTimeout(()=>setReady(true), 80); },[]);
 
@@ -1204,8 +1693,8 @@ function Auth({ onAuth, context="" }) {
     if(!email.trim()||!password.trim()||(mode==="signup"&&!name.trim())){
       setShake(true); setTimeout(()=>setShake(false),600); return;
     }
-    if(mode==="signup"&&!agreed){
-      setError("Please accept the Terms & Conditions to continue."); return;
+    if(mode==="signup"&&!termsAccepted){
+      setError("Please accept the Terms & Conditions to continue."); setShake(true); setTimeout(()=>setShake(false),600); return;
     }
     setLoading(true); setError("");
     try {
@@ -1270,7 +1759,7 @@ function Auth({ onAuth, context="" }) {
         <div className="glass" style={{padding:36,boxShadow:"0 0 60px rgba(255,140,0,0.08),0 32px 64px rgba(0,0,0,0.4)",animation:"borderGlow 5s ease-in-out infinite"}}>
           <div style={{display:"flex",background:"rgba(255,255,255,0.03)",borderRadius:10,padding:4,marginBottom:28,border:"1px solid rgba(255,140,0,0.08)"}}>
             {[["signin","Sign In"],["signup","Sign Up"]].map(([m,l])=>(
-              <button key={m} onClick={()=>{setMode(m);setError("");setResetSent(false);}} style={{flex:1,padding:"9px 0",borderRadius:8,border:"none",background:mode===m?"linear-gradient(135deg,rgba(255,140,0,0.18),rgba(255,80,0,0.1))":"transparent",color:mode===m?"#ffb347":"rgba(255,255,255,0.25)",fontSize:12,fontWeight:600,letterSpacing:.8,textTransform:"uppercase",transition:"all .25s",cursor:"none"}}>{l}</button>
+              <button key={m} onClick={()=>{setMode(m);setError("");setResetSent(false);}} style={{flex:1,padding:"9px 0",borderRadius:8,border:"none",background:mode===m?"linear-gradient(135deg,rgba(255,140,0,0.18),rgba(255,80,0,0.1))":"transparent",color:mode===m?"#ffb347":"rgba(255,255,255,0.25)",fontSize:12,fontWeight:600,letterSpacing:.8,textTransform:"uppercase",transition:"all .25s",cursor:"pointer"}}>{l}</button>
             ))}
           </div>
           <div style={{display:"flex",flexDirection:"column",gap:14}}>
@@ -1279,58 +1768,74 @@ function Auth({ onAuth, context="" }) {
             <div><div style={{fontSize:11,color:"rgba(255,180,80,0.4)",letterSpacing:1,textTransform:"uppercase",marginBottom:7,fontWeight:500}}>Password</div><input style={inputStyle("password")} type="password" placeholder="••••••••" value={password} onChange={e=>setPassword(e.target.value)} onFocus={()=>setFocusedField("password")} onBlur={()=>setFocusedField(null)} onKeyDown={e=>e.key==="Enter"&&handleSubmit()}/></div>
             {error&&<div style={{fontSize:12,color:"#ff7777",padding:"10px 14px",background:"rgba(255,60,60,0.07)",border:"1px solid rgba(255,60,60,0.2)",borderRadius:8,lineHeight:1.5}}>{error}</div>}
             {resetSent&&<div style={{fontSize:12,color:"#66ffaa",padding:"10px 14px",background:"rgba(60,255,120,0.06)",border:"1px solid rgba(60,255,120,0.2)",borderRadius:8}}>✓ Reset email sent — check your inbox.</div>}
-            {mode==="signin"&&<div style={{textAlign:"right",marginTop:-6}}><span onClick={handleForgotPassword} style={{fontSize:11,color:"rgba(255,140,0,0.35)",letterSpacing:.3,cursor:"none"}} onMouseEnter={e=>e.target.style.color="rgba(255,140,0,0.65)"} onMouseLeave={e=>e.target.style.color="rgba(255,140,0,0.35)"}>Forgot password?</span></div>}
-            <button className="btn-primary" onClick={handleSubmit} disabled={loading} style={{width:"100%",marginTop:8,padding:"15px",fontSize:13,borderRadius:12,justifyContent:"center",display:"flex",alignItems:"center",gap:8}}>
+            {mode==="signin"&&<div style={{textAlign:"right",marginTop:-6}}><span onClick={handleForgotPassword} style={{fontSize:11,color:"rgba(255,180,80,0.7)",letterSpacing:.3,cursor:"pointer",textDecoration:"underline",textUnderlineOffset:3}} >Forgot password?</span></div>}
+
+            {/* T&C checkbox — only on signup */}
+            {mode==="signup"&&(
+              <div style={{display:"flex",alignItems:"flex-start",gap:10,padding:"12px 14px",background:"rgba(255,140,0,0.04)",border:"1px solid rgba(255,140,0,0.12)",borderRadius:10}}>
+                <div onClick={()=>setTermsAccepted(v=>!v)} style={{width:18,height:18,borderRadius:5,border:`2px solid ${termsAccepted?"#ff9500":"rgba(255,255,255,0.2)"}`,background:termsAccepted?"#ff9500":"transparent",flexShrink:0,marginTop:1,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",transition:"all .2s"}}>
+                  {termsAccepted&&<svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4L3.5 6.5L9 1" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+                </div>
+                <p style={{fontSize:11,color:"rgba(255,255,255,0.45)",lineHeight:1.6,margin:0}}>
+                  I have read and agree to the{" "}
+                  <span onClick={()=>setShowTerms(true)} style={{color:"rgba(255,180,80,0.85)",cursor:"pointer",textDecoration:"underline",textUnderlineOffset:3}}>Terms & Conditions</span>
+                  {" "}including warranty disclaimers, liability limitations, and binding arbitration provisions.
+                </p>
+              </div>
+            )}
+
+            <button className="btn-primary" onClick={handleSubmit} disabled={loading||(mode==="signup"&&!termsAccepted)} style={{width:"100%",marginTop:8,padding:"15px",fontSize:13,borderRadius:12,justifyContent:"center",display:"flex",alignItems:"center",gap:8,opacity:(mode==="signup"&&!termsAccepted)?0.4:1}}>
               {loading?<span style={{display:"flex",gap:4}}>{[0,1,2].map(i=><span key={i} style={{width:4,height:4,borderRadius:"50%",background:"#fff",animation:`dotBlink 1s ${i*.18}s infinite`}}/>)}</span>:mode==="signin"?"Enter the Protocol →":"Initialize Protocol →"}
             </button>
             <div style={{display:"flex",alignItems:"center",gap:12,margin:"4px 0"}}><div style={{flex:1,height:1,background:"rgba(255,255,255,0.06)"}}/><span style={{fontSize:11,color:"var(--text4)",letterSpacing:1}}>OR</span><div style={{flex:1,height:1,background:"rgba(255,255,255,0.06)"}}/></div>
-            <button onClick={handleGoogle} disabled={loading} onMouseEnter={()=>setGoogleHover(true)} onMouseLeave={()=>setGoogleHover(false)} style={{width:"100%",padding:"14px",borderRadius:12,background:googleHover?"rgba(255,255,255,0.06)":"rgba(255,255,255,0.03)",border:`1px solid ${googleHover?"rgba(255,255,255,0.18)":"rgba(255,255,255,0.08)"}`,color:googleHover?"rgba(255,255,255,0.85)":"rgba(255,255,255,0.4)",fontSize:13,fontWeight:500,cursor:"none",transition:"all .25s",display:"flex",alignItems:"center",justifyContent:"center",gap:10}}>
+            <button onClick={handleGoogle} disabled={loading} onMouseEnter={()=>setGoogleHover(true)} onMouseLeave={()=>setGoogleHover(false)} style={{width:"100%",padding:"14px",borderRadius:12,background:googleHover?"rgba(255,255,255,0.06)":"rgba(255,255,255,0.03)",border:`1px solid ${googleHover?"rgba(255,255,255,0.18)":"rgba(255,255,255,0.08)"}`,color:googleHover?"rgba(255,255,255,0.85)":"rgba(255,255,255,0.4)",fontSize:13,fontWeight:500,cursor:"pointer",transition:"all .25s",display:"flex",alignItems:"center",justifyContent:"center",gap:10}}>
               <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z" fill={googleHover?"#4285F4":"rgba(66,133,244,0.6)"}/><path d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z" fill={googleHover?"#34A853":"rgba(52,168,83,0.6)"}/><path d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332z" fill={googleHover?"#FBBC05":"rgba(251,188,5,0.6)"}/><path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z" fill={googleHover?"#EA4335":"rgba(234,67,53,0.6)"}/>
               </svg>
               Continue with Google
             </button>
           </div>
-          {mode==="signup"&&(
-            <div style={{marginTop:16,display:"flex",alignItems:"flex-start",gap:10}}>
-              <div onClick={()=>setAgreed(a=>!a)} style={{width:18,height:18,borderRadius:4,border:`2px solid ${agreed?"#ff8c00":"rgba(255,255,255,.2)"}`,background:agreed?"rgba(255,140,0,.18)":"transparent",flexShrink:0,marginTop:1,cursor:"none",display:"flex",alignItems:"center",justifyContent:"center",transition:"all .2s"}}>
-                {agreed&&<span style={{fontSize:11,color:"#ff8c00",fontWeight:900,lineHeight:1}}>✓</span>}
-              </div>
-              <p style={{fontSize:11,color:"var(--text4)",margin:0,lineHeight:1.7}}>
-                I agree to the{" "}
-                <span onClick={()=>setShowTC(true)} style={{color:"rgba(255,140,0,.65)",cursor:"none",textDecoration:"underline",textUnderlineOffset:2}}>Terms &amp; Conditions</span>
-                {" "}and acknowledge I have read and understood the agreement.
-              </p>
-            </div>
-          )}
-          <p style={{textAlign:"center",fontSize:11,color:"var(--text4)",marginTop:20,lineHeight:1.7,letterSpacing:.2}}>By continuing, you agree to the Synapse Protocol.<br/><span style={{color:"rgba(255,140,0,0.28)"}}>Encrypted. Private. Never sold.</span><br/><span style={{color:"var(--text4)"}}>⚠ Progress stored locally. Clearing browser data erases your streak.</span></p>
-
-          {/* T&C Modal */}
-          {showTC&&(
-            <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.85)",zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center",padding:"20px"}} onClick={()=>setShowTC(false)}>
-              <div onClick={e=>e.stopPropagation()} style={{background:"#0d0a14",border:"1px solid rgba(255,140,0,.2)",borderRadius:16,width:"100%",maxWidth:640,maxHeight:"80vh",display:"flex",flexDirection:"column",overflow:"hidden"}}>
-                <div style={{padding:"20px 24px",borderBottom:"1px solid rgba(255,255,255,.07)",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-                  <span style={{fontFamily:"'Orbitron',sans-serif",fontSize:13,fontWeight:700,letterSpacing:2,color:"rgba(255,180,80,.8)",textTransform:"uppercase"}}>Terms &amp; Conditions</span>
-                  <button onClick={()=>setShowTC(false)} style={{background:"none",border:"none",color:"rgba(255,255,255,.4)",fontSize:20,cursor:"none",lineHeight:1}}>✕</button>
-                </div>
-                <div style={{overflowY:"auto",padding:"20px 24px",fontSize:11,color:"rgba(255,255,255,.55)",lineHeight:1.9,fontFamily:"'Inter',sans-serif"}}>
-                  <p><strong style={{color:"rgba(255,255,255,.75)"}}>19.4</strong> These Terms, together with the Privacy Policy and any other policies expressly incorporated by reference, constitute the entire agreement between the parties with respect to the subject matter hereof and supersede all prior or contemporaneous agreements, representations, and understandings, whether written or oral.</p>
-                  <p><strong style={{color:"rgba(255,255,255,.75)"}}>20. NOTICES AND CONTACT INFORMATION</strong><br/>20.1 All notices, requests, complaints, or communications required or permitted under this Agreement shall be made in writing and directed to:<br/><em>SYNAPSE Electronic Mail: synapserewire@gmail.com</em></p>
-                  <p>20.2 Notices to the User shall be deemed effective upon transmission to the email address associated with the User's Account.</p>
-                  <p><strong style={{color:"rgba(255,255,255,.75)"}}>21. ACKNOWLEDGMENT</strong><br/>BY USING THE SERVICE, THE USER ACKNOWLEDGES HAVING READ AND UNDERSTOOD THIS AGREEMENT IN ITS ENTIRETY, INCLUDING THE WARRANTY DISCLAIMERS, LIMITATIONS OF LIABILITY, INDEMNIFICATION OBLIGATIONS, AND BINDING ARBITRATION AND CLASS ACTION WAIVER PROVISIONS SET FORTH HEREIN, AND VOLUNTARILY AND IRREVOCABLY AGREES TO BE BOUND BY ITS TERMS.</p>
-                  <p><strong style={{color:"rgba(255,255,255,.75)"}}>22. INDIA-SPECIFIC ADDENDUM</strong><br/>22.1 <em>Governing Law:</em> For Users resident in or accessing the Service from India, this Agreement shall be governed by and construed in accordance with the laws of the Republic of India, including the Information Technology Act, 2000, the Digital Personal Data Protection Act, 2023, and the Indian Contract Act, 1872.<br/>22.2 <em>Jurisdiction:</em> Subject to Section 11, the courts at [INSERT CITY, INDIA] shall have exclusive jurisdiction over any matter not subject to mandatory arbitration.<br/>22.3 <em>Grievance Officer:</em> Email: synapserewire@gmail.com — Designation: Grievance Officer, pursuant to the Information Technology (Intermediary Guidelines and Digital Media Ethics Code) Rules, 2021.</p>
-                  <p><strong style={{color:"rgba(255,255,255,.75)"}}>23. UNITED STATES-SPECIFIC ADDENDUM</strong><br/>23.1 <em>Governing Law:</em> For Users resident in or accessing the Service from the United States, this Agreement shall be governed by and construed in accordance with the laws of the State of [INSERT STATE].<br/>23.2 <em>Jurisdiction:</em> Subject to Section 11, the state and federal courts located in [INSERT STATE] shall have exclusive jurisdiction.<br/>23.3 <em>California Residents:</em> Pursuant to the CCPA/CPRA, California residents may exercise their rights to know, delete, correct, and opt out of the sale or sharing of Personal Information by contacting synapserewire@gmail.com. The Company does not knowingly sell the Personal Information of minors under sixteen (16) years of age.<br/>23.4 <em>COPPA Compliance:</em> The Company does not knowingly collect Personal Information from children under the age of thirteen (13). Should the Company become aware that it has inadvertently collected such information, it shall take reasonable steps to delete it promptly.</p>
-                  <p style={{color:"rgba(255,255,255,.3)",fontSize:10,fontStyle:"italic"}}>This document is a draft template for informational purposes only and does not constitute legal advice. It must be reviewed and finalized by a licensed attorney prior to publication.</p>
-                </div>
-                <div style={{padding:"16px 24px",borderTop:"1px solid rgba(255,255,255,.07)",display:"flex",gap:12}}>
-                  <button onClick={()=>{setAgreed(true);setShowTC(false);}} style={{flex:1,padding:"12px",borderRadius:10,background:"linear-gradient(135deg,#ff9500,#ff5000)",border:"none",color:"#fff",fontSize:12,fontWeight:700,letterSpacing:1,cursor:"none"}}>I Agree &amp; Accept</button>
-                  <button onClick={()=>setShowTC(false)} style={{padding:"12px 20px",borderRadius:10,background:"rgba(255,255,255,.04)",border:"1px solid rgba(255,255,255,.1)",color:"rgba(255,255,255,.4)",fontSize:12,cursor:"none"}}>Close</button>
-                </div>
-              </div>
-            </div>
-          )}
+          <p style={{textAlign:"center",fontSize:11,color:"var(--text4)",marginTop:20,lineHeight:1.7,letterSpacing:.2}}><span style={{color:"rgba(255,140,0,0.28)"}}>Encrypted. Private. Never sold.</span><br/><span style={{color:"var(--text4)"}}>⚠ Progress stored locally. Clearing browser data erases your streak.</span></p>
         </div>
       </div>
     </div>
+
+    {/* T&C Modal — theme aware */}
+    {showTerms&&(()=>{
+      const iL=document.documentElement.classList.contains("light");
+      return(
+        <div style={{position:"fixed",inset:0,zIndex:9999,background:"rgba(0,0,0,0.8)",backdropFilter:"blur(12px)",display:"flex",alignItems:"center",justifyContent:"center",padding:"20px"}} onClick={()=>setShowTerms(false)}>
+          <div onClick={e=>e.stopPropagation()} style={{width:"100%",maxWidth:620,maxHeight:"80vh",background:iL?"#f6f4e8":"#0d0b10",border:iL?"1px solid rgba(192,225,210,0.5)":"1px solid rgba(255,140,0,0.15)",borderRadius:20,display:"flex",flexDirection:"column",overflow:"hidden",boxShadow:"0 32px 80px rgba(0,0,0,0.6)"}}>
+            <div style={{padding:"24px 28px 20px",borderBottom:iL?"1px solid rgba(192,225,210,0.4)":"1px solid rgba(255,255,255,0.06)",display:"flex",alignItems:"center",justifyContent:"space-between",flexShrink:0}}>
+              <div>
+                <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:14,fontWeight:700,color:iL?"#8a4a4a":"#ffb347",letterSpacing:1}}>SYNAPSE TERMS & CONDITIONS</div>
+                <div style={{fontSize:11,color:iL?"rgba(26,18,9,0.45)":"rgba(255,255,255,0.3)",marginTop:3}}>Please read carefully before proceeding</div>
+              </div>
+              <button onClick={()=>setShowTerms(false)} style={{width:32,height:32,borderRadius:"50%",background:iL?"rgba(192,225,210,0.3)":"rgba(255,255,255,0.05)",border:iL?"1px solid rgba(192,225,210,0.5)":"1px solid rgba(255,255,255,0.1)",color:iL?"rgba(26,18,9,0.5)":"rgba(255,255,255,0.5)",fontSize:18,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",lineHeight:1}}>×</button>
+            </div>
+            <div style={{padding:"24px 28px",overflowY:"auto",flex:1,fontSize:12,color:iL?"rgba(26,18,9,0.62)":"rgba(255,255,255,0.55)",lineHeight:1.9}}>
+              <p style={{color:iL?"rgba(138,74,74,0.9)":"rgba(255,180,80,0.7)",fontWeight:600,marginBottom:12}}>19.4 Entire Agreement</p>
+              <p>These Terms, together with the Privacy Policy and any other policies expressly incorporated by reference, constitute the entire agreement between the parties with respect to the subject matter hereof and supersede all prior or contemporaneous agreements, representations, and understandings, whether written or oral.</p>
+              <p style={{color:iL?"rgba(138,74,74,0.9)":"rgba(255,180,80,0.7)",fontWeight:600,margin:"20px 0 12px"}}>20. Notices and Contact Information</p>
+              <p><strong style={{color:iL?"rgba(26,18,9,0.82)":"rgba(255,255,255,0.75)"}}>20.1</strong> All notices shall be directed to: <span style={{color:iL?"#c47a7a":"#ffb347"}}>synapserewire@gmail.com</span></p>
+              <p><strong style={{color:iL?"rgba(26,18,9,0.82)":"rgba(255,255,255,0.75)"}}>20.2</strong> Notices to the User shall be deemed effective upon transmission to the email address associated with the User's Account.</p>
+              <p style={{color:iL?"rgba(138,74,74,0.9)":"rgba(255,180,80,0.7)",fontWeight:600,margin:"20px 0 12px"}}>21. Acknowledgment</p>
+              <p style={{color:iL?"rgba(26,18,9,0.75)":"rgba(255,255,255,0.65)"}}>BY USING THE SERVICE, THE USER ACKNOWLEDGES HAVING READ AND UNDERSTOOD THIS AGREEMENT IN ITS ENTIRETY, INCLUDING THE WARRANTY DISCLAIMERS, LIMITATIONS OF LIABILITY, INDEMNIFICATION OBLIGATIONS, AND BINDING ARBITRATION AND CLASS ACTION WAIVER PROVISIONS SET FORTH HEREIN, AND VOLUNTARILY AND IRREVOCABLY AGREES TO BE BOUND BY ITS TERMS.</p>
+              <p style={{color:iL?"rgba(138,74,74,0.9)":"rgba(255,180,80,0.7)",fontWeight:600,margin:"20px 0 12px"}}>22. India-Specific Addendum</p>
+              <p><strong style={{color:iL?"rgba(26,18,9,0.82)":"rgba(255,255,255,0.75)"}}>22.1</strong> Governed by laws of India including IT Act 2000, DPDP Act 2023, and Indian Contract Act 1872.</p>
+              <p><strong style={{color:iL?"rgba(26,18,9,0.82)":"rgba(255,255,255,0.75)"}}>22.3 Grievance Officer:</strong> <span style={{color:iL?"#c47a7a":"#ffb347"}}>synapserewire@gmail.com</span> — per IT (Intermediary Guidelines) Rules, 2021.</p>
+              <p style={{color:iL?"rgba(138,74,74,0.9)":"rgba(255,180,80,0.7)",fontWeight:600,margin:"20px 0 12px"}}>23. United States-Specific Addendum</p>
+              <p><strong style={{color:iL?"rgba(26,18,9,0.82)":"rgba(255,255,255,0.75)"}}>23.3 California:</strong> CCPA/CPRA rights apply. Contact synapserewire@gmail.com. No sale of minors' data under 16.</p>
+              <p><strong style={{color:iL?"rgba(26,18,9,0.82)":"rgba(255,255,255,0.75)"}}>23.4 COPPA:</strong> No data collected from children under 13.</p>
+              <p style={{marginTop:20,padding:"12px 14px",background:iL?"rgba(192,225,210,0.2)":"rgba(255,140,0,0.05)",border:iL?"1px solid rgba(192,225,210,0.4)":"1px solid rgba(255,140,0,0.12)",borderRadius:8,fontSize:11,color:iL?"rgba(26,18,9,0.4)":"rgba(255,255,255,0.3)"}}>Draft template only — not legal advice. Must be reviewed by a licensed attorney before publication.</p>
+            </div>
+            <div style={{padding:"20px 28px",borderTop:iL?"1px solid rgba(192,225,210,0.4)":"1px solid rgba(255,255,255,0.06)",flexShrink:0,display:"flex",gap:12}}>
+              <button onClick={()=>{setTermsAccepted(true);setShowTerms(false);}} style={{flex:1,padding:"13px",borderRadius:12,background:iL?"linear-gradient(135deg,#c47a7a,#a85c5c)":"linear-gradient(135deg,#ff9500,#ff5000)",border:"none",color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer"}}>✓ Accept & Continue</button>
+              <button onClick={()=>setShowTerms(false)} style={{padding:"13px 20px",borderRadius:12,background:"transparent",border:iL?"1px solid rgba(192,225,210,0.5)":"1px solid rgba(255,255,255,0.1)",color:iL?"rgba(26,18,9,0.5)":"rgba(255,255,255,0.4)",fontSize:13,cursor:"pointer"}}>Cancel</button>
+            </div>
+          </div>
+        </div>
+      );
+    })()}
   );
 }
 
@@ -1469,7 +1974,7 @@ function ArchetypeStep({ onSelect, selected }) {
       </p>
 
       {/* Archetype cards grid */}
-      <div className="archetype-grid" style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(200px,1fr))",gap:16,marginBottom:52,width:"100%",boxSizing:"border-box"}}>
+      <div className="archetype-grid" style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(min(100%,280px),1fr))",gap:12,marginBottom:52,width:"100%",boxSizing:"border-box"}}>
         {ARCHETYPES.map((a, i) => {
           const isSel = selected === a.id;
           const isHov = hovered === a.id;
@@ -1481,7 +1986,7 @@ function ArchetypeStep({ onSelect, selected }) {
               onMouseLeave={()=>setHovered(null)}
               style={{
                 position:"relative", overflow:"hidden",
-                borderRadius:20, cursor:"none",
+                borderRadius:20, cursor:"pointer",
                 border:`1px solid ${active ? a.accent+"66" : "rgba(255,255,255,.06)"}`,
                 background: a.bg,
               backgroundSize: "cover",
@@ -1519,10 +2024,10 @@ function ArchetypeStep({ onSelect, selected }) {
               )}
 
               {/* Content */}
-              <div style={{padding:"36px 28px 32px",position:"relative",zIndex:2}}>
+              <div style={{padding:"clamp(20px,4vw,36px) clamp(14px,3vw,28px) clamp(18px,3vw,32px)",position:"relative",zIndex:2}}>
                 {/* Symbol */}
                 <div style={{
-                  fontSize:44, marginBottom:20,
+                  fontSize:"clamp(32px,8vw,44px)", marginBottom:16,
                   filter:`drop-shadow(0 0 16px rgba(${a.accentRgb},${active?.7:.35}))`,
                   transition:"filter .4s",
                   lineHeight:1,
@@ -1531,7 +2036,7 @@ function ArchetypeStep({ onSelect, selected }) {
                 </div>
 
                 {/* Title */}
-                <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:22,fontWeight:900,letterSpacing:3,color:active?a.accent:"rgba(255,255,255,.55)",marginBottom:4,transition:"color .3s"}}>
+                <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(14px,4vw,22px)",fontWeight:900,letterSpacing:2,color:active?a.accent:"rgba(255,255,255,.55)",marginBottom:4,transition:"color .3s"}}>
                   {a.title}
                 </div>
 
@@ -1567,7 +2072,7 @@ function ArchetypeStep({ onSelect, selected }) {
           {selected ? `${ARCHETYPES.find(a=>a.id===selected)?.title} — ${ARCHETYPES.find(a=>a.id===selected)?.sub}` : "Choose your identity"}
         </div>
         <button onClick={()=>selected && onSelect(selected, true)} disabled={!selected}
-          style={{background:selected?"linear-gradient(135deg,#ff9500,#ff5000)":"rgba(255,255,255,.04)",border:`1px solid ${selected?"transparent":"rgba(255,255,255,.08)"}`,color:selected?"#fff":"rgba(255,255,255,.2)",padding:"14px 40px",borderRadius:12,fontFamily:"'Inter',sans-serif",fontSize:13,fontWeight:700,letterSpacing:.3,transition:"all .3s",boxShadow:selected?"0 0 40px rgba(255,140,0,.4),0 6px 24px rgba(0,0,0,.4)":"none",opacity:selected?1:.4,cursor:"none"}}>
+          style={{background:selected?"linear-gradient(135deg,#ff9500,#ff5000)":"rgba(255,255,255,.04)",border:`1px solid ${selected?"transparent":"rgba(255,255,255,.08)"}`,color:selected?"#fff":"rgba(255,255,255,.2)",padding:"14px 40px",borderRadius:12,fontFamily:"'Inter',sans-serif",fontSize:13,fontWeight:700,letterSpacing:.3,transition:"all .3s",boxShadow:selected?"0 0 40px rgba(255,140,0,.4),0 6px 24px rgba(0,0,0,.4)":"none",opacity:selected?1:.4,cursor:"pointer"}}>
           Forge My Identity → Step 2
         </button>
       </div>
@@ -1578,53 +2083,41 @@ function ArchetypeStep({ onSelect, selected }) {
 function ConfessStep1({selected, onToggle, onNext}) {
   const [vis,setVis]=useState(false);
   useEffect(()=>{setTimeout(()=>setVis(true),60);},[]);
-  const isL=document.documentElement.classList.contains("light");
   return(
     <div className="step-inner" style={{minHeight:"100vh",padding:"clamp(80px,12vw,120px) 6vw 80px",width:"100%",boxSizing:"border-box",position:"relative",zIndex:2,opacity:vis?1:0,transform:vis?"translateY(0)":"translateY(24px)",transition:"all .8s cubic-bezier(.16,1,.3,1)",textAlign:"center"}}>
-      {/* Step tag */}
-      <div style={{display:"inline-flex",alignItems:"center",gap:8,background:isL?"rgba(192,225,210,.2)":"rgba(255,140,0,.07)",border:isL?"1px solid rgba(192,225,210,.5)":"1px solid rgba(255,140,0,.2)",borderRadius:999,padding:"7px 18px",marginBottom:28,animation:"tagGlow 3s ease-in-out infinite"}}>
-        <div style={{width:6,height:6,borderRadius:"50%",background:isL?"#5a9e8a":"#ff8c00",boxShadow:isL?"0 0 10px rgba(90,158,138,.6)":"0 0 10px #ff8c00"}}/>
-        <span style={{fontSize:10,fontWeight:600,letterSpacing:2.5,color:isL?"rgba(80,130,115,.8)":"rgba(255,180,80,.65)",textTransform:"uppercase"}}>Step 02 of 05 — Select Your Poisons</span>
+      <div style={{display:"inline-flex",alignItems:"center",gap:8,background:"rgba(255,140,0,.07)",border:"1px solid rgba(255,140,0,.2)",borderRadius:999,padding:"7px 18px",marginBottom:28,animation:"tagGlow 3s ease-in-out infinite"}}>
+        <div style={{width:6,height:6,borderRadius:"50%",background:"#ff8c00",boxShadow:"0 0 10px #ff8c00"}}/>
+        <span style={{fontSize:10,fontWeight:600,letterSpacing:2.5,color:"rgba(255,180,80,.65)",textTransform:"uppercase"}}>Step 02 of 05 — Select Your Poisons</span>
       </div>
-      {/* Main heading */}
       <div style={{position:"relative",lineHeight:.9,marginBottom:8}}>
-        <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(28px,7.5vw,96px)",fontWeight:900,letterSpacing:-3,background:isL?"linear-gradient(135deg,#1a1a1a 0%,#8a4a4a 55%,#c47a7a 100%)":"var(--gradient-text)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",animation:"glitch1 8s ease-in-out infinite",lineHeight:.9}}>WHAT ARE</div>
-        <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(28px,7.5vw,96px)",fontWeight:900,letterSpacing:-3,color:isL?"rgba(196,122,122,.25)":"rgba(255,80,0,.4)",animation:"glitch2 8s ease-in-out infinite",position:"absolute",top:0,left:0,lineHeight:.9}}>WHAT ARE</div>
+        <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(28px,7.5vw,96px)",fontWeight:900,letterSpacing:-3,background:"var(--gradient-text)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",animation:"glitch1 8s ease-in-out infinite",lineHeight:.9}}>WHAT ARE</div>
+        <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(28px,7.5vw,96px)",fontWeight:900,letterSpacing:-3,color:"rgba(255,80,0,.4)",animation:"glitch2 8s ease-in-out infinite",position:"absolute",top:0,left:0,lineHeight:.9}}>WHAT ARE</div>
       </div>
-      <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(28px,7.5vw,96px)",fontWeight:900,letterSpacing:-3,background:isL?"linear-gradient(135deg,#1a1a1a 0%,#8a4a4a 55%,#c47a7a 100%)":"var(--gradient-text)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",lineHeight:.9,marginBottom:24}}>YOUR POISONS?</div>
-      {/* Subtitle */}
+      <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(28px,7.5vw,96px)",fontWeight:900,letterSpacing:-3,background:"var(--gradient-text)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",lineHeight:.9,marginBottom:24}}>YOUR POISONS?</div>
       <p style={{fontSize:15,color:"var(--text3)",fontWeight:300,lineHeight:1.75,maxWidth:520,marginBottom:48,marginTop:8,textAlign:"center",marginLeft:"auto",marginRight:"auto"}}>
         Be honest. Select everything that has a grip on you —{" "}
-        <span style={{color:isL?"rgba(164,90,90,.8)":"rgba(255,180,80,.6)",fontWeight:500}}>even if it feels embarrassing.</span>
+        <span style={{color:"rgba(255,180,80,.6)",fontWeight:400}}>even if it feels embarrassing.</span>
         <br/>
         <span style={{fontSize:13,color:"var(--text4)"}}>The AI only builds a real plan if you're real with it.</span>
       </p>
-      {/* Addiction cards grid */}
       <div className="addiction-grid" style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(190px,1fr))",gap:14,marginBottom:48}}>
         {ADDICTIONS.map((a,i)=>{
           const sel=selected.includes(a.id);
           const rgb=a.color.replace('#','').match(/.{2}/g).map(x=>parseInt(x,16)).join(',');
-          const cardBg   = isL ? (sel?`rgba(${rgb},0.1)`:"rgba(229,238,228,.55)") : (sel?`rgba(${rgb},0.12)`:"rgba(255,255,255,.025)");
-          const cardBdr  = isL ? (sel?a.color+"99":"rgba(192,225,210,.45)") : (sel?a.color+"88":"rgba(255,255,255,.07)");
-          const cardShad = isL ? (sel?`0 0 24px ${a.color}18,0 6px 20px rgba(100,80,80,.12)`:"0 1px 3px rgba(100,80,80,.04)") : (sel?`0 0 30px ${a.color}22,0 8px 24px rgba(0,0,0,.4)`:"none");
-          const lblClr   = isL ? (sel?"#1a1a1a":"rgba(26,26,26,.55)") : (sel?"#fff":"rgba(255,255,255,.42)");
-          const descClr  = isL ? (sel?`${a.color}dd`:"rgba(26,26,26,.32)") : (sel?`${a.color}cc`:"rgba(255,255,255,.16)");
-          const emojiFilter = isL ? (sel?"none":"grayscale(20%) opacity(.65)") : (sel?"none":"grayscale(40%) opacity(.6)");
           return(
-            <div key={a.id} onClick={()=>onToggle(a.id)} style={{padding:"20px 18px",borderRadius:16,background:cardBg,border:`1px solid ${cardBdr}`,cursor:"none",transition:"all .25s cubic-bezier(.16,1,.3,1)",transform:sel?"translateY(-3px)":"translateY(0)",boxShadow:cardShad,animation:`fadeUp .6s cubic-bezier(.16,1,.3,1) ${i*.04}s both`,position:"relative",overflow:"hidden"}}>
-              {sel&&<div style={{position:"absolute",inset:0,background:`radial-gradient(ellipse at top left, ${a.color}${isL?"12":"18"}, transparent 65%)`,pointerEvents:"none"}}/>}
-              <div style={{fontSize:26,marginBottom:10,filter:emojiFilter,transition:"filter .25s"}}>{a.emoji}</div>
-              <div style={{fontSize:12,fontWeight:600,color:lblClr,marginBottom:3,transition:"color .25s"}}>{a.label}</div>
-              <div style={{fontSize:10,color:descClr,lineHeight:1.5,transition:"color .25s"}}>{a.desc}</div>
-              {sel&&<div style={{position:"absolute",top:10,right:10,width:16,height:16,borderRadius:"50%",background:isL?"#c47a7a":a.color,display:"flex",alignItems:"center",justifyContent:"center",fontSize:9,fontWeight:800,color:"#fff"}}>✓</div>}
+            <div key={a.id} onClick={()=>onToggle(a.id)} style={{padding:"20px 18px",borderRadius:16,background:sel?`rgba(${rgb},0.12)`:"rgba(255,255,255,.025)",border:`1px solid ${sel?a.color+"88":"rgba(255,255,255,.07)"}`,cursor:"pointer",transition:"all .25s cubic-bezier(.16,1,.3,1)",transform:sel?"translateY(-3px)":"translateY(0)",boxShadow:sel?`0 0 30px ${a.color}22,0 8px 24px rgba(0,0,0,.4)`:"none",animation:`fadeUp .6s cubic-bezier(.16,1,.3,1) ${i*.04}s both`,position:"relative",overflow:"hidden"}}>
+              {sel&&<div style={{position:"absolute",inset:0,background:`radial-gradient(ellipse at top left, ${a.color}18, transparent 65%)`,pointerEvents:"none"}}/>}
+              <div style={{fontSize:26,marginBottom:10,filter:sel?"none":"grayscale(40%) opacity(.6)",transition:"filter .25s"}}>{a.emoji}</div>
+              <div style={{fontSize:12,fontWeight:600,color:sel?"#fff":"rgba(255,255,255,.42)",marginBottom:3,transition:"color .25s"}}>{a.label}</div>
+              <div style={{fontSize:10,color:sel?`${a.color}cc`:"rgba(255,255,255,.16)",lineHeight:1.5,transition:"color .25s"}}>{a.desc}</div>
+              {sel&&<div style={{position:"absolute",top:10,right:10,width:16,height:16,borderRadius:"50%",background:a.color,display:"flex",alignItems:"center",justifyContent:"center",fontSize:9,fontWeight:800,color:"#000"}}>✓</div>}
             </div>
           );
         })}
       </div>
-      {/* Footer */}
-      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",paddingTop:24,borderTop:isL?"1px solid rgba(192,225,210,.4)":"1px solid rgba(255,140,0,.08)"}}>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",paddingTop:24,borderTop:"1px solid rgba(255,140,0,.08)"}}>
         <div style={{fontSize:12,color:"var(--text4)",fontFamily:"'JetBrains Mono',monospace",letterSpacing:1}}>{selected.length===0?"Select at least one":`${selected.length} poison${selected.length>1?"s":""} identified`}</div>
-        <button onClick={onNext} disabled={selected.length===0} style={{background:isL?"linear-gradient(135deg,#c47a7a,#a85c5c)":"linear-gradient(135deg,#ff9500,#ff5000)",border:"none",color:"#fff",padding:"14px 40px",borderRadius:12,fontFamily:"'Inter',sans-serif",fontSize:13,fontWeight:700,letterSpacing:.3,transition:"all .3s",boxShadow:selected.length?(isL?"0 0 30px rgba(196,122,122,.3),0 6px 20px rgba(168,92,92,.25)":"0 0 40px rgba(255,140,0,.4),0 6px 24px rgba(0,0,0,.4)"):"none",opacity:selected.length?1:.35,cursor:"none"}}>
+        <button onClick={onNext} disabled={selected.length===0} style={{background:"linear-gradient(135deg,#ff9500,#ff5000)",border:"none",color:"var(--text)",padding:"14px 40px",borderRadius:12,fontFamily:"'Inter',sans-serif",fontSize:13,fontWeight:700,letterSpacing:.3,transition:"all .3s",boxShadow:selected.length?"0 0 40px rgba(255,140,0,.4),0 6px 24px rgba(0,0,0,.4)":"none",opacity:selected.length?1:.3,cursor:"pointer"}}>
           Analyze Damage → Step 2
         </button>
       </div>
@@ -1709,8 +2202,8 @@ function ConfessStep2({selected, hours, onHoursChange, onNext, onBack}) {
         </div>
       )}
       <div style={{display:"flex",gap:14,justifyContent:"space-between",paddingTop:24,borderTop:"1px solid rgba(255,140,0,.08)"}}>
-        <button onClick={onBack} style={{background:"rgba(255,255,255,.04)",border:"1px solid rgba(255,255,255,.1)",color:"var(--text3)",padding:"13px 28px",borderRadius:12,fontFamily:"'Inter',sans-serif",fontSize:13,fontWeight:500,transition:"all .25s",cursor:"none"}}>← Back</button>
-        <button onClick={onNext} disabled={!hasAnyValue} style={{background:"linear-gradient(135deg,#ff9500,#ff5000)",border:"none",color:"var(--text)",padding:"14px 40px",borderRadius:12,fontFamily:"'Inter',sans-serif",fontSize:13,fontWeight:700,letterSpacing:.3,transition:"all .3s",boxShadow:hasAnyValue?"0 0 40px rgba(255,140,0,.4),0 6px 24px rgba(0,0,0,.4)":"none",opacity:hasAnyValue?1:.3,cursor:"none"}}>
+        <button onClick={onBack} style={{background:"rgba(255,255,255,.04)",border:"1px solid rgba(255,255,255,.1)",color:"var(--text3)",padding:"13px 28px",borderRadius:12,fontFamily:"'Inter',sans-serif",fontSize:13,fontWeight:500,transition:"all .25s",cursor:"pointer"}}>← Back</button>
+        <button onClick={onNext} disabled={!hasAnyValue} style={{background:"linear-gradient(135deg,#ff9500,#ff5000)",border:"none",color:"var(--text)",padding:"14px 40px",borderRadius:12,fontFamily:"'Inter',sans-serif",fontSize:13,fontWeight:700,letterSpacing:.3,transition:"all .3s",boxShadow:hasAnyValue?"0 0 40px rgba(255,140,0,.4),0 6px 24px rgba(0,0,0,.4)":"none",opacity:hasAnyValue?1:.3,cursor:"pointer"}}>
           See What You're Losing → Step 3
         </button>
       </div>
@@ -1747,7 +2240,7 @@ function ConfessStep3({selected, hours, onNext, onBack}) {
         </div>
       </div>
       <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:24}}>
-        {selectedAddictions.map((a,i)=>{ const r2=a.color.replace('#','').match(/.{2}/g).map(x=>parseInt(x,16)).join(','); return(<button key={a.id} onClick={()=>setActiveIdx(i)} style={{display:"flex",alignItems:"center",gap:6,padding:"8px 16px",borderRadius:999,border:`1px solid ${activeIdx===i?a.color+"88":"rgba(255,255,255,.07)"}`,background:activeIdx===i?`rgba(${r2},.12)`:"rgba(255,255,255,.03)",color:activeIdx===i?"#fff":"rgba(255,255,255,.28)",fontSize:11,fontWeight:600,transition:"all .2s",cursor:"none"}}><span>{a.emoji}</span><span>{a.label}</span></button>); })}
+        {selectedAddictions.map((a,i)=>{ const r2=a.color.replace('#','').match(/.{2}/g).map(x=>parseInt(x,16)).join(','); return(<button key={a.id} onClick={()=>setActiveIdx(i)} style={{display:"flex",alignItems:"center",gap:6,padding:"8px 16px",borderRadius:999,border:`1px solid ${activeIdx===i?a.color+"88":"rgba(255,255,255,.07)"}`,background:activeIdx===i?`rgba(${r2},.12)`:"rgba(255,255,255,.03)",color:activeIdx===i?"#fff":"rgba(255,255,255,.28)",fontSize:11,fontWeight:600,transition:"all .2s",cursor:"pointer"}}><span>{a.emoji}</span><span>{a.label}</span></button>); })}
       </div>
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16,marginBottom:36}}>
         <div style={{background:`rgba(${rgb},.06)`,border:`1px solid rgba(${rgb},.2)`,borderRadius:16,padding:"28px 24px",animation:"scaleIn .4s cubic-bezier(.16,1,.3,1) both"}}>
@@ -1770,8 +2263,8 @@ function ConfessStep3({selected, hours, onNext, onBack}) {
         {[[`${totalHours}h`,"stolen every day"],[`${Math.round(totalHours*30)}h`,"this month"],[`${Math.round(totalHours*365/24)} days`,"this year"],[`${Math.round(totalHours*365*10/24/365)} years`,"in 10 years"]].map(([v,l])=>(<div key={l}><div style={{fontFamily:"'Orbitron',sans-serif",fontSize:20,fontWeight:800,color:"#ff6644",letterSpacing:-1,lineHeight:1}}>{v}</div><div style={{fontSize:9,color:"var(--text4)",marginTop:3,letterSpacing:.5}}>{l}</div></div>))}
       </div>
       <div style={{display:"flex",gap:14,justifyContent:"space-between",paddingTop:24,borderTop:"1px solid rgba(255,140,0,.08)"}}>
-        <button onClick={onBack} style={{background:"rgba(255,255,255,.04)",border:"1px solid rgba(255,255,255,.1)",color:"var(--text3)",padding:"13px 28px",borderRadius:12,fontFamily:"'Inter',sans-serif",fontSize:13,fontWeight:500,transition:"all .25s",cursor:"none"}}>← Back</button>
-        <button onClick={onNext} style={{background:"linear-gradient(135deg,#ff9500,#ff5000)",border:"none",color:"var(--text)",padding:"14px 40px",borderRadius:12,fontFamily:"'Inter',sans-serif",fontSize:13,fontWeight:700,letterSpacing:.3,transition:"all .3s",boxShadow:"0 0 40px rgba(255,140,0,.4),0 6px 24px rgba(0,0,0,.4)",cursor:"none"}}>
+        <button onClick={onBack} style={{background:"rgba(255,255,255,.04)",border:"1px solid rgba(255,255,255,.1)",color:"var(--text3)",padding:"13px 28px",borderRadius:12,fontFamily:"'Inter',sans-serif",fontSize:13,fontWeight:500,transition:"all .25s",cursor:"pointer"}}>← Back</button>
+        <button onClick={onNext} style={{background:"linear-gradient(135deg,#ff9500,#ff5000)",border:"none",color:"var(--text)",padding:"14px 40px",borderRadius:12,fontFamily:"'Inter',sans-serif",fontSize:13,fontWeight:700,letterSpacing:.3,transition:"all .3s",boxShadow:"0 0 40px rgba(255,140,0,.4),0 6px 24px rgba(0,0,0,.4)",cursor:"pointer"}}>
           I'm Ready. Build My Plan → Step 4
         </button>
       </div>
@@ -1838,10 +2331,10 @@ function ConfessStep4({selected, hours, onSubmit, loading, onBack}) {
       </div>
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:16,paddingTop:8}}>
         <div style={{display:"flex",gap:12}}>
-          <button onClick={onBack} style={{background:"rgba(255,255,255,.04)",border:"1px solid rgba(255,255,255,.1)",color:"var(--text3)",padding:"13px 24px",borderRadius:12,fontFamily:"'Inter',sans-serif",fontSize:13,fontWeight:500,transition:"all .25s",cursor:"none"}}>← Back</button>
+          <button onClick={onBack} style={{background:"rgba(255,255,255,.04)",border:"1px solid rgba(255,255,255,.1)",color:"var(--text3)",padding:"13px 24px",borderRadius:12,fontFamily:"'Inter',sans-serif",fontSize:13,fontWeight:500,transition:"all .25s",cursor:"pointer"}}>← Back</button>
           <div style={{fontSize:11,color:"var(--text4)",fontFamily:"'JetBrains Mono',monospace",letterSpacing:.5,lineHeight:1.7,display:"flex",alignItems:"center"}}>🔒 Never stored or shared</div>
         </div>
-        <button onClick={()=>onSubmit(buildPrompt())} disabled={loading} style={{background:"linear-gradient(135deg,#ff9500,#ff5000)",border:"none",color:"var(--text)",padding:"16px 48px",borderRadius:14,fontFamily:"'Inter',sans-serif",fontSize:14,fontWeight:800,letterSpacing:.5,transition:"all .3s cubic-bezier(.16,1,.3,1)",boxShadow:"0 0 50px rgba(255,140,0,.5),0 0 100px rgba(255,80,0,.2),0 8px 28px rgba(0,0,0,.5)",cursor:"none"}}>
+        <button onClick={()=>onSubmit(buildPrompt())} disabled={loading} style={{background:"linear-gradient(135deg,#ff9500,#ff5000)",border:"none",color:"var(--text)",padding:"16px 48px",borderRadius:14,fontFamily:"'Inter',sans-serif",fontSize:14,fontWeight:800,letterSpacing:.5,transition:"all .3s cubic-bezier(.16,1,.3,1)",boxShadow:"0 0 50px rgba(255,140,0,.5),0 0 100px rgba(255,80,0,.2),0 8px 28px rgba(0,0,0,.5)",cursor:"pointer"}}>
           {loading?"Building Your Battle Plan...":"Generate My Battle Plan 🔥"}
         </button>
       </div>
@@ -1884,26 +2377,18 @@ function Confess({onSubmit,loading}) {
   };
 
   const steps=["Archetype","Poisons","Damage","Cost","Plan"];
-  const isL=document.documentElement.classList.contains("light");
   return(
     <div style={{minHeight:"100vh",background:"var(--bg)",position:"relative",overflowX:"hidden",width:"100%"}}>
-      {/* Full-screen background */}
+      {/* Full-screen background - no gaps */}
       <div style={{position:"fixed",inset:0,background:"var(--bg)",zIndex:-1,pointerEvents:"none"}}/>
       <div style={{position:"fixed",inset:0,pointerEvents:"none",zIndex:0}}>
-        <div style={{position:"absolute",top:"-10%",right:"-5%",width:700,height:700,background:isL?"radial-gradient(circle,rgba(192,225,210,.35) 0%,transparent 65%)":"radial-gradient(circle,rgba(255,90,0,.07) 0%,transparent 65%)"}}/>
-        <div style={{position:"absolute",bottom:"10%",left:"-8%",width:500,height:500,background:isL?"radial-gradient(circle,rgba(220,155,155,.18) 0%,transparent 70%)":"radial-gradient(circle,rgba(255,140,0,.04) 0%,transparent 70%)"}}/>
+        <div style={{position:"absolute",top:"-10%",right:"-5%",width:700,height:700,background:"radial-gradient(circle,rgba(255,90,0,.07) 0%,transparent 65%)"}}/>
+        <div style={{position:"absolute",bottom:"10%",left:"-8%",width:500,height:500,background:"radial-gradient(circle,rgba(255,140,0,.04) 0%,transparent 70%)"}}/>
       </div>
       {/* Step progress bar */}
-      <div className="step-bar-outer" style={{position:"fixed",top:72,left:0,right:0,zIndex:400,padding:"0",background:isL?"rgba(246,244,232,.92)":"rgba(6,3,10,.85)",backdropFilter:"blur(20px)",borderBottom:isL?"1px solid rgba(192,225,210,.35)":"1px solid rgba(255,140,0,.07)"}}>
+      <div className="step-bar-outer" style={{position:"fixed",top:72,left:0,right:0,zIndex:400,padding:"0",background:"rgba(6,3,10,.85)",backdropFilter:"blur(20px)",borderBottom:"1px solid rgba(255,140,0,.07)"}}>
         <div style={{width:"100%",display:"flex",alignItems:"center",padding:"12px 6vw",gap:4,overflowX:"auto"}}>
-          {steps.map((s,i)=>{ const done=step>i,active=step===i;
-            const dotBg  = isL ? (done?"#c47a7a":active?"rgba(196,122,122,.2)":"rgba(26,26,26,.06)") : (done?"#ff8c00":active?"rgba(255,140,0,.18)":"rgba(255,255,255,.04)");
-            const dotBdr = isL ? (done||active?"rgba(196,122,122,.6)":"rgba(26,26,26,.12)") : (done||active?"rgba(255,140,0,.55)":"rgba(255,255,255,.09)");
-            const dotClr = isL ? (done?"#fff":active?"rgba(164,90,90,.85)":"rgba(26,26,26,.22)") : (done?"#fff":active?"rgba(255,180,80,.75)":"rgba(255,255,255,.18)");
-            const lblClr = isL ? (active?"rgba(164,90,90,.9)":done?"rgba(196,122,122,.65)":"rgba(26,26,26,.25)") : (active?"rgba(255,180,80,.75)":done?"rgba(255,140,0,.55)":"rgba(255,255,255,.18)");
-            const lineBg = isL ? (done?"rgba(196,122,122,.4)":"rgba(26,26,26,.08)") : (done?"rgba(255,140,0,.35)":"rgba(255,255,255,.05)");
-            return(<div key={s} style={{display:"flex",alignItems:"center",gap:4,flex:i<steps.length-1?1:"auto"}}><div style={{display:"flex",alignItems:"center",gap:7}}><div style={{width:22,height:22,borderRadius:"50%",background:dotBg,border:`1px solid ${dotBdr}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:9,fontWeight:700,color:dotClr,transition:"all .3s",flexShrink:0}}>{done?"✓":i+1}</div><span style={{fontSize:10,letterSpacing:1,textTransform:"uppercase",fontWeight:500,color:lblClr,transition:"all .3s",whiteSpace:"nowrap"}} className="step-label">{s}</span></div>{i<steps.length-1&&<div style={{flex:1,height:1,background:lineBg,marginLeft:6,transition:"background .3s"}}/>}</div>);
-          })}
+          {steps.map((s,i)=>{ const done=step>i,active=step===i; return(<div key={s} style={{display:"flex",alignItems:"center",gap:4,flex:i<steps.length-1?1:"auto"}}><div style={{display:"flex",alignItems:"center",gap:7}}><div style={{width:22,height:22,borderRadius:"50%",background:done?"#ff8c00":active?"rgba(255,140,0,.18)":"rgba(255,255,255,.04)",border:`1px solid ${done||active?"rgba(255,140,0,.55)":"rgba(255,255,255,.09)"}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:9,fontWeight:700,color:done?"#fff":active?"rgba(255,180,80,.75)":"rgba(255,255,255,.18)",transition:"all .3s",flexShrink:0}}>{done?"✓":i+1}</div><span style={{fontSize:10,letterSpacing:1,textTransform:"uppercase",fontWeight:500,color:active?"rgba(255,180,80,.75)":done?"rgba(255,140,0,.55)":"rgba(255,255,255,.18)",transition:"all .3s",whiteSpace:"nowrap"}} className="step-label">{s}</span></div>{i<steps.length-1&&<div style={{flex:1,height:1,background:done?"rgba(255,140,0,.35)":"rgba(255,255,255,.05)",marginLeft:6,transition:"background .3s"}}/>}</div>); })}
         </div>
       </div>
       {step===0&&<ArchetypeStep selected={archetype} onSelect={handleArchetypeSelect}/>}
@@ -2305,7 +2790,7 @@ function Plan({plan,loading,onBegin,onRetry}) {
               ?<div style={{marginTop:40,paddingTop:28,borderTop:"1px solid rgba(255,140,0,0.08)",animation:"fadeUp .6s ease both"}}><button className="btn-primary" onClick={onRetry} style={{fontSize:14,padding:"16px 48px",background:"linear-gradient(135deg,#cc4400,#992200)"}}>← Back to Confess & Retry</button></div>
               :<div style={{marginTop:40,paddingTop:28,borderTop:"1px solid rgba(255,140,0,0.08)",display:"flex",gap:16,flexWrap:"wrap",animation:"fadeUp .6s ease both"}}>
                   <button className="btn-primary" onClick={()=>onBegin(plan)} style={{fontSize:14,padding:"16px 48px"}}>Begin Day 1 →</button>
-                  <button onClick={printPlan} style={{background:"rgba(255,140,0,0.07)",border:"1px solid rgba(255,140,0,0.25)",color:"rgba(255,180,80,0.8)",padding:"16px 28px",borderRadius:12,fontFamily:"'Inter',sans-serif",fontSize:13,fontWeight:600,letterSpacing:.3,cursor:"none",transition:"all .3s",display:"flex",alignItems:"center",gap:8}} onMouseEnter={e=>{e.currentTarget.style.background="rgba(255,140,0,0.12)";e.currentTarget.style.borderColor="rgba(255,140,0,0.45)";}} onMouseLeave={e=>{e.currentTarget.style.background="rgba(255,140,0,0.07)";e.currentTarget.style.borderColor="rgba(255,140,0,0.25)";}}>
+                  <button onClick={printPlan} style={{background:"rgba(255,140,0,0.07)",border:"1px solid rgba(255,140,0,0.25)",color:"rgba(255,180,80,0.8)",padding:"16px 28px",borderRadius:12,fontFamily:"'Inter',sans-serif",fontSize:13,fontWeight:600,letterSpacing:.3,cursor:"pointer",transition:"all .3s",display:"flex",alignItems:"center",gap:8}} onMouseEnter={e=>{e.currentTarget.style.background="rgba(255,140,0,0.12)";e.currentTarget.style.borderColor="rgba(255,140,0,0.45)";}} onMouseLeave={e=>{e.currentTarget.style.background="rgba(255,140,0,0.07)";e.currentTarget.style.borderColor="rgba(255,140,0,0.25)";}}>
                     <span>⬇</span><span>Download Plan</span>
                   </button>
                 </div>
@@ -2323,7 +2808,7 @@ function BattlePlanAccordion({plan}) {
   if(!plan) return null;
   return(
     <div style={{marginBottom:32}}>
-      <button onClick={()=>setOpen(o=>!o)} style={{width:"100%",background:"rgba(255,140,0,0.03)",border:"1px solid rgba(255,140,0,0.14)",borderRadius:12,padding:"14px 22px",color:"rgba(255,180,80,0.6)",cursor:"none",display:"flex",justifyContent:"space-between",alignItems:"center",transition:"all .3s",fontSize:11,letterSpacing:2,textTransform:"uppercase",fontFamily:"'Orbitron',sans-serif",fontWeight:600}}>
+      <button onClick={()=>setOpen(o=>!o)} style={{width:"100%",background:"rgba(255,140,0,0.03)",border:"1px solid rgba(255,140,0,0.14)",borderRadius:12,padding:"14px 22px",color:"rgba(255,180,80,0.6)",cursor:"pointer",display:"flex",justifyContent:"space-between",alignItems:"center",transition:"all .3s",fontSize:11,letterSpacing:2,textTransform:"uppercase",fontFamily:"'Orbitron',sans-serif",fontWeight:600}}>
         <span>📋 My Battle Plan</span>
         <span style={{fontSize:16,transform:open?"rotate(180deg)":"rotate(0deg)",transition:"transform .3s"}}>↓</span>
       </button>
@@ -2554,23 +3039,23 @@ function Checkin({streak,savedPlan,lastCheckin,onCheckin,onGoChat}) {
   return(
     <div style={{minHeight:"100vh",paddingTop:80,position:"relative",overflowX:"hidden"}}>
       {/* Hero streak */}
-      <div className="hero-pad" style={{padding:"clamp(60px,8vw,80px) clamp(20px,8vw,100px) clamp(40px,5vw,64px)",borderBottom:"1px solid rgba(255,140,0,0.07)",position:"relative",zIndex:1,minHeight:"52vh",display:"flex",flexDirection:"column",justifyContent:"flex-end"}}>
-        <div style={{position:"absolute",inset:0,background:`radial-gradient(ellipse at 65% 55%, rgba(${lv.hex},0.12) 0%, transparent 60%)`,pointerEvents:"none",transition:"background 1s"}}/>
+      <div className="hero-pad" style={{padding:"clamp(60px,8vw,80px) clamp(20px,8vw,100px) clamp(40px,5vw,64px)",borderBottom:document.documentElement.classList.contains("light")?"1px solid rgba(192,225,210,0.4)":"1px solid rgba(255,140,0,0.07)",position:"relative",zIndex:1,minHeight:"52vh",display:"flex",flexDirection:"column",justifyContent:"flex-end"}}>
+        <div style={{position:"absolute",inset:0,background:document.documentElement.classList.contains("light")?`radial-gradient(ellipse at 65% 55%, rgba(${lv.hex},0.07) 0%, transparent 60%)`:`radial-gradient(ellipse at 65% 55%, rgba(${lv.hex},0.12) 0%, transparent 60%)`,pointerEvents:"none",transition:"background 1s"}}/>
         {[100,180,260].map((s,i)=><div key={i} style={{position:"absolute",top:"45%",right:"30%",width:s,height:s,borderRadius:"50%",border:`1px solid rgba(${lv.hex},0.2)`,animation:`ringOut ${3.5+i*.8}s ease-out ${i*.6}s infinite`,pointerEvents:"none"}}/>)}
         <div style={{opacity:entered?1:0,transform:entered?"translateY(0)":"translateY(24px)",transition:"all .9s cubic-bezier(.16,1,.3,1)",position:"relative",zIndex:2}}>
           <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:20,flexWrap:"wrap"}}>
             <div className="tag"><span className="d"/>Current Streak</div>
             {(()=>{ try{ const arch=JSON.parse(ls.get("syn_archetype","null")); if(!arch) return null; const ad=ARCHETYPES.find(a=>a.id===arch.id); return(<div style={{display:"inline-flex",alignItems:"center",gap:6,background:`rgba(${ad?.accentRgb||"255,140,0"},0.08)`,border:`1px solid rgba(${ad?.accentRgb||"255,140,0"},0.22)`,borderRadius:999,padding:"5px 14px"}}><span style={{fontSize:13}}>{arch.id==="sovereign"?"♛":arch.id==="arbiter"?"⚖":arch.id==="stoic"?"🌳":"▲"}</span><span style={{fontSize:10,letterSpacing:1.5,fontWeight:600,color:`rgba(${ad?.accentRgb||"255,180,80"},0.75)`,textTransform:"uppercase"}}>{arch.title}</span></div>); }catch{return null;} })()}
           </div>
-          <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(72px,16vw,200px)",fontWeight:800,lineHeight:.85,color:"var(--text)",marginBottom:12,textShadow:`0 0 80px rgba(${lv.hex},0.25)`,transition:"text-shadow 1s"}}><AnimatedNumber target={streak}/></div>
-          <div style={{fontSize:11,letterSpacing:5,color:"var(--text3)",textTransform:"uppercase",marginBottom:24}}>Days Clean</div>
+          <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(72px,16vw,200px)",fontWeight:800,lineHeight:.85,color:"var(--text)",marginBottom:12,textShadow:document.documentElement.classList.contains("light")?`0 2px 0 rgba(0,0,0,0.08),0 0 40px rgba(${lv.hex},0.1)`:`0 0 80px rgba(${lv.hex},0.25)`,transition:"text-shadow 1s"}}><AnimatedNumber target={streak}/></div>
+          <div style={{fontSize:11,letterSpacing:5,color:document.documentElement.classList.contains("light")?"rgba(26,26,26,0.6)":"var(--text3)",textTransform:"uppercase",marginBottom:24,fontWeight:600}}>Days Clean</div>
           <div style={{display:"inline-flex",alignItems:"center",gap:9,background:`rgba(${lv.hex},0.09)`,border:`1px solid rgba(${lv.hex},0.3)`,borderRadius:999,padding:"9px 22px",marginBottom:32,transition:"all .8s"}}>
             <div style={{width:7,height:7,borderRadius:"50%",background:lv.color,boxShadow:`0 0 12px ${lv.color}`,transition:"all .8s"}}/>
-            <span style={{fontSize:11,letterSpacing:2,color:lv.color,textTransform:"uppercase",fontWeight:600,transition:"color .8s"}}>Level {lv.level} — {lv.title}</span>
+            <span style={{fontSize:11,letterSpacing:2,color:document.documentElement.classList.contains("light")?lv.color.replace("0.","0.9"):lv.color,textTransform:"uppercase",fontWeight:700,transition:"color .8s"}}>Level {lv.level} — {lv.title}</span>
           </div>
           <div style={{maxWidth:480}}>
-            <div style={{display:"flex",justifyContent:"space-between",fontSize:10,color:"var(--text4)",letterSpacing:1,textTransform:"uppercase",marginBottom:10}}><span>{lv.title}</span><span>{nx?`${streak} / ${nx.minDays} days`:"MAX LEVEL REACHED"}</span></div>
-            <div style={{height:3,background:"rgba(255,255,255,0.05)",borderRadius:2,overflow:"hidden"}}><div style={{height:"100%",borderRadius:2,background:`linear-gradient(90deg,${lv.color}cc,${lv.color})`,boxShadow:`0 0 14px ${lv.color}80`,width:`${xp}%`,transition:"width 1.6s cubic-bezier(.16,1,.3,1) .3s"}}/></div>
+            <div style={{display:"flex",justifyContent:"space-between",fontSize:10,color:document.documentElement.classList.contains("light")?"rgba(26,26,26,0.45)":"var(--text4)",letterSpacing:1,textTransform:"uppercase",marginBottom:10,fontWeight:500}}><span>{lv.title}</span><span>{nx?`${streak} / ${nx.minDays} days`:"MAX LEVEL REACHED"}</span></div>
+            <div style={{height:4,background:document.documentElement.classList.contains("light")?"rgba(0,0,0,0.08)":"rgba(255,255,255,0.05)",borderRadius:2,overflow:"hidden"}}><div style={{height:"100%",borderRadius:2,background:`linear-gradient(90deg,${lv.color}cc,${lv.color})`,boxShadow:`0 0 14px ${lv.color}80`,width:`${xp}%`,transition:"width 1.6s cubic-bezier(.16,1,.3,1) .3s"}}/></div>
           </div>
         </div>
       </div>
@@ -2705,7 +3190,7 @@ function Checkin({streak,savedPlan,lastCheckin,onCheckin,onGoChat}) {
                 const w=window.open("","_blank","width=900,height=800");
                 w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"/><title>SYNAPSE — Battle Plan</title><style>@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Inter:wght@300;400;500;600;700&display=swap');*{margin:0;padding:0;box-sizing:border-box;word-wrap:break-word;overflow-wrap:break-word;}@page{margin:0.5in 0.6in;size:A4 portrait;}html,body{background:#fff;color:#111;font-family:'Inter',sans-serif;font-size:10px;line-height:1.35;}body{width:100%;padding:0;}.header{display:flex;align-items:center;justify-content:space-between;padding:0 0 8px;border-bottom:1.5px solid #f0f0f0;margin-bottom:6px;}.brand{display:flex;align-items:center;gap:7px;}.brand-logo{width:22px;height:22px;border-radius:5px;background:linear-gradient(135deg,#ff9500,#ff5000);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;font-family:'Orbitron',sans-serif;color:#fff;flex-shrink:0;}.brand-name{font-family:'Orbitron',sans-serif;font-size:11px;font-weight:900;letter-spacing:2px;color:#ff6000;line-height:1;}.brand-tagline{font-size:6.5px;color:#bbb;letter-spacing:2px;text-transform:uppercase;margin-top:1px;}.doc-title{font-family:'Orbitron',sans-serif;font-size:15px;font-weight:900;color:#111;letter-spacing:-0.5px;line-height:1;text-align:right;}.doc-subtitle{font-size:6.5px;color:#e06000;letter-spacing:1.5px;text-transform:uppercase;font-weight:600;margin-top:2px;text-align:right;}.meta{display:flex;gap:16px;padding:5px 0;border-bottom:1px solid #f5f5f5;margin-bottom:8px;align-items:center;flex-wrap:wrap;}.meta-label{font-size:6px;color:#ccc;letter-spacing:1.5px;text-transform:uppercase;font-weight:600;}.meta-value{font-size:10px;color:#111;font-weight:600;margin-top:1px;}.arch-badge{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:999px;border:1px solid #ffb347;background:#fff8f0;font-family:'Orbitron',sans-serif;font-size:7.5px;font-weight:700;color:#b35000;letter-spacing:0.5px;}.section-label{font-size:6.5px;color:#e06000;letter-spacing:2.5px;text-transform:uppercase;font-weight:700;margin-bottom:6px;}.card{border:1px solid #f0f0f0;border-left:2.5px solid #ff6000;border-radius:4px;padding:8px 12px;}.plan-text{font-size:9.5px;line-height:1.55;color:#222;}.plan-text p{margin-bottom:0;}.plan-text h3{font-size:7.5px;font-weight:700;color:#c05000;letter-spacing:1.5px;text-transform:uppercase;margin:8px 0 3px;padding-top:6px;border-top:1px solid #f5f5f5;}.plan-text h3:first-child{margin-top:0;padding-top:0;border-top:none;}.plan-text hr{border:none;border-top:1px solid #f5f5f5;margin:5px 0;}.plan-text strong{color:#b35000;font-weight:700;}.plan-text div[style]{height:3px!important;}.footer{display:flex;justify-content:space-between;padding:5px 0 0;border-top:1px solid #f5f5f5;margin-top:6px;font-size:6.5px;color:#ccc;}.watermark{position:fixed;bottom:-10px;right:-5px;font-family:'Orbitron',sans-serif;font-size:100px;font-weight:900;color:rgba(255,100,0,.03);pointer-events:none;line-height:1;}.print-btn{position:fixed;top:10px;right:10px;background:linear-gradient(135deg,#ff9500,#ff5000);border:none;color:#fff;padding:7px 18px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;z-index:999;}@media print{.print-btn{display:none!important;}}@media screen{body{max-width:680px;margin:0 auto;padding:20px;background:#f8f8f8;}.page{background:#fff;padding:0.35in 0.45in;box-shadow:0 2px 20px rgba(0,0,0,.1);border-radius:4px;}}</style></head><body><button class="print-btn" onclick="window.print()">⬇ Save as PDF</button><div class="watermark">S</div><div class="page"><div class="header"><div class="brand"><div class="brand-logo">S</div><div><div class="brand-name">SYNAPSE</div><div class="brand-tagline">Dopamine Recovery Protocol</div></div></div><div style="text-align:right"><div class="doc-title">BATTLE PLAN</div><div class="doc-subtitle">Personalized Recovery Protocol — Classified</div></div></div><div class="meta"><div><div class="meta-label">Soldier</div><div class="meta-value">${user.name||"Anonymous"}</div></div><div><div class="meta-label">Streak</div><div class="meta-value">Day ${streakVal}</div></div><div><div class="meta-label">Issued</div><div class="meta-value">${date}</div></div><div><div class="meta-label">Archetype</div><div class="arch-badge">${archSymbol} ${archName}</div></div></div><div class="content"><div class="section-label">Mission Briefing</div><div class="card"><div class="plan-text">${formatted}</div></div></div><div class="footer"><div>Generated by SYNAPSE • synapserewire@gmail.com</div><div>synapse-parth.vercel.app • ${date}</div></div></div></body></html>`);
                 w.document.close();
-              }} style={{flexShrink:0,background:"var(--accent3)",border:"1px solid var(--border)",color:"var(--accent2)",padding:"10px 14px",borderRadius:10,fontSize:11,fontWeight:600,cursor:"none",transition:"all .25s",whiteSpace:"nowrap"}}>⬇ Plan</button>
+              }} style={{flexShrink:0,background:"var(--accent3)",border:"1px solid var(--border)",color:"var(--accent2)",padding:"10px 14px",borderRadius:10,fontSize:11,fontWeight:600,cursor:"pointer",transition:"all .25s",whiteSpace:"nowrap"}}>⬇ Plan</button>
             </div>}
 
             {/* Submit button */}
@@ -3024,7 +3509,7 @@ function Report({history,savedPlan,streak,planHistory}) {
         <div className="tag s1" style={{marginBottom:16}}><span className="d"/>Your Battle Plan</div>
         {savedPlan?(
           <>
-            <button onClick={()=>setPlanOpen(o=>!o)} style={{width:"100%",background:"rgba(255,140,0,0.04)",border:"1px solid rgba(255,140,0,0.18)",borderRadius:12,padding:"18px 24px",color:"rgba(255,180,80,0.8)",cursor:"none",display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:planOpen?0:32,transition:"all .3s",fontSize:13,letterSpacing:1,textTransform:"uppercase",fontFamily:"'Orbitron',sans-serif",fontWeight:600}}>
+            <button onClick={()=>setPlanOpen(o=>!o)} style={{width:"100%",background:"rgba(255,140,0,0.04)",border:"1px solid rgba(255,140,0,0.18)",borderRadius:12,padding:"18px 24px",color:"rgba(255,180,80,0.8)",cursor:"pointer",display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:planOpen?0:32,transition:"all .3s",fontSize:13,letterSpacing:1,textTransform:"uppercase",fontFamily:"'Orbitron',sans-serif",fontWeight:600}}>
               <span>📋 View My Battle Plan</span>
               <span style={{fontSize:18,transform:planOpen?"rotate(180deg)":"rotate(0deg)",transition:"transform .3s"}}>↓</span>
             </button>
@@ -3045,7 +3530,7 @@ function Report({history,savedPlan,streak,planHistory}) {
           <>
             <div className="tag s1" style={{marginBottom:16,marginTop:16}}><span className="d"/>Previous Plans</div>
             {planHistory.map((p,i)=>(
-              <div key={i} className="glass" style={{padding:"20px 24px",marginBottom:10,cursor:"none"}} onClick={()=>setOldPlanIdx(oldPlanIdx===i?null:i)}>
+              <div key={i} className="glass" style={{padding:"20px 24px",marginBottom:10,cursor:"pointer"}} onClick={()=>setOldPlanIdx(oldPlanIdx===i?null:i)}>
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
                   <span style={{fontSize:11,color:"rgba(255,140,0,0.4)",letterSpacing:1}}>Plan from {new Date(p.date).toLocaleDateString()}</span>
                   <span style={{fontSize:12,color:"var(--text4)"}}>{oldPlanIdx===i?"▲":"▼"}</span>
@@ -3066,19 +3551,10 @@ const OFF_TOPIC_MSG="Stay on mission, soldier. I only respond to questions about
 
 function ChatBubble({msg,idx}){
   const isUser=msg.role==="user";
-  const isL=document.documentElement.classList.contains("light");
-  const aiBg  =isL?(msg.crisis?"linear-gradient(135deg,rgba(70,150,255,.08),rgba(40,100,255,.04))":"rgba(229,238,228,.75)"):(msg.crisis?"linear-gradient(135deg,rgba(70,150,255,.08),rgba(40,100,255,.04))":"rgba(255,255,255,.04)");
-  const aiBdr =isL?(msg.crisis?"rgba(100,180,255,.25)":msg.offTopic?"rgba(220,80,80,.2)":"rgba(192,225,210,.55)"):(msg.crisis?"rgba(100,180,255,.25)":msg.offTopic?"rgba(255,80,80,.2)":"rgba(255,255,255,.07)");
-  const aiClr =isL?(msg.offTopic?"rgba(180,60,60,.8)":"rgba(26,26,26,.78)"):(msg.offTopic?"rgba(255,120,120,.75)":"rgba(255,255,255,.65)");
-  const userBg=isL?"linear-gradient(135deg,rgba(196,122,122,.18),rgba(168,92,92,.1))":"linear-gradient(135deg,rgba(255,140,0,.18),rgba(255,80,0,.12))";
-  const userBdr=isL?"rgba(196,122,122,.35)":"rgba(255,140,0,.25)";
-  const userClr=isL?"rgba(26,26,26,.82)":"rgba(255,255,255,.75)";
-  const dotBg =isL?(msg.crisis?"rgba(70,150,255,.1)":"rgba(192,225,210,.55)"):(msg.crisis?"rgba(70,150,255,.12)":"rgba(255,140,0,.12)");
-  const dotBdr=isL?(msg.crisis?"rgba(100,180,255,.3)":"rgba(90,158,138,.45)"):(msg.crisis?"rgba(100,180,255,.3)":"rgba(255,140,0,.25)");
   return(
     <div style={{display:"flex",justifyContent:isUser?"flex-end":"flex-start",marginBottom:16,animation:`fadeUp .4s cubic-bezier(.16,1,.3,1) both`,animationDelay:`${idx*0.04}s`}}>
-      {!isUser&&<div style={{width:28,height:28,borderRadius:"50%",background:dotBg,border:`1px solid ${dotBdr}`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,marginRight:10,marginTop:2}}><span style={{fontSize:12}}>{msg.crisis?"🤝":"⚡"}</span></div>}
-      <div style={{maxWidth:"78%",padding:"13px 18px",borderRadius:isUser?"16px 16px 4px 16px":"16px 16px 16px 4px",background:isUser?userBg:aiBg,border:`1px solid ${isUser?userBdr:aiBdr}`,fontSize:13,lineHeight:1.85,color:isUser?userClr:aiClr,fontWeight:300}}>
+      {!isUser&&<div style={{width:28,height:28,borderRadius:"50%",background:msg.crisis?"rgba(70,150,255,.12)":"rgba(255,140,0,.12)",border:`1px solid ${msg.crisis?"rgba(100,180,255,.3)":"rgba(255,140,0,.25)"}`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,marginRight:10,marginTop:2}}><span style={{fontSize:12}}>{msg.crisis?"🤝":"⚡"}</span></div>}
+      <div style={{maxWidth:"78%",padding:"13px 18px",borderRadius:isUser?"16px 16px 4px 16px":"16px 16px 16px 4px",background:isUser?"linear-gradient(135deg,rgba(255,140,0,.18),rgba(255,80,0,.12))":msg.crisis?"linear-gradient(135deg,rgba(70,150,255,.08),rgba(40,100,255,.04))":"rgba(255,255,255,.04)",border:`1px solid ${isUser?"rgba(255,140,0,.25)":msg.crisis?"rgba(100,180,255,.25)":msg.offTopic?"rgba(255,80,80,.2)":"rgba(255,255,255,.07)"}`,fontSize:13,lineHeight:1.85,color:msg.crisis?"rgba(255,255,255,.75)":msg.offTopic?"rgba(255,120,120,.75)":isUser?"rgba(255,255,255,.75)":"rgba(255,255,255,.65)",fontWeight:300}}>
         {parseBold(msg.text)}
       </div>
     </div>
@@ -3136,28 +3612,25 @@ function Chat({streak,savedPlan}){
     setLoading(false);
   };
 
-  const isL=document.documentElement.classList.contains("light");
   return(
     <div style={{minHeight:"100vh",display:"flex",flexDirection:"column",opacity:vis?1:0,transition:"opacity .6s ease"}}>
 
-      {/* Header */}
+      {/* Header — same max-width as messages */}
       <div style={{maxWidth:760,width:"100%",margin:"0 auto",padding:"clamp(90px,12vw,120px) clamp(16px,5vw,48px) 24px",boxSizing:"border-box"}}>
-        <div style={{display:"inline-flex",alignItems:"center",gap:8,background:isL?"rgba(192,225,210,.2)":"rgba(255,140,0,.07)",border:isL?"1px solid rgba(192,225,210,.5)":"1px solid rgba(255,140,0,.2)",borderRadius:999,padding:"7px 18px",marginBottom:20}}>
-          <div style={{width:6,height:6,borderRadius:"50%",background:isL?"#5a9e8a":"#ff8c00",boxShadow:isL?"0 0 10px rgba(90,158,138,.6)":"0 0 10px #ff8c00",animation:"pulse 1.5s ease-in-out infinite"}}/>
-          <span style={{fontSize:10,fontWeight:600,letterSpacing:2.5,color:isL?"rgba(80,130,115,.8)":"rgba(255,180,80,.65)",textTransform:"uppercase"}}>SYNAPSE Coach — Live</span>
+        <div style={{display:"inline-flex",alignItems:"center",gap:8,background:"rgba(255,140,0,.07)",border:"1px solid rgba(255,140,0,.2)",borderRadius:999,padding:"7px 18px",marginBottom:20}}>
+          <div style={{width:6,height:6,borderRadius:"50%",background:"#ff8c00",boxShadow:"0 0 10px #ff8c00",animation:"pulse 1.5s ease-in-out infinite"}}/>
+          <span style={{fontSize:10,fontWeight:600,letterSpacing:2.5,color:"rgba(255,180,80,.65)",textTransform:"uppercase"}}>SYNAPSE Coach — Live</span>
         </div>
-        <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(24px,5.5vw,52px)",fontWeight:900,letterSpacing:-2,background:isL?"linear-gradient(135deg,#1a1a1a 0%,#8a4a4a 55%,#c47a7a 100%)":"linear-gradient(135deg,#fff,rgba(255,180,80,.7))",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",lineHeight:.95,marginBottom:14}}>TALK TO<br/>SYNAPSE</div>
-        <p style={{fontSize:13,color:"var(--text3)",lineHeight:1.8,maxWidth:"100%",margin:"0 0 24px 0"}}>Ask anything about your recovery — urges, relapses, streaks, cravings, your battle plan. I stay on topic.</p>
+        <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(24px,5.5vw,52px)",fontWeight:900,letterSpacing:-2,background:"linear-gradient(135deg,#fff,rgba(255,180,80,.7))",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",lineHeight:.95,marginBottom:14}}>TALK TO<br/>SYNAPSE</div>
+        <p style={{fontSize:13,color:"var(--text4)",lineHeight:1.8,maxWidth:"100%",margin:"0 0 24px 0"}}>Ask anything about your recovery — urges, relapses, streaks, cravings, your battle plan. I stay on topic.</p>
 
         {/* Mode selector */}
         <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
           {Object.values(MODES).map(m=>{
             const active=mode.id===m.id;
-            const inactiveBdr=isL?"rgba(26,26,26,.12)":"rgba(255,255,255,.1)";
-            const inactiveClr=isL?"rgba(26,26,26,.35)":"rgba(255,255,255,.3)";
             return(
               <button key={m.id} onClick={()=>switchMode(m)}
-                style={{display:"flex",alignItems:"center",gap:6,padding:"8px 16px",borderRadius:999,border:`1px solid ${active?m.accent:inactiveBdr}`,background:active?`rgba(${m.id==="operator"?"74,222,128":m.id==="warlord"?"239,68,68":"196,122,122"},.12)`:"transparent",color:active?m.accent:inactiveClr,fontSize:11,fontWeight:active?700:400,letterSpacing:active?2:1.5,textTransform:"uppercase",cursor:"none",transition:"all .25s",boxShadow:active?`0 0 16px ${m.accent}33`:"none"}}>
+                style={{display:"flex",alignItems:"center",gap:6,padding:"8px 16px",borderRadius:999,border:`1px solid ${active?m.accent:"rgba(255,255,255,.1)"}`,background:active?`rgba(${m.id==="operator"?"74,222,128":m.id==="warlord"?"239,68,68":"255,140,0"},.1)`:"transparent",color:active?m.accent:"rgba(255,255,255,.3)",fontSize:11,fontWeight:active?700:400,letterSpacing:active?2:1.5,textTransform:"uppercase",cursor:"pointer",transition:"all .25s",boxShadow:active?`0 0 16px ${m.accent}33`:"none"}}>
                 <span style={{fontSize:13}}>{m.icon}</span>
                 {m.label}
                 {active&&<span style={{fontSize:9,opacity:.7,marginLeft:2}}>●</span>}
@@ -3173,9 +3646,9 @@ function Chat({streak,savedPlan}){
         {msgs.map((m,i)=><ChatBubble key={i} msg={m} idx={i}/>)}
         {loading&&(
           <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:16}}>
-            <div style={{width:28,height:28,borderRadius:"50%",background:isL?"rgba(192,225,210,.45)":"rgba(255,140,0,.12)",border:isL?"1px solid rgba(90,158,138,.4)":"1px solid rgba(255,140,0,.25)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><span style={{fontSize:12}}>⚡</span></div>
-            <div style={{display:"flex",gap:5,padding:"12px 16px",background:isL?"rgba(229,238,228,.65)":"rgba(255,255,255,.04)",border:isL?"1px solid rgba(192,225,210,.45)":"1px solid rgba(255,255,255,.07)",borderRadius:"16px 16px 16px 4px"}}>
-              {[0,1,2].map(i=><div key={i} style={{width:5,height:5,borderRadius:"50%",background:isL?"#5a9e8a":"#ff9500",animation:`dotBlink 1s ${i*.18}s infinite`}}/>)}
+            <div style={{width:28,height:28,borderRadius:"50%",background:"rgba(255,140,0,.12)",border:"1px solid rgba(255,140,0,.25)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><span style={{fontSize:12}}>⚡</span></div>
+            <div style={{display:"flex",gap:5,padding:"12px 16px",background:"rgba(255,255,255,.04)",border:"1px solid rgba(255,255,255,.07)",borderRadius:"16px 16px 16px 4px"}}>
+              {[0,1,2].map(i=><div key={i} style={{width:5,height:5,borderRadius:"50%",background:"#ff9500",animation:`dotBlink 1s ${i*.18}s infinite`}}/>)}
             </div>
           </div>
         )}
@@ -3183,7 +3656,7 @@ function Chat({streak,savedPlan}){
       </div>
 
       {/* Input bar — fixed at bottom */}
-      <div style={{position:"fixed",bottom:0,left:0,right:0,padding:"16px clamp(16px,5vw,48px)",background:`linear-gradient(0deg,var(--bg) 70%,${isL?"rgba(246,244,232,0)":"rgba(7,4,10,0)"} 100%)`,zIndex:100}}>
+      <div style={{position:"fixed",bottom:0,left:0,right:0,padding:"16px clamp(16px,5vw,48px)",background:"linear-gradient(0deg,var(--bg) 70%,rgba(7,4,10,0) 100%)",zIndex:100}}>
         <div style={{maxWidth:760,margin:"0 auto",display:"flex",gap:12,alignItems:"flex-end"}}>
           <textarea
             value={input}
@@ -3191,12 +3664,12 @@ function Chat({streak,savedPlan}){
             onKeyDown={e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();send();}}}
             placeholder="Ask about your urges, battle plan, recovery tactics..."
             rows={1}
-            style={{flex:1,background:isL?"rgba(246,244,232,.95)":"rgba(255,255,255,.04)",border:isL?"1px solid rgba(192,225,210,.5)":"1px solid rgba(255,140,0,.2)",borderRadius:14,padding:"14px 18px",color:"var(--text)",fontSize:13,fontFamily:"'Inter',sans-serif",fontWeight:300,outline:"none",resize:"none",lineHeight:1.6,caretColor:isL?"#c47a7a":"#ff8c00",transition:"border .3s",boxSizing:"border-box"}}
-            onFocus={e=>e.target.style.borderColor=isL?"rgba(196,122,122,.55)":"rgba(255,140,0,.55)"}
-            onBlur={e=>e.target.style.borderColor=isL?"rgba(192,225,210,.5)":"rgba(255,140,0,.2)"}
+            style={{flex:1,background:"rgba(255,255,255,.04)",border:"1px solid rgba(255,140,0,.2)",borderRadius:14,padding:"14px 18px",color:"var(--text)",fontSize:13,fontFamily:"'Inter',sans-serif",fontWeight:300,outline:"none",resize:"none",lineHeight:1.6,caretColor:"#ff8c00",transition:"border .3s",boxSizing:"border-box"}}
+            onFocus={e=>e.target.style.borderColor="rgba(255,140,0,.55)"}
+            onBlur={e=>e.target.style.borderColor="rgba(255,140,0,.2)"}
           />
           <button onClick={send} disabled={!input.trim()||loading}
-            style={{background:input.trim()?(isL?"linear-gradient(135deg,#c47a7a,#a85c5c)":"linear-gradient(135deg,#ff9500,#ff5000)"):(isL?"rgba(192,225,210,.3)":"rgba(255,255,255,.05)"),border:"none",borderRadius:12,padding:"14px 20px",color:input.trim()?"#fff":(isL?"rgba(26,26,26,.2)":"rgba(255,255,255,.2)"),fontSize:16,cursor:"none",transition:"all .25s",flexShrink:0,boxShadow:input.trim()?(isL?"0 0 20px rgba(196,122,122,.3)":"0 0 20px rgba(255,140,0,.3)"):"none"}}>
+            style={{background:input.trim()?"linear-gradient(135deg,#ff9500,#ff5000)":"rgba(255,255,255,.05)",border:"none",borderRadius:12,padding:"14px 20px",color:input.trim()?"#fff":"rgba(255,255,255,.2)",fontSize:16,cursor:"pointer",transition:"all .25s",flexShrink:0,boxShadow:input.trim()?"0 0 20px rgba(255,140,0,.3)":"none"}}>
             ↑
           </button>
         </div>
@@ -3253,7 +3726,7 @@ function BattlePlanPreview({plan,loading,onAuth,onBack}){
           🔥 Lock In My Protocol — Create Account
         </button>
         <button onClick={onBack}
-          style={{width:"100%",padding:"13px",fontSize:12,background:"transparent",border:"1px solid rgba(255,255,255,.08)",borderRadius:12,color:"var(--text4)",cursor:"none"}}>
+          style={{width:"100%",padding:"13px",fontSize:12,background:"transparent",border:"1px solid rgba(255,255,255,.08)",borderRadius:12,color:"var(--text4)",cursor:"pointer"}}>
           ← Edit My Answers
         </button>
       </div>
@@ -3339,7 +3812,7 @@ function EmergencyOverlay({savedPlan,streak,onClose,onCoach}){
             <div style={{width:10,height:10,borderRadius:"50%",background:"#ff3333",boxShadow:"0 0 14px #ff3333",animation:"pulse 1s ease-in-out infinite"}}/>
             <span style={{fontFamily:"'Orbitron',sans-serif",fontSize:11,fontWeight:700,letterSpacing:3,color:"rgba(255,80,80,.85)",textTransform:"uppercase"}}>Emergency Mode</span>
           </div>
-          <button onClick={onClose} style={{background:"rgba(255,255,255,.04)",border:"1px solid rgba(255,255,255,.1)",color:"var(--text3)",width:32,height:32,borderRadius:8,cursor:"none",fontSize:15,display:"flex",alignItems:"center",justifyContent:"center"}}>✕</button>
+          <button onClick={onClose} style={{background:"rgba(255,255,255,.04)",border:"1px solid rgba(255,255,255,.1)",color:"var(--text3)",width:32,height:32,borderRadius:8,cursor:"pointer",fontSize:15,display:"flex",alignItems:"center",justifyContent:"center"}}>✕</button>
         </div>
         {/* Response */}
         {loading
@@ -3353,7 +3826,7 @@ function EmergencyOverlay({savedPlan,streak,onClose,onCoach}){
             <button className="btn-primary" onClick={onClose} style={{width:"100%",padding:"15px",fontSize:13,background:"linear-gradient(135deg,#cc2222,#992222)",boxShadow:"0 0 30px rgba(200,30,30,.4),0 6px 24px rgba(0,0,0,.5)"}}>
               I'm back. Keep going. →
             </button>
-            <button onClick={()=>{onClose();onCoach();}} style={{width:"100%",padding:"13px",fontSize:12,background:"rgba(255,140,0,.06)",border:"1px solid rgba(255,140,0,.2)",borderRadius:12,color:"rgba(255,180,80,.7)",cursor:"none",fontFamily:"'Orbitron',sans-serif",fontWeight:600,letterSpacing:1,textTransform:"uppercase"}}>
+            <button onClick={()=>{onClose();onCoach();}} style={{width:"100%",padding:"13px",fontSize:12,background:"rgba(255,140,0,.06)",border:"1px solid rgba(255,140,0,.2)",borderRadius:12,color:"rgba(255,180,80,.7)",cursor:"pointer",fontFamily:"'Orbitron',sans-serif",fontWeight:600,letterSpacing:1,textTransform:"uppercase"}}>
               ⚡ Talk to Coach
             </button>
           </div>
@@ -3485,6 +3958,23 @@ export default function App() {
     try{
       const reply=await callAI([{role:"user",content:text}],getConfessPrompt());
       setPlan(reply);setSP(reply);ls.set("syn_plan",reply);
+      // Save to Firestore
+      try{
+        const uid=auth.currentUser?.uid;
+        const u=JSON.parse(ls.get("syn_user","{}"));
+        const confessData=JSON.parse(ls.get("syn_confess","{}"));
+        if(uid){
+          await setDoc(doc(db,"users",uid),{
+            uid, name:u.name||"", email:u.email||"",
+            photoURL:u.photoURL||auth.currentUser?.photoURL||"",
+            archetype:archData?.title||"",
+            addictions:confessData?.addictions||[],
+            hoursPerDay:confessData?.hours||{},
+            onboardedAt:serverTimestamp(),
+            lastSeen:serverTimestamp(),
+          },{merge:true});
+        }
+      }catch(fe){console.warn("Firestore write failed:",fe);}
     }catch(e){
       setPlan(`Connection error: ${e.message}\n\nYour mission still stands. Show up every day.`);
     }
@@ -3567,6 +4057,26 @@ export default function App() {
       }
     }
 
+    // Firestore — save checkin + update user lastSeen/streak
+    try{
+      const uid=auth.currentUser?.uid;
+      if(uid){
+        const checkinId=`${uid}_${today.replace(/\s/g,"_")}`;
+        await setDoc(doc(db,"checkins",checkinId),{
+          uid, date:today,
+          status:status.toLowerCase(),
+          streak: status==="SLIP"?0:streak+1,
+          msg: msg.slice(0,500),
+          timestamp:serverTimestamp(),
+        });
+        await setDoc(doc(db,"users",uid),{
+          lastCheckin:today,
+          lastSeen:serverTimestamp(),
+          currentStreak:status==="SLIP"?0:streak+1,
+        },{merge:true});
+      }
+    }catch(fe){console.warn("Firestore checkin write failed:",fe);}
+
     return {reply, status};
   };
 
@@ -3599,7 +4109,7 @@ export default function App() {
 
       ) : authed ? (
         <>
-          <Nav screen={screen} goTo={goTo} savedPlan={savedPlan} onReset={handleReset} theme={theme} onThemeToggle={handleThemeToggle}/>
+          <Nav screen={screen} goTo={goTo} savedPlan={savedPlan} onReset={handleReset} theme={theme} onThemeToggle={handleThemeToggle} user={JSON.parse(ls.get("syn_user","{}"))}/>
           <div key={screen} ref={topRef} style={{position:"relative",zIndex:2,opacity:tr?0:1,transition:"opacity .26s ease"}}>
             {screen==="confess" &&<Confess onSubmit={handleConfess} loading={planLoading}/>}
             {screen==="plan"    &&<Plan plan={plan||savedPlan} loading={planLoading} onBegin={handleBeginDay1} onRetry={()=>goTo("confess")}/>}
@@ -3612,7 +4122,7 @@ export default function App() {
           {screen!=="boot"&&<div style={{position:"relative",zIndex:2,marginTop:80,overflow:"hidden",width:"100%",maxWidth:"100%"}}><Marquee/></div>}
           {/* Emergency floating button — only on checkin screen */}
           {screen==="checkin"&&(
-            <button onClick={()=>setEmergency(true)} style={{position:"fixed",bottom:"clamp(20px,4vw,32px)",right:"clamp(12px,4vw,28px)",zIndex:800,background:"linear-gradient(135deg,#cc1111,#8b0000)",border:"1px solid rgba(255,80,80,0.4)",borderRadius:999,padding:"clamp(8px,1.5vw,13px) clamp(12px,2.5vw,22px)",color:"var(--text)",fontSize:"clamp(8px,1.8vw,11px)",fontWeight:700,letterSpacing:"clamp(0.5px,0.3vw,1.5px)",textTransform:"uppercase",boxShadow:"0 0 20px rgba(255,30,30,0.35),0 6px 20px rgba(0,0,0,0.5)",cursor:"none",display:"flex",alignItems:"center",gap:"clamp(5px,1vw,9px)",fontFamily:"'Orbitron',sans-serif"}}>
+            <button onClick={()=>setEmergency(true)} style={{position:"fixed",bottom:"clamp(20px,4vw,32px)",right:"clamp(12px,4vw,28px)",zIndex:800,background:"linear-gradient(135deg,#cc1111,#8b0000)",border:"1px solid rgba(255,80,80,0.4)",borderRadius:999,padding:"clamp(8px,1.5vw,13px) clamp(12px,2.5vw,22px)",color:"var(--text)",fontSize:"clamp(8px,1.8vw,11px)",fontWeight:700,letterSpacing:"clamp(0.5px,0.3vw,1.5px)",textTransform:"uppercase",boxShadow:"0 0 20px rgba(255,30,30,0.35),0 6px 20px rgba(0,0,0,0.5)",cursor:"pointer",display:"flex",alignItems:"center",gap:"clamp(5px,1vw,9px)",fontFamily:"'Orbitron',sans-serif"}}>
               <span style={{fontSize:"clamp(11px,2.5vw,15px)"}}>🆘</span>
               <span>I'm Struggling</span>
             </button>
