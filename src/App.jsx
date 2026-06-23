@@ -5,7 +5,7 @@ import {
   signInWithPopup, signOut, onAuthStateChanged, updateProfile,
   sendPasswordResetEmail
 } from "firebase/auth";
-import { getStorage, ref as sRef, uploadBytes, getDownloadURL } from "firebase/storage";
+import { ref as sRef, uploadBytes, getDownloadURL } from "firebase/storage";
 import {
   collection, doc, setDoc, getDoc, getDocs,
   orderBy, query, serverTimestamp, limit
@@ -1045,6 +1045,47 @@ input[type=range]{-webkit-appearance:none;appearance:none;background:transparent
 `;
 
 /* ─── NAV ────────────────────────────────────────────────────────────────── */
+// ─── PWA INSTALL PROMPT ──────────────────────────────────────────────────────
+function InstallPrompt({theme,onInstall,onDismiss}){
+  const isL=theme==="light";
+  const [installing,setInstalling]=useState(false);
+  return(
+    <div style={{position:"fixed",inset:0,zIndex:1100,display:"flex",alignItems:"flex-end",justifyContent:"center",padding:"0 0 24px"}}>
+      {/* Backdrop */}
+      <div onClick={onDismiss} style={{position:"absolute",inset:0,background:"rgba(0,0,0,0.6)",backdropFilter:"blur(8px)"}}/>
+      {/* Card */}
+      <div style={{position:"relative",width:"100%",maxWidth:480,background:isL?"#f6f4e8":"#0d0b14",border:isL?"1px solid rgba(192,225,210,0.5)":"1px solid rgba(255,140,0,0.2)",borderRadius:24,padding:"28px 24px 24px",margin:"0 16px",animation:"slideUp .4s cubic-bezier(.16,1,.3,1)",boxShadow:isL?"0 -4px 40px rgba(192,225,210,0.2)":"0 -4px 40px rgba(255,140,0,0.1)"}}>
+        {/* Icon */}
+        <div style={{width:56,height:56,borderRadius:16,background:isL?"linear-gradient(135deg,#c47a7a,#a85c5c)":"linear-gradient(135deg,#ff9500,#ff5000)",display:"flex",alignItems:"center",justifyContent:"center",marginBottom:18,boxShadow:isL?"0 8px 24px rgba(196,122,122,0.35)":"0 8px 24px rgba(255,140,0,0.35)"}}>
+          <span style={{fontSize:28}}>⚡</span>
+        </div>
+        {/* Text */}
+        <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:16,fontWeight:800,color:"var(--text)",letterSpacing:.5,marginBottom:8}}>Add SYNAPSE to Home Screen</div>
+        <div style={{fontSize:13,color:"var(--text3)",lineHeight:1.7,marginBottom:24}}>
+          Install SYNAPSE for instant access — faster check-ins, no browser bar, feels like a real app.
+        </div>
+        {/* Buttons */}
+        <div style={{display:"flex",gap:12}}>
+          <button onClick={async()=>{
+            setInstalling(true);
+            await onInstall();
+            setInstalling(false);
+          }} style={{flex:1,padding:"14px",borderRadius:14,background:isL?"linear-gradient(135deg,#c47a7a,#a85c5c)":"linear-gradient(135deg,#ff9500,#ff5000)",border:"none",color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8,boxShadow:isL?"0 4px 16px rgba(196,122,122,0.35)":"0 4px 16px rgba(255,140,0,0.35)"}}>
+            {installing?<div style={{width:16,height:16,border:"2px solid rgba(255,255,255,0.3)",borderTop:"2px solid #fff",borderRadius:"50%",animation:"spin 0.7s linear infinite"}}/>:"📲 Install App"}
+          </button>
+          <button onClick={onDismiss} style={{padding:"14px 20px",borderRadius:14,background:"transparent",border:isL?"1px solid rgba(192,225,210,0.5)":"1px solid rgba(255,255,255,0.1)",color:"var(--text3)",fontSize:13,cursor:"pointer"}}>
+            Later
+          </button>
+        </div>
+        {/* iOS fallback hint */}
+        <div style={{marginTop:14,fontSize:10,color:"var(--text4)",textAlign:"center",lineHeight:1.6}}>
+          On iPhone? Tap <strong style={{color:isL?"#c47a7a":"rgba(255,180,80,0.7)"}}>Share →</strong> then <strong style={{color:isL?"#c47a7a":"rgba(255,180,80,0.7)"}}>Add to Home Screen</strong>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── ADMIN DASHBOARD ────────────────────────────────────────────────────────
 const ADMIN_UIDS=["r2JKcDHrBOgGD1A14M9ugGQ6rzc2","bOFNjETZWjOU6nDBagxKSyB4szS2"]; // Parth + Lily
 
@@ -1285,6 +1326,10 @@ function AdminDashboard({theme,onClose}){
                           <span>Last check-in: <span style={{color:txt}}>{u.lastCheckin||"Never"}</span></span>
                           <span>Last seen: <span style={{color:txt}}>{lastSeenStr}</span></span>
                         </div>
+                        <div style={{display:"flex",gap:16,marginTop:8,fontSize:10,color:txt2}}>
+                          {u.dob&&<span>DOB: <span style={{color:txt}}>{new Date(u.dob).toLocaleDateString("en-IN",{day:"2-digit",month:"short",year:"numeric"})}</span></span>}
+                          {u.gender&&<span>Gender: <span style={{color:txt}}>{u.gender}</span></span>}
+                        </div>
                       </div>
                     )}
                   </div>
@@ -1391,6 +1436,10 @@ function ProfileSheet({user,theme,onThemeToggle,onClose,onSignOut,onPhotoUpdate,
   const initials=(user?.name||user?.email||"U").split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase();
   const [uploading,setUploading]=useState(false);
   const [photoURL,setPhotoURL]=useState(user?.photoURL||auth.currentUser?.photoURL||null);
+  const [dob,setDob]=useState(user?.dob||"");
+  const [gender,setGender]=useState(user?.gender||"");
+  const [saving,setSaving]=useState(false);
+  const [saved,setSaved]=useState(false);
   const fileRef=useRef();
 
   const handlePhotoClick=()=>fileRef.current?.click();
@@ -1398,18 +1447,15 @@ function ProfileSheet({user,theme,onThemeToggle,onClose,onSignOut,onPhotoUpdate,
   const handlePhotoChange=async(e)=>{
     const file=e.target.files?.[0];
     if(!file||!auth.currentUser) return;
-    // Validate — max 5MB, image only
     if(file.size>5*1024*1024){alert("Photo must be under 5MB");return;}
     if(!file.type.startsWith("image/")) return;
     setUploading(true);
     try{
-      const storage=getStorage();
       const storageRef=sRef(storage,`avatars/${auth.currentUser.uid}`);
       await uploadBytes(storageRef,file);
       const url=await getDownloadURL(storageRef);
       await updateProfile(auth.currentUser,{photoURL:url});
       setPhotoURL(url);
-      // Update local storage
       const stored=JSON.parse(localStorage.getItem("syn_user")||"{}");
       localStorage.setItem("syn_user",JSON.stringify({...stored,photoURL:url}));
       onPhotoUpdate?.(url);
@@ -1418,6 +1464,23 @@ function ProfileSheet({user,theme,onThemeToggle,onClose,onSignOut,onPhotoUpdate,
       alert("Upload failed — check Firebase Storage rules.");
     }finally{setUploading(false);}
   };
+
+  const handleSaveProfile=async()=>{
+    setSaving(true);
+    try{
+      const stored=JSON.parse(localStorage.getItem("syn_user")||"{}");
+      localStorage.setItem("syn_user",JSON.stringify({...stored,dob,gender}));
+      const uid=auth.currentUser?.uid;
+      if(uid){
+        await setDoc(doc(db,"users",uid),{dob,gender,lastSeen:serverTimestamp()},{merge:true});
+      }
+      setSaved(true);
+      setTimeout(()=>setSaved(false),2000);
+    }catch(e){console.error("Save profile failed:",e);}
+    finally{setSaving(false);}
+  };
+
+  const inp={width:"100%",background:isL?"rgba(255,255,255,0.7)":"rgba(255,255,255,0.05)",border:isL?"1px solid rgba(192,225,210,0.5)":"1px solid rgba(255,255,255,0.1)",borderRadius:10,padding:"11px 14px",color:"var(--text)",fontSize:13,outline:"none",fontFamily:"'Inter',sans-serif",boxSizing:"border-box"};
 
   return(
     <>
@@ -1459,6 +1522,35 @@ function ProfileSheet({user,theme,onThemeToggle,onClose,onSignOut,onPhotoUpdate,
               <span style={{fontSize:9,fontWeight:600,letterSpacing:1.5,color:isL?"rgba(80,130,115,0.8)":"rgba(255,180,80,0.7)",textTransform:"uppercase"}}>Active Protocol</span>
             </div>
           </div>
+        </div>
+        {/* DOB + Gender */}
+        <div style={{padding:"20px 24px",borderBottom:isL?"1px solid rgba(192,225,210,0.35)":"1px solid rgba(255,255,255,0.06)",display:"flex",flexDirection:"column",gap:12}}>
+          <div style={{fontSize:10,letterSpacing:1.5,color:"var(--text4)",textTransform:"uppercase",fontWeight:600,marginBottom:2}}>Personal Info</div>
+          {/* DOB */}
+          <div>
+            <div style={{fontSize:11,color:"var(--text3)",marginBottom:6,fontWeight:500}}>Date of Birth</div>
+            <input
+              type="date"
+              value={dob}
+              onChange={e=>setDob(e.target.value)}
+              style={{...inp,colorScheme:isL?"light":"dark"}}
+            />
+          </div>
+          {/* Gender */}
+          <div>
+            <div style={{fontSize:11,color:"var(--text3)",marginBottom:8,fontWeight:500}}>Gender</div>
+            <div style={{display:"flex",gap:8}}>
+              {["Male","Female"].map(g=>(
+                <div key={g} onClick={()=>setGender(g)} style={{flex:1,padding:"11px",borderRadius:10,textAlign:"center",background:gender===g?(isL?"rgba(196,122,122,0.15)":"rgba(255,140,0,0.12)"):(isL?"rgba(255,255,255,0.5)":"rgba(255,255,255,0.03)"),border:`1px solid ${gender===g?(isL?"rgba(196,122,122,0.5)":"rgba(255,140,0,0.4)"):(isL?"rgba(192,225,210,0.4)":"rgba(255,255,255,0.08)")}`,cursor:"pointer",transition:"all .2s",fontSize:13,fontWeight:gender===g?600:400,color:gender===g?(isL?"#c47a7a":"#ff9500"):"var(--text3)"}}>
+                  {g==="Male"?"👨 Male":"👩 Female"}
+                </div>
+              ))}
+            </div>
+          </div>
+          {/* Save button */}
+          <button onClick={handleSaveProfile} disabled={saving} style={{padding:"11px",borderRadius:10,background:saved?(isL?"rgba(74,222,128,0.15)":"rgba(74,222,128,0.12)"):(isL?"linear-gradient(135deg,#c47a7a,#a85c5c)":"linear-gradient(135deg,#ff9500,#ff5000)"),border:saved?"1px solid rgba(74,222,128,0.4)":"none",color:saved?"#4ade80":"#fff",fontSize:12,fontWeight:600,cursor:"pointer",transition:"all .3s",display:"flex",alignItems:"center",justifyContent:"center",gap:6}}>
+            {saving?<><div style={{width:12,height:12,border:"2px solid rgba(255,255,255,0.3)",borderTop:"2px solid #fff",borderRadius:"50%",animation:"spin 0.7s linear infinite"}}/> Saving...</>:saved?"✓ Saved!":"Save Profile"}
+          </button>
         </div>
         {/* Options */}
         <div style={{padding:"16px 24px",display:"flex",flexDirection:"column",gap:4}}>
@@ -1672,6 +1764,42 @@ function getErrorMsg(code) {
   return map[code] || "Something went wrong. Try again.";
 }
 
+function TCModal({isL,onAccept,onClose}){
+  return(
+    <div style={{position:"fixed",inset:0,zIndex:9999,background:"rgba(0,0,0,0.8)",backdropFilter:"blur(12px)",display:"flex",alignItems:"center",justifyContent:"center",padding:"20px"}} onClick={onClose}>
+      <div onClick={e=>e.stopPropagation()} style={{width:"100%",maxWidth:620,maxHeight:"80vh",background:isL?"#f6f4e8":"#0d0b10",border:isL?"1px solid rgba(192,225,210,0.5)":"1px solid rgba(255,140,0,0.15)",borderRadius:20,display:"flex",flexDirection:"column",overflow:"hidden",boxShadow:"0 32px 80px rgba(0,0,0,0.6)"}}>
+        <div style={{padding:"24px 28px 20px",borderBottom:isL?"1px solid rgba(192,225,210,0.4)":"1px solid rgba(255,255,255,0.06)",display:"flex",alignItems:"center",justifyContent:"space-between",flexShrink:0}}>
+          <div>
+            <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:14,fontWeight:700,color:isL?"#8a4a4a":"#ffb347",letterSpacing:1}}>SYNAPSE TERMS & CONDITIONS</div>
+            <div style={{fontSize:11,color:isL?"rgba(26,18,9,0.45)":"rgba(255,255,255,0.3)",marginTop:3}}>Please read carefully before proceeding</div>
+          </div>
+          <button onClick={onClose} style={{width:32,height:32,borderRadius:"50%",background:isL?"rgba(192,225,210,0.3)":"rgba(255,255,255,0.05)",border:isL?"1px solid rgba(192,225,210,0.5)":"1px solid rgba(255,255,255,0.1)",color:isL?"rgba(26,18,9,0.5)":"rgba(255,255,255,0.5)",fontSize:18,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",lineHeight:1}}>×</button>
+        </div>
+        <div style={{padding:"24px 28px",overflowY:"auto",flex:1,fontSize:12,color:isL?"rgba(26,18,9,0.62)":"rgba(255,255,255,0.55)",lineHeight:1.9}}>
+          <p style={{color:isL?"rgba(138,74,74,0.9)":"rgba(255,180,80,0.7)",fontWeight:600,marginBottom:12}}>19.4 Entire Agreement</p>
+          <p>These Terms, together with the Privacy Policy and any other policies expressly incorporated by reference, constitute the entire agreement between the parties with respect to the subject matter hereof and supersede all prior or contemporaneous agreements, representations, and understandings, whether written or oral.</p>
+          <p style={{color:isL?"rgba(138,74,74,0.9)":"rgba(255,180,80,0.7)",fontWeight:600,margin:"20px 0 12px"}}>20. Notices and Contact Information</p>
+          <p><strong style={{color:isL?"rgba(26,18,9,0.82)":"rgba(255,255,255,0.75)"}}>20.1</strong> All notices shall be directed to: <span style={{color:isL?"#c47a7a":"#ffb347"}}>synapserewire@gmail.com</span></p>
+          <p><strong style={{color:isL?"rgba(26,18,9,0.82)":"rgba(255,255,255,0.75)"}}>20.2</strong> Notices deemed effective upon transmission to the User's email address.</p>
+          <p style={{color:isL?"rgba(138,74,74,0.9)":"rgba(255,180,80,0.7)",fontWeight:600,margin:"20px 0 12px"}}>21. Acknowledgment</p>
+          <p style={{color:isL?"rgba(26,18,9,0.75)":"rgba(255,255,255,0.65)"}}>BY USING THE SERVICE, THE USER ACKNOWLEDGES HAVING READ AND UNDERSTOOD THIS AGREEMENT IN ITS ENTIRETY, INCLUDING THE WARRANTY DISCLAIMERS, LIMITATIONS OF LIABILITY, INDEMNIFICATION OBLIGATIONS, AND BINDING ARBITRATION AND CLASS ACTION WAIVER PROVISIONS SET FORTH HEREIN, AND VOLUNTARILY AND IRREVOCABLY AGREES TO BE BOUND BY ITS TERMS.</p>
+          <p style={{color:isL?"rgba(138,74,74,0.9)":"rgba(255,180,80,0.7)",fontWeight:600,margin:"20px 0 12px"}}>22. India-Specific Addendum</p>
+          <p><strong style={{color:isL?"rgba(26,18,9,0.82)":"rgba(255,255,255,0.75)"}}>22.1</strong> Governed by laws of India — IT Act 2000, DPDP Act 2023, Indian Contract Act 1872.</p>
+          <p><strong style={{color:isL?"rgba(26,18,9,0.82)":"rgba(255,255,255,0.75)"}}>22.3 Grievance Officer:</strong> <span style={{color:isL?"#c47a7a":"#ffb347"}}>synapserewire@gmail.com</span> — per IT (Intermediary Guidelines) Rules, 2021.</p>
+          <p style={{color:isL?"rgba(138,74,74,0.9)":"rgba(255,180,80,0.7)",fontWeight:600,margin:"20px 0 12px"}}>23. United States-Specific Addendum</p>
+          <p><strong style={{color:isL?"rgba(26,18,9,0.82)":"rgba(255,255,255,0.75)"}}>23.3 California:</strong> CCPA/CPRA rights apply. Contact synapserewire@gmail.com. No sale of minors' data under 16.</p>
+          <p><strong style={{color:isL?"rgba(26,18,9,0.82)":"rgba(255,255,255,0.75)"}}>23.4 COPPA:</strong> No data collected from children under 13.</p>
+          <p style={{marginTop:20,padding:"12px 14px",background:isL?"rgba(192,225,210,0.2)":"rgba(255,140,0,0.05)",border:isL?"1px solid rgba(192,225,210,0.4)":"1px solid rgba(255,140,0,0.12)",borderRadius:8,fontSize:11,color:isL?"rgba(26,18,9,0.4)":"rgba(255,255,255,0.3)"}}>Draft template only — not legal advice. Must be reviewed by a licensed attorney.</p>
+        </div>
+        <div style={{padding:"20px 28px",borderTop:isL?"1px solid rgba(192,225,210,0.4)":"1px solid rgba(255,255,255,0.06)",flexShrink:0,display:"flex",gap:12}}>
+          <button onClick={onAccept} style={{flex:1,padding:"13px",borderRadius:12,background:isL?"linear-gradient(135deg,#c47a7a,#a85c5c)":"linear-gradient(135deg,#ff9500,#ff5000)",border:"none",color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer"}}>✓ Accept & Continue</button>
+          <button onClick={onClose} style={{padding:"13px 20px",borderRadius:12,background:"transparent",border:isL?"1px solid rgba(192,225,210,0.5)":"1px solid rgba(255,255,255,0.1)",color:isL?"rgba(26,18,9,0.5)":"rgba(255,255,255,0.4)",fontSize:13,cursor:"pointer"}}>Cancel</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function Auth({ onAuth, context="" }) {
   const [mode, setMode]           = useState("signin");
   const [email, setEmail]         = useState("");
@@ -1801,43 +1929,8 @@ function Auth({ onAuth, context="" }) {
     </div>
 
     {/* T&C Modal — theme aware */}
-    {showTerms&&(()=>{
-      const iL=document.documentElement.classList.contains("light");
-      return(
-        <div style={{position:"fixed",inset:0,zIndex:9999,background:"rgba(0,0,0,0.8)",backdropFilter:"blur(12px)",display:"flex",alignItems:"center",justifyContent:"center",padding:"20px"}} onClick={()=>setShowTerms(false)}>
-          <div onClick={e=>e.stopPropagation()} style={{width:"100%",maxWidth:620,maxHeight:"80vh",background:iL?"#f6f4e8":"#0d0b10",border:iL?"1px solid rgba(192,225,210,0.5)":"1px solid rgba(255,140,0,0.15)",borderRadius:20,display:"flex",flexDirection:"column",overflow:"hidden",boxShadow:"0 32px 80px rgba(0,0,0,0.6)"}}>
-            <div style={{padding:"24px 28px 20px",borderBottom:iL?"1px solid rgba(192,225,210,0.4)":"1px solid rgba(255,255,255,0.06)",display:"flex",alignItems:"center",justifyContent:"space-between",flexShrink:0}}>
-              <div>
-                <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:14,fontWeight:700,color:iL?"#8a4a4a":"#ffb347",letterSpacing:1}}>SYNAPSE TERMS & CONDITIONS</div>
-                <div style={{fontSize:11,color:iL?"rgba(26,18,9,0.45)":"rgba(255,255,255,0.3)",marginTop:3}}>Please read carefully before proceeding</div>
-              </div>
-              <button onClick={()=>setShowTerms(false)} style={{width:32,height:32,borderRadius:"50%",background:iL?"rgba(192,225,210,0.3)":"rgba(255,255,255,0.05)",border:iL?"1px solid rgba(192,225,210,0.5)":"1px solid rgba(255,255,255,0.1)",color:iL?"rgba(26,18,9,0.5)":"rgba(255,255,255,0.5)",fontSize:18,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",lineHeight:1}}>×</button>
-            </div>
-            <div style={{padding:"24px 28px",overflowY:"auto",flex:1,fontSize:12,color:iL?"rgba(26,18,9,0.62)":"rgba(255,255,255,0.55)",lineHeight:1.9}}>
-              <p style={{color:iL?"rgba(138,74,74,0.9)":"rgba(255,180,80,0.7)",fontWeight:600,marginBottom:12}}>19.4 Entire Agreement</p>
-              <p>These Terms, together with the Privacy Policy and any other policies expressly incorporated by reference, constitute the entire agreement between the parties with respect to the subject matter hereof and supersede all prior or contemporaneous agreements, representations, and understandings, whether written or oral.</p>
-              <p style={{color:iL?"rgba(138,74,74,0.9)":"rgba(255,180,80,0.7)",fontWeight:600,margin:"20px 0 12px"}}>20. Notices and Contact Information</p>
-              <p><strong style={{color:iL?"rgba(26,18,9,0.82)":"rgba(255,255,255,0.75)"}}>20.1</strong> All notices shall be directed to: <span style={{color:iL?"#c47a7a":"#ffb347"}}>synapserewire@gmail.com</span></p>
-              <p><strong style={{color:iL?"rgba(26,18,9,0.82)":"rgba(255,255,255,0.75)"}}>20.2</strong> Notices to the User shall be deemed effective upon transmission to the email address associated with the User's Account.</p>
-              <p style={{color:iL?"rgba(138,74,74,0.9)":"rgba(255,180,80,0.7)",fontWeight:600,margin:"20px 0 12px"}}>21. Acknowledgment</p>
-              <p style={{color:iL?"rgba(26,18,9,0.75)":"rgba(255,255,255,0.65)"}}>BY USING THE SERVICE, THE USER ACKNOWLEDGES HAVING READ AND UNDERSTOOD THIS AGREEMENT IN ITS ENTIRETY, INCLUDING THE WARRANTY DISCLAIMERS, LIMITATIONS OF LIABILITY, INDEMNIFICATION OBLIGATIONS, AND BINDING ARBITRATION AND CLASS ACTION WAIVER PROVISIONS SET FORTH HEREIN, AND VOLUNTARILY AND IRREVOCABLY AGREES TO BE BOUND BY ITS TERMS.</p>
-              <p style={{color:iL?"rgba(138,74,74,0.9)":"rgba(255,180,80,0.7)",fontWeight:600,margin:"20px 0 12px"}}>22. India-Specific Addendum</p>
-              <p><strong style={{color:iL?"rgba(26,18,9,0.82)":"rgba(255,255,255,0.75)"}}>22.1</strong> Governed by laws of India including IT Act 2000, DPDP Act 2023, and Indian Contract Act 1872.</p>
-              <p><strong style={{color:iL?"rgba(26,18,9,0.82)":"rgba(255,255,255,0.75)"}}>22.3 Grievance Officer:</strong> <span style={{color:iL?"#c47a7a":"#ffb347"}}>synapserewire@gmail.com</span> — per IT (Intermediary Guidelines) Rules, 2021.</p>
-              <p style={{color:iL?"rgba(138,74,74,0.9)":"rgba(255,180,80,0.7)",fontWeight:600,margin:"20px 0 12px"}}>23. United States-Specific Addendum</p>
-              <p><strong style={{color:iL?"rgba(26,18,9,0.82)":"rgba(255,255,255,0.75)"}}>23.3 California:</strong> CCPA/CPRA rights apply. Contact synapserewire@gmail.com. No sale of minors' data under 16.</p>
-              <p><strong style={{color:iL?"rgba(26,18,9,0.82)":"rgba(255,255,255,0.75)"}}>23.4 COPPA:</strong> No data collected from children under 13.</p>
-              <p style={{marginTop:20,padding:"12px 14px",background:iL?"rgba(192,225,210,0.2)":"rgba(255,140,0,0.05)",border:iL?"1px solid rgba(192,225,210,0.4)":"1px solid rgba(255,140,0,0.12)",borderRadius:8,fontSize:11,color:iL?"rgba(26,18,9,0.4)":"rgba(255,255,255,0.3)"}}>Draft template only — not legal advice. Must be reviewed by a licensed attorney before publication.</p>
-            </div>
-            <div style={{padding:"20px 28px",borderTop:iL?"1px solid rgba(192,225,210,0.4)":"1px solid rgba(255,255,255,0.06)",flexShrink:0,display:"flex",gap:12}}>
-              <button onClick={()=>{setTermsAccepted(true);setShowTerms(false);}} style={{flex:1,padding:"13px",borderRadius:12,background:iL?"linear-gradient(135deg,#c47a7a,#a85c5c)":"linear-gradient(135deg,#ff9500,#ff5000)",border:"none",color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer"}}>✓ Accept & Continue</button>
-              <button onClick={()=>setShowTerms(false)} style={{padding:"13px 20px",borderRadius:12,background:"transparent",border:iL?"1px solid rgba(192,225,210,0.5)":"1px solid rgba(255,255,255,0.1)",color:iL?"rgba(26,18,9,0.5)":"rgba(255,255,255,0.4)",fontSize:13,cursor:"pointer"}}>Cancel</button>
-            </div>
-          </div>
-        </div>
-      );
-    })()}
-    </>
+    {showTerms&&<TCModal isL={document.documentElement.classList.contains("light")} onAccept={()=>{setTermsAccepted(true);setShowTerms(false);}} onClose={()=>setShowTerms(false)}/>}
+  </>
   );
 }
 
@@ -3858,6 +3951,8 @@ export default function App() {
   const [milestone,setMilestone]=useState(null);
   const [toured,setToured]  =useState(()=>ls.get("syn_toured","")!=="1");
   const [theme,setTheme]    =useState(()=>ls.get("syn_theme","dark"));
+  const [showInstallPrompt,setShowInstallPrompt]=useState(false);
+  const deferredInstallPrompt=useRef(null);
   const audioPlayRef = useRef(null);
 
   // Apply theme class to root element
@@ -3873,6 +3968,16 @@ export default function App() {
 
   useEffect(()=>{const s=document.createElement("style");s.textContent=G;document.head.appendChild(s);return()=>document.head.removeChild(s);},[]);
   useEffect(()=>{"serviceWorker" in navigator&&navigator.serviceWorker.register("/sw.js",{scope:"/"}).catch(()=>{});},[]);
+
+  // Capture PWA install prompt — fire before browser auto-dismisses it
+  useEffect(()=>{
+    const handler=(e)=>{
+      e.preventDefault();
+      deferredInstallPrompt.current=e;
+    };
+    window.addEventListener("beforeinstallprompt",handler);
+    return()=>window.removeEventListener("beforeinstallprompt",handler);
+  },[]);
 
   // Firebase auth state listener — restores session on page reload
   useEffect(()=>{
@@ -3972,6 +4077,8 @@ export default function App() {
             archetype:archData?.title||"",
             addictions:confessData?.addictions||[],
             hoursPerDay:confessData?.hours||{},
+            dob:u.dob||"",
+            gender:u.gender||"",
             onboardedAt:serverTimestamp(),
             lastSeen:serverTimestamp(),
           },{merge:true});
@@ -4079,6 +4186,11 @@ export default function App() {
       }
     }catch(fe){console.warn("Firestore checkin write failed:",fe);}
 
+    // Show PWA install prompt after first check-in if not already installed
+    if(deferredInstallPrompt.current && !ls.get("syn_pwa_prompted","")){
+      setTimeout(()=>setShowInstallPrompt(true), 1200);
+    }
+
     return {reply, status};
   };
 
@@ -4131,6 +4243,15 @@ export default function App() {
           )}
           {emergency&&<EmergencyOverlay savedPlan={savedPlan} streak={streak} onClose={()=>setEmergency(false)} onCoach={()=>{setEmergency(false);goTo("chat");}}/>}
           {milestone&&<MilestoneCelebration day={milestone} onClose={()=>setMilestone(null)}/>}
+          {showInstallPrompt&&<InstallPrompt theme={theme} onDismiss={()=>{setShowInstallPrompt(false);ls.set("syn_pwa_prompted","1");}} onInstall={async()=>{
+            if(deferredInstallPrompt.current){
+              deferredInstallPrompt.current.prompt();
+              const{outcome}=await deferredInstallPrompt.current.userChoice;
+              deferredInstallPrompt.current=null;
+              ls.set("syn_pwa_prompted","1");
+            }
+            setShowInstallPrompt(false);
+          }}/>}
           <div className="footer-wrap" style={{position:"relative",zIndex:2,borderTop:"1px solid rgba(255,140,0,0.06)",padding:"28px clamp(16px,4vw,48px)",display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:16,background:"rgba(255,140,0,0.01)",boxSizing:"border-box",width:"100%"}}>
             <div style={{display:"flex",alignItems:"center",gap:12}}>
               <div style={{width:36,height:36,borderRadius:10,background:"linear-gradient(135deg,rgba(255,140,0,0.15),rgba(255,60,0,0.08))",border:"1px solid rgba(255,140,0,0.2)",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Orbitron',sans-serif",fontSize:11,fontWeight:800,color:"rgba(255,180,80,0.7)",letterSpacing:1}}>PG</div>
