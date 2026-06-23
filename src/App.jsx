@@ -1,5 +1,5 @@
 import { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo } from "react";
-import { auth, googleProvider, db, storage } from "./firebase";
+import { auth, googleProvider, db, storage, messaging, requestNotificationPermission, onMessage, VAPID_KEY } from "./firebase";
 import {
   signInWithEmailAndPassword, createUserWithEmailAndPassword,
   signInWithPopup, signOut, onAuthStateChanged, updateProfile,
@@ -969,12 +969,12 @@ input[type=range]{-webkit-appearance:none;appearance:none;background:transparent
 /* ── MOBILE RESPONSIVE ── */
 .step-inner{box-sizing:border-box;width:100%;}
 .archetype-grid{box-sizing:border-box;}
-@media(max-width:600px){
+@media(max-width:700px){
   .archetype-grid{grid-template-columns:1fr 1fr!important;gap:10px!important;}
   .archetype-grid>div{min-height:clamp(220px,55vw,280px)!important;}
 }
 @media(max-width:380px){
-  .archetype-grid{grid-template-columns:1fr!important;}
+  .archetype-grid{grid-template-columns:1fr 1fr!important;}
 }
 .addiction-grid{box-sizing:border-box;}
 
@@ -1045,6 +1045,23 @@ input[type=range]{-webkit-appearance:none;appearance:none;background:transparent
 `;
 
 /* ─── NAV ────────────────────────────────────────────────────────────────── */
+// ─── FCM FOREGROUND TOAST ────────────────────────────────────────────────────
+function FcmToast({toast,theme}){
+  const isL=theme==="light";
+  if(!toast) return null;
+  return(
+    <div style={{position:"fixed",top:80,left:"50%",transform:"translateX(-50%)",zIndex:1200,maxWidth:380,width:"calc(100% - 32px)",background:isL?"rgba(246,244,232,0.97)":"rgba(13,11,20,0.97)",border:isL?"1px solid rgba(192,225,210,0.6)":"1px solid rgba(255,140,0,0.25)",borderRadius:16,padding:"14px 18px",boxShadow:isL?"0 8px 32px rgba(192,225,210,0.3)":"0 8px 32px rgba(0,0,0,0.6)",animation:"fadeUp .4s cubic-bezier(.16,1,.3,1)",display:"flex",gap:12,alignItems:"flex-start"}}>
+      <div style={{width:36,height:36,borderRadius:10,background:isL?"linear-gradient(135deg,#c47a7a,#a85c5c)":"linear-gradient(135deg,#ff9500,#ff5000)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+        <span style={{fontSize:18}}>⚡</span>
+      </div>
+      <div style={{flex:1,minWidth:0}}>
+        <div style={{fontSize:13,fontWeight:700,color:"var(--text)",marginBottom:3}}>{toast.title}</div>
+        <div style={{fontSize:12,color:"var(--text3)",lineHeight:1.5}}>{toast.body}</div>
+      </div>
+    </div>
+  );
+}
+
 // ─── PWA INSTALL PROMPT ──────────────────────────────────────────────────────
 function InstallPrompt({theme,onInstall,onDismiss}){
   const isL=theme==="light";
@@ -1095,8 +1112,9 @@ function AdminDashboard({theme,onClose}){
   const [checkins,setCheckins]=useState([]);
   const [loading,setLoading]=useState(true);
   const [tab,setTab]=useState("overview");
-  const [range,setRange]=useState("7d"); // 1d | 7d | 30d | all
+  const [range,setRange]=useState("7d");
   const [selectedUser,setSelectedUser]=useState(null);
+  const [dbError,setDbError]=useState(false);
 
   // Colors
   const bg    = isL?"#f6f4e8":"#09070f";
@@ -1109,14 +1127,63 @@ function AdminDashboard({theme,onClose}){
 
   useEffect(()=>{
     (async()=>{
+      // Try Firestore first
       try{
+        if(!db) throw new Error("db undefined — firebase.js not updated yet");
         const [uSnap,cSnap]=await Promise.all([
           getDocs(collection(db,"users")),
           getDocs(query(collection(db,"checkins"),orderBy("timestamp","desc"),limit(500)))
         ]);
-        setUsers(uSnap.docs.map(d=>({id:d.id,...d.data()})));
-        setCheckins(cSnap.docs.map(d=>({id:d.id,...d.data()})));
-      }catch(e){console.error("Admin fetch:",e);}
+        const uData=uSnap.docs.map(d=>({id:d.id,...d.data()}));
+        const cData=cSnap.docs.map(d=>({id:d.id,...d.data()}));
+        if(uData.length>0||cData.length>0){
+          setUsers(uData);
+          setCheckins(cData);
+          setLoading(false);
+          return;
+        }
+      }catch(e){
+        console.warn("Firestore unavailable, falling back to localStorage:",e.message);
+        setDbError(true);
+      }
+
+      // Fallback — build data from localStorage
+      try{
+        const u=JSON.parse(localStorage.getItem("syn_user")||"{}");
+        const h=JSON.parse(localStorage.getItem("syn_history")||"[]");
+        const archetype=JSON.parse(localStorage.getItem("syn_archetype")||"{}");
+        const confess=JSON.parse(localStorage.getItem("syn_confess")||"{}");
+        const streak=parseInt(localStorage.getItem("syn_streak")||"0");
+
+        const localUser={
+          id:u.uid||"local",
+          uid:u.uid||"local",
+          name:u.name||"You",
+          email:u.email||"",
+          photoURL:u.photoURL||"",
+          archetype:archetype?.title||"",
+          addictions:confess?.addictions||[],
+          hoursPerDay:confess?.hours||{},
+          currentStreak:streak,
+          lastCheckin:localStorage.getItem("syn_last")||"",
+          dob:u.dob||"",
+          gender:u.gender||"",
+          lastSeen:{toDate:()=>new Date()},
+        };
+
+        const localCheckins=h.map((entry,i)=>({
+          id:`local_${i}`,
+          uid:u.uid||"local",
+          date:entry.date||"",
+          status:entry.status||"win",
+          streak:entry.streak||0,
+          msg:entry.msg||"",
+          timestamp:{toDate:()=>new Date(entry.date||Date.now())},
+        }));
+
+        setUsers([localUser]);
+        setCheckins(localCheckins);
+      }catch(le){console.error("localStorage fallback failed:",le);}
       finally{setLoading(false);}
     })();
   },[]);
@@ -1193,6 +1260,16 @@ function AdminDashboard({theme,onClose}){
           <button onClick={onClose} style={{width:32,height:32,borderRadius:"50%",background:card,border:`1px solid ${bdr}`,color:txt2,fontSize:18,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",lineHeight:1}}>×</button>
         </div>
       </div>
+
+      {/* Firestore status banner */}
+      {dbError&&(
+        <div style={{background:"rgba(251,191,36,0.08)",border:"none",borderBottom:"1px solid rgba(251,191,36,0.2)",padding:"10px 20px",display:"flex",alignItems:"center",gap:10}}>
+          <span style={{fontSize:14}}>⚠️</span>
+          <div style={{fontSize:11,color:amber,lineHeight:1.5}}>
+            <strong>Firestore offline</strong> — showing local data only. Update <code style={{background:"rgba(251,191,36,0.1)",padding:"1px 5px",borderRadius:4}}>src/firebase.js</code> with db export to see all users.
+          </div>
+        </div>
+      )}
 
       {/* ── Tab bar ── */}
       <div style={{display:"flex",gap:0,borderBottom:`1px solid ${bdr}`,padding:"0 20px",overflowX:"auto"}}>
@@ -2069,7 +2146,7 @@ function ArchetypeStep({ onSelect, selected }) {
       </p>
 
       {/* Archetype cards grid */}
-      <div className="archetype-grid" style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(min(100%,280px),1fr))",gap:12,marginBottom:52,width:"100%",boxSizing:"border-box"}}>
+      <div className="archetype-grid" style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12,marginBottom:52,width:"100%",boxSizing:"border-box"}}>
         {ARCHETYPES.map((a, i) => {
           const isSel = selected === a.id;
           const isHov = hovered === a.id;
@@ -3952,6 +4029,7 @@ export default function App() {
   const [toured,setToured]  =useState(()=>ls.get("syn_toured","")!=="1");
   const [theme,setTheme]    =useState(()=>ls.get("syn_theme","dark"));
   const [showInstallPrompt,setShowInstallPrompt]=useState(false);
+  const [fcmToast,setFcmToast]=useState(null);
   const deferredInstallPrompt=useRef(null);
   const audioPlayRef = useRef(null);
 
@@ -3967,17 +4045,37 @@ export default function App() {
   },[]);
 
   useEffect(()=>{const s=document.createElement("style");s.textContent=G;document.head.appendChild(s);return()=>document.head.removeChild(s);},[]);
-  useEffect(()=>{"serviceWorker" in navigator&&navigator.serviceWorker.register("/sw.js",{scope:"/"}).catch(()=>{});},[]);
+  useEffect(()=>{"serviceWorker" in navigator&&navigator.serviceWorker.register("/firebase-messaging-sw.js",{scope:"/"}).catch(()=>{});},[]);
 
-  // Capture PWA install prompt — fire before browser auto-dismisses it
+  // Capture PWA install prompt
   useEffect(()=>{
-    const handler=(e)=>{
-      e.preventDefault();
-      deferredInstallPrompt.current=e;
-    };
+    const handler=(e)=>{ e.preventDefault(); deferredInstallPrompt.current=e; };
     window.addEventListener("beforeinstallprompt",handler);
     return()=>window.removeEventListener("beforeinstallprompt",handler);
   },[]);
+
+  // FCM — request permission + save token after auth, listen for foreground messages
+  useEffect(()=>{
+    if(!authed) return;
+    // Request permission & save token
+    (async()=>{
+      try{
+        const token = await requestNotificationPermission();
+        if(token && auth.currentUser?.uid){
+          await setDoc(doc(db,"users",auth.currentUser.uid),{fcmToken:token,lastSeen:serverTimestamp()},{merge:true});
+        }
+      }catch(e){ console.warn("FCM setup:",e); }
+    })();
+    // Foreground message handler
+    const unsub = onMessage(messaging,(payload)=>{
+      const {title,body} = payload.notification||{};
+      if(!title) return;
+      // Show as in-app toast
+      setFcmToast({title,body:body||""});
+      setTimeout(()=>setFcmToast(null),5000);
+    });
+    return()=>unsub();
+  },[authed]);
 
   // Firebase auth state listener — restores session on page reload
   useEffect(()=>{
@@ -4243,6 +4341,7 @@ export default function App() {
           )}
           {emergency&&<EmergencyOverlay savedPlan={savedPlan} streak={streak} onClose={()=>setEmergency(false)} onCoach={()=>{setEmergency(false);goTo("chat");}}/>}
           {milestone&&<MilestoneCelebration day={milestone} onClose={()=>setMilestone(null)}/>}
+          <FcmToast toast={fcmToast} theme={theme}/>
           {showInstallPrompt&&<InstallPrompt theme={theme} onDismiss={()=>{setShowInstallPrompt(false);ls.set("syn_pwa_prompted","1");}} onInstall={async()=>{
             if(deferredInstallPrompt.current){
               deferredInstallPrompt.current.prompt();

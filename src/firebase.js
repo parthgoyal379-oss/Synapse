@@ -2,6 +2,7 @@ import { initializeApp } from "firebase/app";
 import { getAuth, GoogleAuthProvider } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
+import { getMessaging, getToken, onMessage } from "firebase/messaging";
 
 const firebaseConfig = {
   apiKey:            import.meta.env.VITE_FIREBASE_API_KEY,
@@ -13,8 +14,28 @@ const firebaseConfig = {
 };
 
 const app = initializeApp(firebaseConfig);
-export const auth    = getAuth(app);
-export const db      = getFirestore(app);
-export const storage = getStorage(app);
+export const auth      = getAuth(app);
+export const db        = getFirestore(app);
+export const storage   = getStorage(app);
+export const messaging = getMessaging(app);
 export const googleProvider = new GoogleAuthProvider();
 googleProvider.setCustomParameters({ prompt: "select_account" });
+
+export const VAPID_KEY = "BMhfG52HfwVhnYK1aY0FmHGPI7tSDhB60etg8f-bvOYS0PFpmjk21RDqNS07W6MKScQm-W3w7RwA_SOwjjSQodc";
+
+export async function requestNotificationPermission() {
+  try {
+    const permission = await Notification.requestPermission();
+    if (permission !== "granted") return null;
+    const token = await getToken(messaging, {
+      vapidKey: VAPID_KEY,
+      serviceWorkerRegistration: await navigator.serviceWorker.getRegistration("/"),
+    });
+    return token || null;
+  } catch (e) {
+    console.warn("FCM token error:", e);
+    return null;
+  }
+}
+
+export { onMessage };
