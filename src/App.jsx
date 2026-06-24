@@ -1045,6 +1045,31 @@ input[type=range]{-webkit-appearance:none;appearance:none;background:transparent
 `;
 
 /* ─── NAV ────────────────────────────────────────────────────────────────── */
+// ─── NOTIFICATION PERMISSION PROMPT ─────────────────────────────────────────
+function NotifPrompt({theme,onAllow,onDismiss}){
+  const isL=theme==="light";
+  return(
+    <div style={{position:"fixed",inset:0,zIndex:1100,display:"flex",alignItems:"flex-end",justifyContent:"center",padding:"0 0 24px"}}>
+      <div onClick={onDismiss} style={{position:"absolute",inset:0,background:"rgba(0,0,0,0.55)",backdropFilter:"blur(8px)"}}/>
+      <div style={{position:"relative",width:"100%",maxWidth:480,background:isL?"#f6f4e8":"#0d0b14",border:isL?"1px solid rgba(192,225,210,0.5)":"1px solid rgba(255,140,0,0.2)",borderRadius:24,padding:"28px 24px 24px",margin:"0 16px",animation:"slideUp .4s cubic-bezier(.16,1,.3,1)",boxShadow:isL?"0 -4px 40px rgba(192,225,210,0.2)":"0 -4px 40px rgba(255,140,0,0.1)"}}>
+        <div style={{width:52,height:52,borderRadius:14,background:isL?"linear-gradient(135deg,#c47a7a,#a85c5c)":"linear-gradient(135deg,#ff9500,#ff5000)",display:"flex",alignItems:"center",justifyContent:"center",marginBottom:16,fontSize:24}}>🔔</div>
+        <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:15,fontWeight:800,color:"var(--text)",letterSpacing:.5,marginBottom:8}}>Stay on Track</div>
+        <div style={{fontSize:13,color:"var(--text3)",lineHeight:1.7,marginBottom:24}}>
+          Enable notifications to get daily check-in reminders and streak alerts — even when SYNAPSE is closed.
+        </div>
+        <div style={{display:"flex",gap:10}}>
+          <button onClick={onAllow} style={{flex:1,padding:"14px",borderRadius:14,background:isL?"linear-gradient(135deg,#c47a7a,#a85c5c)":"linear-gradient(135deg,#ff9500,#ff5000)",border:"none",color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer",boxShadow:isL?"0 4px 16px rgba(196,122,122,0.35)":"0 4px 16px rgba(255,140,0,0.35)"}}>
+            🔔 Enable Notifications
+          </button>
+          <button onClick={onDismiss} style={{padding:"14px 18px",borderRadius:14,background:"transparent",border:isL?"1px solid rgba(192,225,210,0.5)":"1px solid rgba(255,255,255,0.1)",color:"var(--text3)",fontSize:13,cursor:"pointer"}}>
+            Later
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── FCM FOREGROUND TOAST ────────────────────────────────────────────────────
 function FcmToast({toast,theme}){
   const isL=theme==="light";
@@ -4029,6 +4054,7 @@ export default function App() {
   const [toured,setToured]  =useState(()=>ls.get("syn_toured","")!=="1");
   const [theme,setTheme]    =useState(()=>ls.get("syn_theme","dark"));
   const [showInstallPrompt,setShowInstallPrompt]=useState(false);
+  const [showNotifPrompt,setShowNotifPrompt]=useState(false);
   const [fcmToast,setFcmToast]=useState(null);
   const deferredInstallPrompt=useRef(null);
   const audioPlayRef = useRef(null);
@@ -4054,27 +4080,53 @@ export default function App() {
     return()=>window.removeEventListener("beforeinstallprompt",handler);
   },[]);
 
-  // FCM — request permission + save token after auth, listen for foreground messages
+  // Notification permission — ask directly via browser API (firebase-independent)
   useEffect(()=>{
     if(!authed) return;
-    // Request permission & save token
-    (async()=>{
+    if(ls.get("syn_notif_asked","")) return; // already asked once
+    // Small delay so it doesn't fire immediately on login
+    const t=setTimeout(async()=>{
+      if(!("Notification" in window)) return;
+      if(Notification.permission==="granted"||Notification.permission==="denied") return;
+      // Show our custom prompt first instead of raw browser dialog
+      setShowNotifPrompt(true);
+    },3000);
+    return()=>clearTimeout(t);
+  },[authed]);
+
+  // FCM token save after permission granted
+  const requestNotifPermission=async()=>{
+    ls.set("syn_notif_asked","1");
+    setShowNotifPrompt(false);
+    try{
+      const permission=await Notification.requestPermission();
+      if(permission!=="granted") return;
+      // Try FCM token if firebase available
       try{
-        const token = await requestNotificationPermission();
-        if(token && auth.currentUser?.uid){
-          await setDoc(doc(db,"users",auth.currentUser.uid),{fcmToken:token,lastSeen:serverTimestamp()},{merge:true});
+        const {requestNotificationPermission:reqFCM}=await import("./firebase");
+        const token=await reqFCM();
+        if(token&&auth.currentUser?.uid&&db){
+          await setDoc(doc(db,"users",auth.currentUser.uid),{fcmToken:token},{merge:true});
         }
-      }catch(e){ console.warn("FCM setup:",e); }
-    })();
-    // Foreground message handler
-    const unsub = onMessage(messaging,(payload)=>{
-      const {title,body} = payload.notification||{};
-      if(!title) return;
-      // Show as in-app toast
-      setFcmToast({title,body:body||""});
-      setTimeout(()=>setFcmToast(null),5000);
-    });
-    return()=>unsub();
+      }catch(fe){console.warn("FCM token (non-critical):",fe);}
+      // Show confirmation toast
+      setFcmToast({title:"Notifications enabled ✓",body:"You'll get daily reminders and streak alerts."});
+      setTimeout(()=>setFcmToast(null),4000);
+    }catch(e){console.warn("Notif permission:",e);}
+  };
+
+  // Foreground FCM messages — only if messaging available
+  useEffect(()=>{
+    if(!authed||!messaging) return;
+    try{
+      const unsub=onMessage(messaging,(payload)=>{
+        const {title,body}=payload.notification||{};
+        if(!title) return;
+        setFcmToast({title,body:body||""});
+        setTimeout(()=>setFcmToast(null),5000);
+      });
+      return()=>unsub();
+    }catch(e){console.warn("onMessage:",e);}
   },[authed]);
 
   // Firebase auth state listener — restores session on page reload
@@ -4284,9 +4336,16 @@ export default function App() {
       }
     }catch(fe){console.warn("Firestore checkin write failed:",fe);}
 
-    // Show PWA install prompt after first check-in if not already installed
-    if(deferredInstallPrompt.current && !ls.get("syn_pwa_prompted","")){
-      setTimeout(()=>setShowInstallPrompt(true), 1200);
+    // Show PWA install prompt after check-in if not already installed/prompted
+    if(!ls.get("syn_pwa_prompted","")){
+      setTimeout(()=>{
+        if(deferredInstallPrompt.current){
+          setShowInstallPrompt(true);
+        } else {
+          // No deferred prompt — still show our card with iOS instructions
+          setShowInstallPrompt(true);
+        }
+      }, 1500);
     }
 
     return {reply, status};
@@ -4342,6 +4401,7 @@ export default function App() {
           {emergency&&<EmergencyOverlay savedPlan={savedPlan} streak={streak} onClose={()=>setEmergency(false)} onCoach={()=>{setEmergency(false);goTo("chat");}}/>}
           {milestone&&<MilestoneCelebration day={milestone} onClose={()=>setMilestone(null)}/>}
           <FcmToast toast={fcmToast} theme={theme}/>
+          {showNotifPrompt&&<NotifPrompt theme={theme} onAllow={requestNotifPermission} onDismiss={()=>{setShowNotifPrompt(false);ls.set("syn_notif_asked","1");}}/>}
           {showInstallPrompt&&<InstallPrompt theme={theme} onDismiss={()=>{setShowInstallPrompt(false);ls.set("syn_pwa_prompted","1");}} onInstall={async()=>{
             if(deferredInstallPrompt.current){
               deferredInstallPrompt.current.prompt();
