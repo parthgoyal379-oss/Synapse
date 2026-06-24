@@ -1045,6 +1045,16 @@ input[type=range]{-webkit-appearance:none;appearance:none;background:transparent
 `;
 
 /* ─── NAV ────────────────────────────────────────────────────────────────── */
+// Capture install prompt ASAP — before React even mounts
+// Must be at module level so it fires before useEffect
+if(typeof window !== "undefined"){
+  window.__installPrompt = null;
+  window.addEventListener("beforeinstallprompt", (e) => {
+    e.preventDefault();
+    window.__installPrompt = e;
+  });
+}
+
 // ─── NOTIFICATION PERMISSION PROMPT ─────────────────────────────────────────
 function NotifPrompt({theme,onAllow,onDismiss}){
   const isL=theme==="light";
@@ -2171,7 +2181,7 @@ function ArchetypeStep({ onSelect, selected }) {
       </p>
 
       {/* Archetype cards grid */}
-      <div className="archetype-grid" style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12,marginBottom:52,width:"100%",boxSizing:"border-box"}}>
+      <div className="archetype-grid" style={{display:"grid",gridTemplateColumns:window.innerWidth<=700?"1fr 1fr":"repeat(4,1fr)",gap:window.innerWidth<=700?10:12,marginBottom:52,width:"100%",boxSizing:"border-box"}}>
         {ARCHETYPES.map((a, i) => {
           const isSel = selected === a.id;
           const isHov = hovered === a.id;
@@ -2195,7 +2205,7 @@ function ArchetypeStep({ onSelect, selected }) {
                   : isHov
                   ? `0 0 30px rgba(${a.accentRgb},.2), 0 12px 28px rgba(0,0,0,.5)`
                   : "0 4px 16px rgba(0,0,0,.4)",
-                minHeight: "clamp(260px,40vw,320px)",
+                minHeight: window.innerWidth<=700?"clamp(180px,44vw,240px)":"clamp(260px,40vw,320px)",
                 animation:`fadeUp .6s cubic-bezier(.16,1,.3,1) ${i*.1}s both`,
               }}>
 
@@ -2246,7 +2256,7 @@ function ArchetypeStep({ onSelect, selected }) {
                 <div style={{height:1,background:`linear-gradient(90deg, rgba(${a.accentRgb},${active?.3:.1}), transparent)`,marginBottom:18,transition:"all .3s"}}/>
 
                 {/* Description */}
-                <p style={{fontSize:13,color:active?"rgba(255,255,255,.52)":"rgba(255,255,255,.28)",lineHeight:1.8,fontWeight:300,transition:"color .3s"}}>
+                <p style={{fontSize:window.innerWidth<=700?11:13,color:active?"rgba(255,255,255,.52)":"rgba(255,255,255,.28)",lineHeight:1.8,fontWeight:300,transition:"color .3s",overflow:"hidden",display:"-webkit-box",WebkitLineClamp:window.innerWidth<=700?3:8,WebkitBoxOrient:"vertical",margin:0}}>
                   {a.desc}
                 </p>
 
@@ -4073,9 +4083,11 @@ export default function App() {
   useEffect(()=>{const s=document.createElement("style");s.textContent=G;document.head.appendChild(s);return()=>document.head.removeChild(s);},[]);
   useEffect(()=>{"serviceWorker" in navigator&&navigator.serviceWorker.register("/firebase-messaging-sw.js",{scope:"/"}).catch(()=>{});},[]);
 
-  // Capture PWA install prompt
+  // Capture PWA install prompt — also sync from module-level capture
   useEffect(()=>{
-    const handler=(e)=>{ e.preventDefault(); deferredInstallPrompt.current=e; };
+    // Already captured at module level
+    if(window.__installPrompt) deferredInstallPrompt.current=window.__installPrompt;
+    const handler=(e)=>{ e.preventDefault(); deferredInstallPrompt.current=e; window.__installPrompt=e; };
     window.addEventListener("beforeinstallprompt",handler);
     return()=>window.removeEventListener("beforeinstallprompt",handler);
   },[]);
@@ -4336,16 +4348,9 @@ export default function App() {
       }
     }catch(fe){console.warn("Firestore checkin write failed:",fe);}
 
-    // Show PWA install prompt after check-in if not already installed/prompted
+    // Show PWA install prompt after check-in
     if(!ls.get("syn_pwa_prompted","")){
-      setTimeout(()=>{
-        if(deferredInstallPrompt.current){
-          setShowInstallPrompt(true);
-        } else {
-          // No deferred prompt — still show our card with iOS instructions
-          setShowInstallPrompt(true);
-        }
-      }, 1500);
+      setTimeout(()=>setShowInstallPrompt(true), 1500);
     }
 
     return {reply, status};
@@ -4403,12 +4408,14 @@ export default function App() {
           <FcmToast toast={fcmToast} theme={theme}/>
           {showNotifPrompt&&<NotifPrompt theme={theme} onAllow={requestNotifPermission} onDismiss={()=>{setShowNotifPrompt(false);ls.set("syn_notif_asked","1");}}/>}
           {showInstallPrompt&&<InstallPrompt theme={theme} onDismiss={()=>{setShowInstallPrompt(false);ls.set("syn_pwa_prompted","1");}} onInstall={async()=>{
-            if(deferredInstallPrompt.current){
-              deferredInstallPrompt.current.prompt();
-              const{outcome}=await deferredInstallPrompt.current.userChoice;
+            const prompt=deferredInstallPrompt.current||window.__installPrompt;
+            if(prompt){
+              prompt.prompt();
+              const{outcome}=await prompt.userChoice;
               deferredInstallPrompt.current=null;
-              ls.set("syn_pwa_prompted","1");
+              window.__installPrompt=null;
             }
+            ls.set("syn_pwa_prompted","1");
             setShowInstallPrompt(false);
           }}/>}
           <div className="footer-wrap" style={{position:"relative",zIndex:2,borderTop:"1px solid rgba(255,140,0,0.06)",padding:"28px clamp(16px,4vw,48px)",display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:16,background:"rgba(255,140,0,0.01)",boxSizing:"border-box",width:"100%"}}>
