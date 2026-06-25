@@ -27,9 +27,17 @@ export async function requestNotificationPermission() {
   try {
     const permission = await Notification.requestPermission();
     if (permission !== "granted") return null;
+    // Register/get the FCM service worker explicitly
+    let swReg;
+    try {
+      swReg = await navigator.serviceWorker.register("/firebase-messaging-sw.js", { scope: "/" });
+    } catch {
+      swReg = await navigator.serviceWorker.getRegistration("/");
+    }
+    if (!swReg) return null;
     const token = await getToken(messaging, {
       vapidKey: VAPID_KEY,
-      serviceWorkerRegistration: await navigator.serviceWorker.getRegistration("/"),
+      serviceWorkerRegistration: swReg,
     });
     return token || null;
   } catch (e) {
