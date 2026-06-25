@@ -1547,9 +1547,18 @@ function ProfileSheet({user,theme,onThemeToggle,onClose,onSignOut,onPhotoUpdate,
   const isL=theme==="light";
   const initials=(user?.name||user?.email||"U").split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase();
   const [uploading,setUploading]=useState(false);
-  const [photoURL,setPhotoURL]=useState(user?.photoURL||auth.currentUser?.photoURL||null);
-  const [dob,setDob]=useState(user?.dob||"");
-  const [gender,setGender]=useState(user?.gender||"");
+  const [photoURL,setPhotoURL]=useState(()=>{
+    const stored=JSON.parse(localStorage.getItem("syn_user")||"{}");
+    return stored.photoURL||auth.currentUser?.photoURL||null;
+  });
+  const [dob,setDob]=useState(()=>{
+    const stored=JSON.parse(localStorage.getItem("syn_user")||"{}");
+    return stored.dob||user?.dob||"";
+  });
+  const [gender,setGender]=useState(()=>{
+    const stored=JSON.parse(localStorage.getItem("syn_user")||"{}");
+    return stored.gender||user?.gender||"";
+  });
   const [saving,setSaving]=useState(false);
   const [saved,setSaved]=useState(false);
   const fileRef=useRef();
@@ -1577,19 +1586,18 @@ function ProfileSheet({user,theme,onThemeToggle,onClose,onSignOut,onPhotoUpdate,
     }finally{setUploading(false);}
   };
 
-  const handleSaveProfile=async()=>{
-    setSaving(true);
-    try{
-      const stored=JSON.parse(localStorage.getItem("syn_user")||"{}");
-      localStorage.setItem("syn_user",JSON.stringify({...stored,dob,gender}));
-      const uid=auth.currentUser?.uid;
-      if(uid){
-        await setDoc(doc(db,"users",uid),{dob,gender,lastSeen:serverTimestamp()},{merge:true});
-      }
-      setSaved(true);
-      setTimeout(()=>setSaved(false),2000);
-    }catch(e){console.error("Save profile failed:",e);}
-    finally{setSaving(false);}
+  const handleSaveProfile=()=>{
+    // 1. Save to localStorage INSTANTLY — no async
+    const stored=JSON.parse(localStorage.getItem("syn_user")||"{}");
+    localStorage.setItem("syn_user",JSON.stringify({...stored,dob,gender}));
+    setSaved(true);
+    setTimeout(()=>setSaved(false),2000);
+    // 2. Firestore in background — non-blocking
+    const uid=auth.currentUser?.uid;
+    if(uid&&db){
+      setDoc(doc(db,"users",uid),{dob,gender,lastSeen:serverTimestamp()},{merge:true})
+        .catch(e=>console.warn("Firestore profile sync (non-critical):",e));
+    }
   };
 
   const inp={width:"100%",background:isL?"rgba(255,255,255,0.7)":"rgba(255,255,255,0.05)",border:isL?"1px solid rgba(192,225,210,0.5)":"1px solid rgba(255,255,255,0.1)",borderRadius:10,padding:"11px 14px",color:"var(--text)",fontSize:13,outline:"none",fontFamily:"'Inter',sans-serif",boxSizing:"border-box"};
@@ -1660,8 +1668,8 @@ function ProfileSheet({user,theme,onThemeToggle,onClose,onSignOut,onPhotoUpdate,
             </div>
           </div>
           {/* Save button */}
-          <button onClick={handleSaveProfile} disabled={saving} style={{padding:"11px",borderRadius:10,background:saved?(isL?"rgba(74,222,128,0.15)":"rgba(74,222,128,0.12)"):(isL?"linear-gradient(135deg,#c47a7a,#a85c5c)":"linear-gradient(135deg,#ff9500,#ff5000)"),border:saved?"1px solid rgba(74,222,128,0.4)":"none",color:saved?"#4ade80":"#fff",fontSize:12,fontWeight:600,cursor:"pointer",transition:"all .3s",display:"flex",alignItems:"center",justifyContent:"center",gap:6}}>
-            {saving?<><div style={{width:12,height:12,border:"2px solid rgba(255,255,255,0.3)",borderTop:"2px solid #fff",borderRadius:"50%",animation:"spin 0.7s linear infinite"}}/> Saving...</>:saved?"✓ Saved!":"Save Profile"}
+          <button onClick={handleSaveProfile} style={{padding:"11px",borderRadius:10,background:saved?(isL?"rgba(74,222,128,0.15)":"rgba(74,222,128,0.12)"):(isL?"linear-gradient(135deg,#c47a7a,#a85c5c)":"linear-gradient(135deg,#ff9500,#ff5000)"),border:saved?"1px solid rgba(74,222,128,0.4)":"none",color:saved?"#4ade80":"#fff",fontSize:12,fontWeight:600,cursor:"pointer",transition:"all .3s",display:"flex",alignItems:"center",justifyContent:"center",gap:6}}>
+            {saved?"✓ Saved!":"Save Profile"}
           </button>
         </div>
         {/* Options */}
@@ -1879,33 +1887,104 @@ function getErrorMsg(code) {
 function TCModal({isL,onAccept,onClose}){
   return(
     <div style={{position:"fixed",inset:0,zIndex:9999,background:"rgba(0,0,0,0.8)",backdropFilter:"blur(12px)",display:"flex",alignItems:"center",justifyContent:"center",padding:"20px"}} onClick={onClose}>
-      <div onClick={e=>e.stopPropagation()} style={{width:"100%",maxWidth:620,maxHeight:"80vh",background:isL?"#f6f4e8":"#0d0b10",border:isL?"1px solid rgba(192,225,210,0.5)":"1px solid rgba(255,140,0,0.15)",borderRadius:20,display:"flex",flexDirection:"column",overflow:"hidden",boxShadow:"0 32px 80px rgba(0,0,0,0.6)"}}>
-        <div style={{padding:"24px 28px 20px",borderBottom:isL?"1px solid rgba(192,225,210,0.4)":"1px solid rgba(255,255,255,0.06)",display:"flex",alignItems:"center",justifyContent:"space-between",flexShrink:0}}>
+      <div onClick={e=>e.stopPropagation()} style={{width:"100%",maxWidth:620,maxHeight:"82vh",background:isL?"#f6f4e8":"#0d0b10",border:isL?"1px solid rgba(192,225,210,0.5)":"1px solid rgba(255,140,0,0.15)",borderRadius:20,display:"flex",flexDirection:"column",overflow:"hidden",boxShadow:"0 32px 80px rgba(0,0,0,0.6)"}}>
+        {/* Header */}
+        <div style={{padding:"22px 28px 18px",borderBottom:isL?"1px solid rgba(192,225,210,0.4)":"1px solid rgba(255,255,255,0.06)",display:"flex",alignItems:"center",justifyContent:"space-between",flexShrink:0}}>
           <div>
-            <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:14,fontWeight:700,color:isL?"#8a4a4a":"#ffb347",letterSpacing:1}}>SYNAPSE TERMS & CONDITIONS</div>
-            <div style={{fontSize:11,color:isL?"rgba(26,18,9,0.45)":"rgba(255,255,255,0.3)",marginTop:3}}>Please read carefully before proceeding</div>
+            <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:13,fontWeight:700,color:isL?"#8a4a4a":"#ffb347",letterSpacing:1}}>SYNAPSE TERMS OF SERVICE</div>
+            <div style={{fontSize:10,color:isL?"rgba(26,18,9,0.4)":"rgba(255,255,255,0.3)",marginTop:3}}>Effective Date: June 25, 2026 · Please read carefully</div>
           </div>
           <button onClick={onClose} style={{width:32,height:32,borderRadius:"50%",background:isL?"rgba(192,225,210,0.3)":"rgba(255,255,255,0.05)",border:isL?"1px solid rgba(192,225,210,0.5)":"1px solid rgba(255,255,255,0.1)",color:isL?"rgba(26,18,9,0.5)":"rgba(255,255,255,0.5)",fontSize:18,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",lineHeight:1}}>×</button>
         </div>
-        <div style={{padding:"24px 28px",overflowY:"auto",flex:1,fontSize:12,color:isL?"rgba(26,18,9,0.62)":"rgba(255,255,255,0.55)",lineHeight:1.9}}>
-          <p style={{color:isL?"rgba(138,74,74,0.9)":"rgba(255,180,80,0.7)",fontWeight:600,marginBottom:12}}>19.4 Entire Agreement</p>
-          <p>These Terms, together with the Privacy Policy and any other policies expressly incorporated by reference, constitute the entire agreement between the parties with respect to the subject matter hereof and supersede all prior or contemporaneous agreements, representations, and understandings, whether written or oral.</p>
-          <p style={{color:isL?"rgba(138,74,74,0.9)":"rgba(255,180,80,0.7)",fontWeight:600,margin:"20px 0 12px"}}>20. Notices and Contact Information</p>
-          <p><strong style={{color:isL?"rgba(26,18,9,0.82)":"rgba(255,255,255,0.75)"}}>20.1</strong> All notices shall be directed to: <span style={{color:isL?"#c47a7a":"#ffb347"}}>synapserewire@gmail.com</span></p>
-          <p><strong style={{color:isL?"rgba(26,18,9,0.82)":"rgba(255,255,255,0.75)"}}>20.2</strong> Notices deemed effective upon transmission to the User's email address.</p>
-          <p style={{color:isL?"rgba(138,74,74,0.9)":"rgba(255,180,80,0.7)",fontWeight:600,margin:"20px 0 12px"}}>21. Acknowledgment</p>
-          <p style={{color:isL?"rgba(26,18,9,0.75)":"rgba(255,255,255,0.65)"}}>BY USING THE SERVICE, THE USER ACKNOWLEDGES HAVING READ AND UNDERSTOOD THIS AGREEMENT IN ITS ENTIRETY, INCLUDING THE WARRANTY DISCLAIMERS, LIMITATIONS OF LIABILITY, INDEMNIFICATION OBLIGATIONS, AND BINDING ARBITRATION AND CLASS ACTION WAIVER PROVISIONS SET FORTH HEREIN, AND VOLUNTARILY AND IRREVOCABLY AGREES TO BE BOUND BY ITS TERMS.</p>
-          <p style={{color:isL?"rgba(138,74,74,0.9)":"rgba(255,180,80,0.7)",fontWeight:600,margin:"20px 0 12px"}}>22. India-Specific Addendum</p>
-          <p><strong style={{color:isL?"rgba(26,18,9,0.82)":"rgba(255,255,255,0.75)"}}>22.1</strong> Governed by laws of India — IT Act 2000, DPDP Act 2023, Indian Contract Act 1872.</p>
-          <p><strong style={{color:isL?"rgba(26,18,9,0.82)":"rgba(255,255,255,0.75)"}}>22.3 Grievance Officer:</strong> <span style={{color:isL?"#c47a7a":"#ffb347"}}>synapserewire@gmail.com</span> — per IT (Intermediary Guidelines) Rules, 2021.</p>
-          <p style={{color:isL?"rgba(138,74,74,0.9)":"rgba(255,180,80,0.7)",fontWeight:600,margin:"20px 0 12px"}}>23. United States-Specific Addendum</p>
-          <p><strong style={{color:isL?"rgba(26,18,9,0.82)":"rgba(255,255,255,0.75)"}}>23.3 California:</strong> CCPA/CPRA rights apply. Contact synapserewire@gmail.com. No sale of minors' data under 16.</p>
-          <p><strong style={{color:isL?"rgba(26,18,9,0.82)":"rgba(255,255,255,0.75)"}}>23.4 COPPA:</strong> No data collected from children under 13.</p>
-          <p style={{marginTop:20,padding:"12px 14px",background:isL?"rgba(192,225,210,0.2)":"rgba(255,140,0,0.05)",border:isL?"1px solid rgba(192,225,210,0.4)":"1px solid rgba(255,140,0,0.12)",borderRadius:8,fontSize:11,color:isL?"rgba(26,18,9,0.4)":"rgba(255,255,255,0.3)"}}>Draft template only — not legal advice. Must be reviewed by a licensed attorney.</p>
+        {/* Content */}
+        <div style={{padding:"20px 28px",overflowY:"auto",flex:1,fontSize:12,color:isL?"rgba(26,18,9,0.62)":"rgba(255,255,255,0.55)",lineHeight:1.9}}>
+          {[
+            {h:"1. Definitions",b:`"Service" means all websites, applications, software, AI systems, content, and features provided by Synapse. "AI Content" means any content generated through AI systems. "User Content" means all information, data, and submissions provided by a User.`},
+            {h:"2. Eligibility",b:"Users must be at least 18 years of age or possess legally valid parental/guardian consent. Synapse reserves the right to refuse registration, suspend access, or terminate accounts at its sole discretion."},
+            {h:"3. Account Registration",b:"Users agree to provide accurate, complete, and current information. Users are solely responsible for maintaining account confidentiality and assume full responsibility for all activities conducted through their account."},
+            {h:"4. Description of Service",b:"Synapse provides AI-powered productivity, habit-building, behavioral support, educational guidance, goal management, accountability tools, and related features. Service functionality may change without prior notice."},
+            {h:"5. NO MEDICAL OR CLINICAL SERVICES",b:"THE SERVICE DOES NOT PROVIDE MEDICAL CARE. Synapse is not a healthcare provider. Information provided is for informational, educational, and self-development purposes only. Users should seek qualified professional assistance for medical, psychological, or mental health concerns."},
+            {h:"6. CRISIS AND EMERGENCY DISCLAIMER",b:"THE SERVICE IS NOT DESIGNED FOR EMERGENCY RESPONSE OR CRISIS INTERVENTION. Users experiencing thoughts of self-harm, suicide, violence, or immediate danger should immediately contact local emergency services. Synapse has no duty to monitor or respond to emergency situations."},
+            {h:"7. Artificial Intelligence Disclosure",b:"AI-generated outputs may contain inaccuracies, omissions, biases, or hallucinations. Users acknowledge that AI-generated content should not be relied upon as the sole basis for important decisions. Synapse does not guarantee accuracy or fitness of AI outputs."},
+            {h:"8. User Content",b:"Users retain ownership of User Content. Users grant Synapse a worldwide, non-exclusive, royalty-free license to host, process, analyze, and use User Content solely for operation and improvement of the Service."},
+            {h:"9. Prohibited Conduct",b:"Users shall not: violate applicable laws; attempt unauthorized access; reverse engineer the Service; interfere with platform security; distribute malware; scrape or harvest data; impersonate another person; or use the Service for unlawful activity."},
+            {h:"10. Intellectual Property",b:"All Service components, software, designs, interfaces, trademarks, AI systems, and algorithms remain the exclusive property of Synapse. Users receive only a limited, revocable, non-transferable license to access the Service."},
+            {h:"11. Fees, Subscriptions & Billing",b:"Certain features may require payment. Fees may be modified at any time. Except where required by law, payments are non-refundable. Failure to pay may result in suspension or termination."},
+            {h:"12. Third-Party Services",b:"The Service may integrate with third-party providers. Synapse does not control third-party services and shall not be responsible for third-party content, actions, policies, or security incidents."},
+            {h:"13. Privacy",b:"Collection and processing of personal information is governed by the Privacy Policy. Users consent to processing, storage, and transfer of information necessary to provide the Service."},
+            {h:"14. Termination",b:"Synapse may suspend or terminate access at any time. Upon termination, licenses cease immediately. Liability limitations, indemnification, arbitration provisions, and IP protections survive termination."},
+            {h:"15. DISCLAIMER OF WARRANTIES",b:"TO THE MAXIMUM EXTENT PERMITTED BY LAW, THE SERVICE IS PROVIDED ON AN \"AS IS\" AND \"AS AVAILABLE\" BASIS. SYNAPSE EXPRESSLY DISCLAIMS ALL WARRANTIES, INCLUDING MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT."},
+            {h:"16. LIMITATION OF LIABILITY",b:"TO THE MAXIMUM EXTENT PERMITTED BY LAW, SYNAPSE SHALL NOT BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, OR CONSEQUENTIAL DAMAGES. AGGREGATE LIABILITY SHALL NOT EXCEED USD $100 OR THE TOTAL AMOUNT PAID BY THE USER IN THE PRECEDING 12 MONTHS."},
+            {h:"17. Indemnification",b:"Users agree to defend, indemnify, and hold harmless Synapse from any claims, losses, liabilities, and legal fees arising from use of the Service, violation of these Terms, or infringement of third-party rights."},
+            {h:"18. Force Majeure",b:"Synapse shall not be liable for delays or failures caused by circumstances beyond reasonable control, including natural disasters, internet failures, cyberattacks, governmental actions, or other force majeure events."},
+            {h:"19. Dispute Resolution & Arbitration",b:"Any dispute arising from these Terms shall be resolved through binding arbitration. Users waive rights to jury trials and class action participation where legally permissible. Arbitration shall be conducted confidentially."},
+            {h:"20. Governing Law",b:"These Terms shall be governed by and construed in accordance with the laws of India. Any matter not subject to arbitration shall fall within the exclusive jurisdiction of competent courts in India."},
+            {h:"21. Data Protection Compliance",b:"Synapse intends to comply with applicable privacy laws including the Digital Personal Data Protection Act, 2023; IT Act, 2000; IT Rules, 2021; GDPR where applicable; and CCPA/CPRA where applicable."},
+            {h:"22–28. Additional Provisions",b:"Synapse reserves the right to modify these Terms at any time. Continued use constitutes acceptance. Electronic acceptance (checkboxes, account creation) constitutes a valid electronic signature. Beta features are provided on an \"as available\" basis without warranties. No guarantee of uninterrupted service availability. User feedback grants Synapse a perpetual, royalty-free right to use and incorporate such feedback."},
+            {h:"29–37. Final Provisions",b:"Synapse may assign rights under these Terms without restriction. These Terms constitute the complete agreement between the parties. Export control compliance is the User's responsibility. Headings are for convenience only. Any rights not expressly granted are reserved exclusively by Synapse."},
+            {h:"Contact",b:"Synapse · Email: synapserewire@gmail.com · Grievance Officer: synapserewire@gmail.com"},
+          ].map((s,i)=>(
+            <div key={i} style={{marginBottom:16}}>
+              <div style={{fontWeight:700,color:isL?"rgba(138,74,74,0.9)":"rgba(255,180,80,0.75)",marginBottom:4,fontSize:12}}>{s.h}</div>
+              <div>{s.b}</div>
+            </div>
+          ))}
+          <div style={{marginTop:16,padding:"12px 14px",background:isL?"rgba(192,225,210,0.2)":"rgba(255,140,0,0.05)",border:isL?"1px solid rgba(192,225,210,0.4)":"1px solid rgba(255,140,0,0.12)",borderRadius:8,fontSize:11,color:isL?"rgba(26,18,9,0.4)":"rgba(255,255,255,0.3)"}}>
+            BY USING THE SERVICE, YOU ACKNOWLEDGE HAVING READ AND UNDERSTOOD THIS AGREEMENT IN ITS ENTIRETY AND VOLUNTARILY AGREE TO BE BOUND BY ITS TERMS.
+          </div>
         </div>
+        {/* Footer */}
         <div style={{padding:"20px 28px",borderTop:isL?"1px solid rgba(192,225,210,0.4)":"1px solid rgba(255,255,255,0.06)",flexShrink:0,display:"flex",gap:12}}>
           <button onClick={onAccept} style={{flex:1,padding:"13px",borderRadius:12,background:isL?"linear-gradient(135deg,#c47a7a,#a85c5c)":"linear-gradient(135deg,#ff9500,#ff5000)",border:"none",color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer"}}>✓ Accept & Continue</button>
           <button onClick={onClose} style={{padding:"13px 20px",borderRadius:12,background:"transparent",border:isL?"1px solid rgba(192,225,210,0.5)":"1px solid rgba(255,255,255,0.1)",color:isL?"rgba(26,18,9,0.5)":"rgba(255,255,255,0.4)",fontSize:13,cursor:"pointer"}}>Cancel</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PrivacyModal({isL,onClose}){
+  const sections=[
+    {h:"1. Introduction",b:"This Privacy Policy describes how Synapse collects, uses, stores, discloses, and processes information relating to users who access or use the Synapse platform and related services. By using the Services, you acknowledge that you have read and understood this Policy and consent to the collection and processing of information as described herein."},
+    {h:"2. Scope",b:"This Policy applies to all information collected through the Services. It does not apply to third-party websites or platforms linked to or integrated with the Services but operated independently of Synapse."},
+    {h:"3. Information We Collect",b:"We may collect: full name or display name; email address; profile information; date of birth and gender (where voluntarily provided); user preferences; communications submitted through support channels; authentication data from third-party providers (Google Sign-In); and technical information such as device characteristics, browser info, IP address, access timestamps, and diagnostic data."},
+    {h:"4. Purposes of Processing",b:"We process information for: account creation and management; user authentication; service delivery; security monitoring and fraud prevention; technical troubleshooting; performance optimization; customer support; compliance with legal obligations; and internal analytics and service improvement."},
+    {h:"5. Legal Basis for Processing",b:"We process information on the basis of: user consent; performance of contractual obligations; compliance with legal obligations; legitimate business interests; protection of vital interests; and establishment or defense of legal claims."},
+    {h:"6. Disclosure of Information",b:"Synapse does not sell personal information to advertisers or data brokers. Information may be shared with carefully selected third-party service providers (authentication, cloud infrastructure, security, analytics, customer support, and professional advisors) solely to the extent necessary to operate the Services."},
+    {h:"7. Data Retention",b:"Information is retained only as long as necessary to provide the Services, fulfill contractual obligations, comply with legal requirements, resolve disputes, enforce agreements, and preserve security and integrity of systems."},
+    {h:"8. Data Security",b:"Synapse implements commercially reasonable administrative, technical, and organizational safeguards to protect information. No method of electronic transmission or storage can be guaranteed to be completely secure. Users acknowledge the inherent risks associated with internet-based communications."},
+    {h:"9. User Rights",b:"Subject to applicable law, you may have the right to access, correct, delete, restrict, or object to processing of your information, and to withdraw consent where processing is based on consent. Submit requests to: synapserewire@gmail.com"},
+    {h:"10. Children's Privacy",b:"The Services are not directed toward children under thirteen (13) years of age. We do not knowingly collect personal information from children under the applicable minimum age."},
+    {h:"11. International Data Transfers",b:"Information may be processed, stored, or transferred in jurisdictions different from your country of residence. By using the Services, you consent to such transfers where permitted by applicable law."},
+    {h:"12. Modifications",b:"Synapse reserves the right to modify this Policy at any time. Material modifications may be communicated through the Services. Continued use following revisions constitutes acknowledgment of the updated Policy."},
+    {h:"13. Contact",b:"For privacy-related inquiries, contact: Synapse Privacy Team — synapserewire@gmail.com"},
+  ];
+  return(
+    <div style={{position:"fixed",inset:0,zIndex:9999,background:"rgba(0,0,0,0.8)",backdropFilter:"blur(12px)",display:"flex",alignItems:"center",justifyContent:"center",padding:"20px"}} onClick={onClose}>
+      <div onClick={e=>e.stopPropagation()} style={{width:"100%",maxWidth:620,maxHeight:"82vh",background:isL?"#f6f4e8":"#0d0b10",border:isL?"1px solid rgba(192,225,210,0.5)":"1px solid rgba(255,140,0,0.15)",borderRadius:20,display:"flex",flexDirection:"column",overflow:"hidden",boxShadow:"0 32px 80px rgba(0,0,0,0.6)"}}>
+        {/* Header */}
+        <div style={{padding:"22px 28px 18px",borderBottom:isL?"1px solid rgba(192,225,210,0.4)":"1px solid rgba(255,255,255,0.06)",display:"flex",alignItems:"center",justifyContent:"space-between",flexShrink:0}}>
+          <div>
+            <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:13,fontWeight:700,color:isL?"#8a4a4a":"#ffb347",letterSpacing:1}}>SYNAPSE PRIVACY POLICY</div>
+            <div style={{fontSize:10,color:isL?"rgba(26,18,9,0.4)":"rgba(255,255,255,0.3)",marginTop:3}}>Effective Date: June 25, 2026 · Last Updated: June 25, 2026</div>
+          </div>
+          <button onClick={onClose} style={{width:32,height:32,borderRadius:"50%",background:isL?"rgba(192,225,210,0.3)":"rgba(255,255,255,0.05)",border:isL?"1px solid rgba(192,225,210,0.5)":"1px solid rgba(255,255,255,0.1)",color:isL?"rgba(26,18,9,0.5)":"rgba(255,255,255,0.5)",fontSize:18,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",lineHeight:1}}>×</button>
+        </div>
+        {/* Content */}
+        <div style={{padding:"20px 28px",overflowY:"auto",flex:1,fontSize:12,color:isL?"rgba(26,18,9,0.62)":"rgba(255,255,255,0.55)",lineHeight:1.9}}>
+          {sections.map((s,i)=>(
+            <div key={i} style={{marginBottom:18}}>
+              <div style={{fontWeight:700,color:isL?"rgba(138,74,74,0.9)":"rgba(255,180,80,0.75)",marginBottom:5,fontSize:12}}>{s.h}</div>
+              <div>{s.b}</div>
+            </div>
+          ))}
+          <div style={{marginTop:16,padding:"12px 14px",background:isL?"rgba(192,225,210,0.2)":"rgba(255,140,0,0.05)",border:isL?"1px solid rgba(192,225,210,0.4)":"1px solid rgba(255,140,0,0.12)",borderRadius:8,fontSize:11,color:isL?"rgba(26,18,9,0.4)":"rgba(255,255,255,0.3)"}}>
+            By accessing or using Synapse, you acknowledge that you have read and understood this Privacy Policy and consent to the collection and processing of your information as described herein.
+          </div>
+        </div>
+        {/* Footer */}
+        <div style={{padding:"16px 28px",borderTop:isL?"1px solid rgba(192,225,210,0.4)":"1px solid rgba(255,255,255,0.06)",flexShrink:0}}>
+          <button onClick={onClose} style={{width:"100%",padding:"13px",borderRadius:12,background:isL?"linear-gradient(135deg,#c47a7a,#a85c5c)":"linear-gradient(135deg,#ff9500,#ff5000)",border:"none",color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer"}}>Got it</button>
         </div>
       </div>
     </div>
@@ -1926,6 +2005,7 @@ function Auth({ onAuth, context="" }) {
   const [ready, setReady]         = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
+  const [showPrivacy, setShowPrivacy] = useState(false);
 
   useEffect(()=>{ setTimeout(()=>setReady(true), 80); },[]);
 
@@ -2035,13 +2115,22 @@ function Auth({ onAuth, context="" }) {
               Continue with Google
             </button>
           </div>
-          <p style={{textAlign:"center",fontSize:11,color:"var(--text4)",marginTop:20,lineHeight:1.7,letterSpacing:.2}}><span style={{color:"rgba(255,140,0,0.28)"}}>Encrypted. Private. Never sold.</span><br/><span style={{color:"var(--text4)"}}>⚠ Progress stored locally. Clearing browser data erases your streak.</span></p>
+          <p style={{textAlign:"center",fontSize:11,color:"var(--text4)",marginTop:20,lineHeight:1.9,letterSpacing:.2}}>
+            <span style={{color:"rgba(255,140,0,0.28)"}}>Encrypted. Private. Never sold.</span><br/>
+            <span style={{color:"var(--text4)"}}>⚠ Progress stored locally. Clearing browser data erases your streak.</span><br/>
+            <span style={{color:"var(--text4)"}}>By continuing you agree to our{" "}
+              <span onClick={()=>setShowTerms(true)} style={{color:"rgba(255,180,80,0.6)",cursor:"pointer",textDecoration:"underline",textUnderlineOffset:2}}>Terms & Conditions</span>
+              {" "}and{" "}
+              <span onClick={()=>setShowPrivacy(true)} style={{color:"rgba(255,180,80,0.6)",cursor:"pointer",textDecoration:"underline",textUnderlineOffset:2}}>Privacy Policy</span>
+            </span>
+          </p>
         </div>
       </div>
     </div>
 
     {/* T&C Modal — theme aware */}
     {showTerms&&<TCModal isL={document.documentElement.classList.contains("light")} onAccept={()=>{setTermsAccepted(true);setShowTerms(false);}} onClose={()=>setShowTerms(false)}/>}
+    {showPrivacy&&<PrivacyModal isL={document.documentElement.classList.contains("light")} onClose={()=>setShowPrivacy(false)}/>}
   </>
   );
 }
