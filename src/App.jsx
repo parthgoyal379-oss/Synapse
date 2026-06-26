@@ -4181,27 +4181,25 @@ export default function App() {
     return()=>window.removeEventListener("beforeinstallprompt",handler);
   },[]);
 
-  // Notification permission — ask after login, repeat until granted
+  // Notification permission — ask if not yet decided
   useEffect(()=>{
     if(!authed) return;
     if(!("Notification" in window)) return;
-    if(Notification.permission==="granted"||Notification.permission==="denied") return;
-    if(ls.get("syn_notif_asked","")) return;
+    // If already granted — generate token silently
+    if(Notification.permission==="granted"){
+      generateFCMToken();
+      return;
+    }
+    // If denied — do nothing
+    if(Notification.permission==="denied") return;
+    // If default — show prompt after 3s
     const t=setTimeout(()=>setShowNotifPrompt(true),3000);
     return()=>clearTimeout(t);
   },[authed]);
 
-  // FCM token save after permission granted
-  const requestNotifPermission=async()=>{
-    setShowNotifPrompt(false);
+  // Shared token generation function
+  const generateFCMToken=async()=>{
     try{
-      const permission=await Notification.requestPermission();
-      // Mark as asked only when browser has given a definitive answer
-      if(permission==="granted"||permission==="denied"){
-        ls.set("syn_notif_asked","1");
-      }
-      if(permission!=="granted") return;
-      // Generate FCM token using CDN imports (works in production)
       const {initializeApp,getApps}=await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js");
       const {getMessaging,getToken}=await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging.js");
       const fcmApp=getApps().find(a=>a.name==="fcm-token")||initializeApp({
@@ -4219,16 +4217,25 @@ export default function App() {
         serviceWorkerRegistration:swReg,
       });
       if(token){
-        // Save token to localStorage
         const stored=JSON.parse(localStorage.getItem("syn_user")||"{}");
         localStorage.setItem("syn_user",JSON.stringify({...stored,fcmToken:token}));
-        // Save to Firestore if available
         if(auth.currentUser?.uid&&db){
           setDoc(doc(db,"users",auth.currentUser.uid),{fcmToken:token,lastSeen:serverTimestamp()},{merge:true})
-            .catch(e=>console.warn("Firestore token save:",e));
+            .catch(e=>console.warn("Firestore token:",e));
         }
-        console.log("FCM token saved:",token.slice(0,20)+"...");
+        console.log("✅ FCM token saved:",token.slice(0,20)+"...");
       }
+    }catch(e){console.warn("FCM token gen:",e);}
+  };
+
+  // FCM token save after permission granted
+  const requestNotifPermission=async()=>{
+    setShowNotifPrompt(false);
+    try{
+      const permission=await Notification.requestPermission();
+      if(permission==="granted"||permission==="denied") ls.set("syn_notif_asked","1");
+      if(permission!=="granted") return;
+      await generateFCMToken();
       setFcmToast({title:"Notifications enabled ✓",body:"You'll get daily reminders and streak alerts."});
       setTimeout(()=>setFcmToast(null),4000);
     }catch(e){console.warn("Notif permission:",e);}
