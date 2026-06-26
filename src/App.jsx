@@ -4181,26 +4181,25 @@ export default function App() {
     return()=>window.removeEventListener("beforeinstallprompt",handler);
   },[]);
 
-  // Notification permission — ask directly via browser API (firebase-independent)
+  // Notification permission — ask after login, repeat until granted
   useEffect(()=>{
     if(!authed) return;
-    if(ls.get("syn_notif_asked","")) return; // already asked once
-    // Small delay so it doesn't fire immediately on login
-    const t=setTimeout(async()=>{
-      if(!("Notification" in window)) return;
-      if(Notification.permission==="granted"||Notification.permission==="denied") return;
-      // Show our custom prompt first instead of raw browser dialog
-      setShowNotifPrompt(true);
-    },3000);
+    if(!("Notification" in window)) return;
+    if(Notification.permission==="granted"||Notification.permission==="denied") return;
+    if(ls.get("syn_notif_asked","")) return;
+    const t=setTimeout(()=>setShowNotifPrompt(true),3000);
     return()=>clearTimeout(t);
   },[authed]);
 
   // FCM token save after permission granted
   const requestNotifPermission=async()=>{
-    ls.set("syn_notif_asked","1");
     setShowNotifPrompt(false);
     try{
       const permission=await Notification.requestPermission();
+      // Mark as asked only when browser has given a definitive answer
+      if(permission==="granted"||permission==="denied"){
+        ls.set("syn_notif_asked","1");
+      }
       if(permission!=="granted") return;
       // Generate FCM token using CDN imports (works in production)
       const {initializeApp,getApps}=await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js");
@@ -4514,7 +4513,7 @@ export default function App() {
           {emergency&&<EmergencyOverlay savedPlan={savedPlan} streak={streak} onClose={()=>setEmergency(false)} onCoach={()=>{setEmergency(false);goTo("chat");}}/>}
           {milestone&&<MilestoneCelebration day={milestone} onClose={()=>setMilestone(null)}/>}
           <FcmToast toast={fcmToast} theme={theme}/>
-          {showNotifPrompt&&<NotifPrompt theme={theme} onAllow={requestNotifPermission} onDismiss={()=>{setShowNotifPrompt(false);ls.set("syn_notif_asked","1");}}/>}
+          {showNotifPrompt&&<NotifPrompt theme={theme} onAllow={requestNotifPermission} onDismiss={()=>setShowNotifPrompt(false)}/>}
           {showInstallPrompt&&<InstallPrompt theme={theme} onDismiss={()=>{setShowInstallPrompt(false);ls.set("syn_pwa_prompted","1");}} onInstall={async()=>{
             const prompt=deferredInstallPrompt.current||window.__installPrompt;
             if(prompt){
