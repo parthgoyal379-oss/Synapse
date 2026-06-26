@@ -1698,6 +1698,41 @@ function ProfileSheet({user,theme,onThemeToggle,onClose,onSignOut,onPhotoUpdate,
               <div style={{position:"absolute",top:3,left:isL?3:19,width:16,height:16,borderRadius:"50%",background:isL?"#c47a7a":"#ff9500",transition:"left .3s",boxShadow:"0 2px 4px rgba(0,0,0,0.3)"}}/>
             </div>
           </div>
+
+          {/* Notifications toggle */}
+          {(()=>{
+            const granted="Notification" in window && Notification.permission==="granted";
+            const denied="Notification" in window && Notification.permission==="denied";
+            return(
+              <div onClick={async()=>{
+                if(denied){
+                  alert("Notifications are blocked. Go to browser settings → Site Settings → Notifications → Allow for "+window.location.hostname);
+                  return;
+                }
+                if(granted){
+                  // Can't programmatically revoke — show instructions
+                  alert("To disable: click the lock icon in address bar → Notifications → Block");
+                  return;
+                }
+                // Not yet asked — trigger permission
+                onClose();
+              }} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"14px 16px",borderRadius:14,background:isL?"rgba(229,238,228,0.5)":"rgba(255,255,255,0.03)",border:isL?"1px solid rgba(192,225,210,0.4)":"1px solid rgba(255,255,255,0.06)",cursor:"pointer",transition:"all .2s"}}>
+                <div style={{display:"flex",alignItems:"center",gap:12}}>
+                  <span style={{fontSize:18}}>{granted?"🔔":denied?"🔕":"🔔"}</span>
+                  <div>
+                    <div style={{fontSize:13,fontWeight:500,color:"var(--text)"}}>Notifications</div>
+                    <div style={{fontSize:11,color:granted?"#4ade80":denied?"#f87171":"var(--text3)",marginTop:1}}>
+                      {granted?"Enabled — receiving alerts":denied?"Blocked in browser settings":"Tap to enable reminders"}
+                    </div>
+                  </div>
+                </div>
+                <div style={{width:44,height:24,borderRadius:999,background:granted?(isL?"rgba(74,222,128,0.2)":"rgba(74,222,128,0.15)"):"rgba(255,255,255,0.06)",border:`1px solid ${granted?"rgba(74,222,128,0.4)":denied?"rgba(248,113,113,0.3)":"rgba(255,255,255,0.1)"}`,position:"relative",transition:"all .3s"}}>
+                  <div style={{position:"absolute",top:3,left:granted?19:3,width:16,height:16,borderRadius:"50%",background:granted?"#4ade80":denied?"#f87171":"rgba(255,255,255,0.2)",transition:"left .3s",boxShadow:"0 2px 4px rgba(0,0,0,0.3)"}}/>
+                </div>
+              </div>
+            );
+          })()}
+
           {/* Sign out */}
           <div onClick={onSignOut} style={{display:"flex",alignItems:"center",gap:12,padding:"14px 16px",borderRadius:14,background:"rgba(255,60,60,0.04)",border:"1px solid rgba(255,60,60,0.1)",cursor:"pointer",transition:"all .2s",marginTop:8}}>
             <span style={{fontSize:18}}>🚪</span>
