@@ -4202,15 +4202,34 @@ export default function App() {
     try{
       const permission=await Notification.requestPermission();
       if(permission!=="granted") return;
-      // Try FCM token if firebase available
-      try{
-        const {requestNotificationPermission:reqFCM}=await import("./firebase");
-        const token=await reqFCM();
-        if(token&&auth.currentUser?.uid&&db){
-          await setDoc(doc(db,"users",auth.currentUser.uid),{fcmToken:token},{merge:true});
+      // Generate FCM token using CDN imports (works in production)
+      const {initializeApp,getApps}=await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js");
+      const {getMessaging,getToken}=await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging.js");
+      const fcmApp=getApps().find(a=>a.name==="fcm-token")||initializeApp({
+        apiKey:"AIzaSyCJSNckvatpfSlyvy9Z8Z1DiTYTYAJAQ7c",
+        authDomain:"classpredictor.firebaseapp.com",
+        projectId:"classpredictor",
+        storageBucket:"classpredictor.firebasestorage.app",
+        messagingSenderId:"4567824313",
+        appId:"1:4567824313:web:cf97fa1bdcd32f7f56a868",
+      },"fcm-token");
+      const fcmMsg=getMessaging(fcmApp);
+      const swReg=await navigator.serviceWorker.register("/firebase-messaging-sw.js",{scope:"/"});
+      const token=await getToken(fcmMsg,{
+        vapidKey:"BMhfG52HfwVhnYK1aY0FmHGPI7tSDhB60etg8f-bvOYS0PFpmjk21RDqNS07W6MKScQm-W3w7RwA_SOwjjSQodc",
+        serviceWorkerRegistration:swReg,
+      });
+      if(token){
+        // Save token to localStorage
+        const stored=JSON.parse(localStorage.getItem("syn_user")||"{}");
+        localStorage.setItem("syn_user",JSON.stringify({...stored,fcmToken:token}));
+        // Save to Firestore if available
+        if(auth.currentUser?.uid&&db){
+          setDoc(doc(db,"users",auth.currentUser.uid),{fcmToken:token,lastSeen:serverTimestamp()},{merge:true})
+            .catch(e=>console.warn("Firestore token save:",e));
         }
-      }catch(fe){console.warn("FCM token (non-critical):",fe);}
-      // Show confirmation toast
+        console.log("FCM token saved:",token.slice(0,20)+"...");
+      }
       setFcmToast({title:"Notifications enabled ✓",body:"You'll get daily reminders and streak alerts."});
       setTimeout(()=>setFcmToast(null),4000);
     }catch(e){console.warn("Notif permission:",e);}
