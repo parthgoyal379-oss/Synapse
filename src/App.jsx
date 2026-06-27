@@ -1561,6 +1561,7 @@ function ProfileSheet({user,theme,onThemeToggle,onClose,onSignOut,onPhotoUpdate,
   });
   const [saving,setSaving]=useState(false);
   const [saved,setSaved]=useState(false);
+  const [showNotifInfo,setShowNotifInfo]=useState(false);
   const fileRef=useRef();
 
   const handlePhotoClick=()=>fileRef.current?.click();
@@ -1608,8 +1609,14 @@ function ProfileSheet({user,theme,onThemeToggle,onClose,onSignOut,onPhotoUpdate,
       <div onClick={onClose} style={{position:"fixed",inset:0,zIndex:900,background:"rgba(0,0,0,0.55)",backdropFilter:"blur(6px)"}}/>
       {/* Sheet */}
       <div style={{position:"fixed",bottom:0,left:0,right:0,zIndex:901,background:isL?"#f6f4e8":"#0d0b14",borderTop:isL?"1px solid rgba(192,225,210,0.5)":"1px solid rgba(255,140,0,0.15)",borderRadius:"24px 24px 0 0",padding:"8px 0 40px",animation:"slideUp .35s cubic-bezier(.16,1,.3,1)"}}>
-        {/* Handle */}
-        <div style={{width:40,height:4,borderRadius:2,background:isL?"rgba(26,18,9,0.15)":"rgba(255,255,255,0.15)",margin:"12px auto 24px"}}/>
+        {/* Handle + close */}
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"12px 20px 0"}}>
+          <button onClick={onClose} style={{display:"flex",alignItems:"center",gap:6,background:"none",border:"none",color:"var(--text3)",fontSize:13,cursor:"pointer",padding:"4px 0"}}>
+            <span style={{fontSize:16}}>←</span> Close
+          </button>
+          <div style={{width:40,height:4,borderRadius:2,background:isL?"rgba(26,18,9,0.15)":"rgba(255,255,255,0.15)"}}/>
+          <div style={{width:60}}/>
+        </div>
         {/* Avatar + info */}
         <div style={{padding:"0 24px 24px",borderBottom:isL?"1px solid rgba(192,225,210,0.35)":"1px solid rgba(255,255,255,0.06)",display:"flex",alignItems:"center",gap:16}}>
           {/* Avatar — tappable to change photo */}
@@ -1703,24 +1710,24 @@ function ProfileSheet({user,theme,onThemeToggle,onClose,onSignOut,onPhotoUpdate,
           {(()=>{
             const granted="Notification" in window && Notification.permission==="granted";
             const denied="Notification" in window && Notification.permission==="denied";
+            const isAndroid=/android/i.test(navigator.userAgent);
+            const isIOS=/iphone|ipad|ipod/i.test(navigator.userAgent);
+            const instructions=isAndroid
+              ?"Settings → Apps → Chrome → Notifications → synapserewire.site → Block"
+              :isIOS
+              ?"Settings → Chrome/Safari → Notifications → Turn off"
+              :"Click 🔒 lock icon in address bar → Notifications → Block";
             return(
               <div onClick={()=>{
-                if(granted||denied){
-                  // Open browser notification settings directly
-                  window.open("chrome://settings/content/notifications","_blank") ||
-                  window.open("about:preferences#privacy","_blank") ||
-                  alert(`To change notifications:\n\n📱 Android: Settings → Apps → Chrome → Notifications\n🍎 iOS: Settings → Safari → Notifications\n💻 Desktop: Click 🔒 in address bar → Notifications`);
-                  return;
-                }
-                // Not asked — close sheet and show prompt
-                onClose();
+                if(!granted&&!denied){ onClose(); return; }
+                setShowNotifInfo(true);
               }} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"14px 16px",borderRadius:14,background:isL?"rgba(229,238,228,0.5)":"rgba(255,255,255,0.03)",border:isL?"1px solid rgba(192,225,210,0.4)":"1px solid rgba(255,255,255,0.06)",cursor:"pointer",transition:"all .2s"}}>
                 <div style={{display:"flex",alignItems:"center",gap:12}}>
                   <span style={{fontSize:18}}>{granted?"🔔":denied?"🔕":"🔔"}</span>
                   <div>
                     <div style={{fontSize:13,fontWeight:500,color:"var(--text)"}}>Notifications</div>
                     <div style={{fontSize:11,color:granted?"#4ade80":denied?"#f87171":"var(--text3)",marginTop:1}}>
-                      {granted?"Enabled · Tap to manage in settings":denied?"Blocked · Tap to manage in settings":"Tap to enable reminders"}
+                      {granted?"Enabled · Tap to manage":denied?"Blocked · Tap to enable":"Tap to enable reminders"}
                     </div>
                   </div>
                 </div>
@@ -1730,6 +1737,19 @@ function ProfileSheet({user,theme,onThemeToggle,onClose,onSignOut,onPhotoUpdate,
               </div>
             );
           })()}
+          {showNotifInfo&&(
+            <div style={{background:isL?"rgba(192,225,210,0.2)":"rgba(255,140,0,0.06)",border:isL?"1px solid rgba(192,225,210,0.4)":"1px solid rgba(255,140,0,0.15)",borderRadius:12,padding:"14px 16px",fontSize:12,color:"var(--text3)",lineHeight:1.7}}>
+              <div style={{fontWeight:600,color:"var(--text)",marginBottom:6,display:"flex",justifyContent:"space-between"}}>
+                <span>To manage notifications:</span>
+                <span onClick={()=>setShowNotifInfo(false)} style={{cursor:"pointer",opacity:.5,fontSize:16,lineHeight:1}}>×</span>
+              </div>
+              {/android/i.test(navigator.userAgent)
+                ?"📱 Settings → Apps → Chrome → Notifications → synapserewire.site"
+                :/iphone|ipad/i.test(navigator.userAgent)
+                ?"📱 Settings → Chrome → Notifications → Turn off"
+                :"💻 Click 🔒 in address bar → Notifications → Block/Allow"}
+            </div>
+          )}
 
           {/* Sign out */}
           <div onClick={onSignOut} style={{display:"flex",alignItems:"center",gap:12,padding:"14px 16px",borderRadius:14,background:"rgba(255,60,60,0.04)",border:"1px solid rgba(255,60,60,0.1)",cursor:"pointer",transition:"all .2s",marginTop:8}}>
