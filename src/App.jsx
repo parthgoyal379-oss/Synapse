@@ -1608,15 +1608,9 @@ function ProfileSheet({user,theme,onThemeToggle,onClose,onSignOut,onPhotoUpdate,
       {/* Backdrop */}
       <div onClick={onClose} style={{position:"fixed",inset:0,zIndex:900,background:"rgba(0,0,0,0.55)",backdropFilter:"blur(6px)"}}/>
       {/* Sheet */}
-      <div style={{position:"fixed",bottom:0,left:0,right:0,zIndex:901,background:isL?"#f6f4e8":"#0d0b14",borderTop:isL?"1px solid rgba(192,225,210,0.5)":"1px solid rgba(255,140,0,0.15)",borderRadius:"24px 24px 0 0",padding:"8px 0 40px",animation:"slideUp .35s cubic-bezier(.16,1,.3,1)"}}>
-        {/* Handle + close */}
-        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"12px 20px 0"}}>
-          <button onClick={onClose} style={{display:"flex",alignItems:"center",gap:6,background:"none",border:"none",color:"var(--text3)",fontSize:13,cursor:"pointer",padding:"4px 0"}}>
-            <span style={{fontSize:16}}>←</span> Close
-          </button>
-          <div style={{width:40,height:4,borderRadius:2,background:isL?"rgba(26,18,9,0.15)":"rgba(255,255,255,0.15)"}}/>
-          <div style={{width:60}}/>
-        </div>
+      <div style={{position:"fixed",bottom:0,left:0,right:0,zIndex:901,background:isL?"#f6f4e8":"#0d0b14",borderTop:isL?"1px solid rgba(192,225,210,0.5)":"1px solid rgba(255,140,0,0.15)",borderRadius:"24px 24px 0 0",padding:"8px 0 40px",animation:"slideUp .35s cubic-bezier(.16,1,.3,1)",maxHeight:"90vh",overflowY:"auto"}}>
+        {/* Handle */}
+        <div style={{width:40,height:4,borderRadius:2,background:isL?"rgba(26,18,9,0.15)":"rgba(255,255,255,0.15)",margin:"12px auto 20px"}}/>
         {/* Avatar + info */}
         <div style={{padding:"0 24px 24px",borderBottom:isL?"1px solid rgba(192,225,210,0.35)":"1px solid rgba(255,255,255,0.06)",display:"flex",alignItems:"center",gap:16}}>
           {/* Avatar — tappable to change photo */}
@@ -1759,6 +1753,10 @@ function ProfileSheet({user,theme,onThemeToggle,onClose,onSignOut,onPhotoUpdate,
               <div style={{fontSize:11,color:"var(--text4)",marginTop:1}}>Your progress stays saved</div>
             </div>
           </div>
+          {/* Close */}
+          <button onClick={onClose} style={{width:"100%",padding:"13px",borderRadius:14,background:"transparent",border:isL?"1px solid rgba(192,225,210,0.35)":"1px solid rgba(255,255,255,0.07)",color:"var(--text3)",fontSize:13,cursor:"pointer",marginTop:4}}>
+            ← Close
+          </button>
         </div>
       </div>
     </>
