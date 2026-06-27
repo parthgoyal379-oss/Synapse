@@ -1704,17 +1704,15 @@ function ProfileSheet({user,theme,onThemeToggle,onClose,onSignOut,onPhotoUpdate,
             const granted="Notification" in window && Notification.permission==="granted";
             const denied="Notification" in window && Notification.permission==="denied";
             return(
-              <div onClick={async()=>{
-                if(denied){
-                  alert("Notifications are blocked. Go to browser settings → Site Settings → Notifications → Allow for "+window.location.hostname);
+              <div onClick={()=>{
+                if(granted||denied){
+                  // Open browser notification settings directly
+                  window.open("chrome://settings/content/notifications","_blank") ||
+                  window.open("about:preferences#privacy","_blank") ||
+                  alert(`To change notifications:\n\n📱 Android: Settings → Apps → Chrome → Notifications\n🍎 iOS: Settings → Safari → Notifications\n💻 Desktop: Click 🔒 in address bar → Notifications`);
                   return;
                 }
-                if(granted){
-                  // Can't programmatically revoke — show instructions
-                  alert("To disable: click the lock icon in address bar → Notifications → Block");
-                  return;
-                }
-                // Not yet asked — trigger permission
+                // Not asked — close sheet and show prompt
                 onClose();
               }} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"14px 16px",borderRadius:14,background:isL?"rgba(229,238,228,0.5)":"rgba(255,255,255,0.03)",border:isL?"1px solid rgba(192,225,210,0.4)":"1px solid rgba(255,255,255,0.06)",cursor:"pointer",transition:"all .2s"}}>
                 <div style={{display:"flex",alignItems:"center",gap:12}}>
@@ -1722,7 +1720,7 @@ function ProfileSheet({user,theme,onThemeToggle,onClose,onSignOut,onPhotoUpdate,
                   <div>
                     <div style={{fontSize:13,fontWeight:500,color:"var(--text)"}}>Notifications</div>
                     <div style={{fontSize:11,color:granted?"#4ade80":denied?"#f87171":"var(--text3)",marginTop:1}}>
-                      {granted?"Enabled — receiving alerts":denied?"Blocked in browser settings":"Tap to enable reminders"}
+                      {granted?"Enabled · Tap to manage in settings":denied?"Blocked · Tap to manage in settings":"Tap to enable reminders"}
                     </div>
                   </div>
                 </div>
