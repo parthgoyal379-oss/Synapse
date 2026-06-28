@@ -1881,6 +1881,15 @@ function Boot({ onBegin, hasPlan, theme, onThemeToggle }) {
   const chargeRef=useRef(null);
   const chargeVal=useRef(0);
 
+  // Inject fonts
+  useEffect(()=>{
+    const link=document.createElement("link");
+    link.rel="stylesheet";
+    link.href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Space+Grotesk:wght@500;600;700&family=Space+Mono:wght@400;700&family=Inter:wght@400;500&display=swap";
+    document.head.appendChild(link);
+    return()=>document.head.removeChild(link);
+  },[]);
+
   const BL=[
     "> ACCESSING NEURAL INTERFACE...",
     "> IDENTITY VERIFIED.",
@@ -2028,9 +2037,10 @@ function Boot({ onBegin, hasPlan, theme, onThemeToggle }) {
   const stitleStyle=(vis)=>({
     fontFamily:"'Space Grotesk',sans-serif",fontWeight:700,
     fontSize:"clamp(30px,5.2vw,66px)",lineHeight:1.05,letterSpacing:"-0.025em",
-    color:"#fff8e7",marginBottom:40,
+    color:"#fff8e7",marginBottom:40,textAlign:"left",
     opacity:vis?1:0,transform:vis?"translateY(0)":"translateY(20px)",
     transition:"opacity .7s,transform .7s cubic-bezier(.1,0,0,1)",
+    WebkitFontSmoothing:"antialiased",
   });
 
   const sbodyStyle=(vis,delay=0)=>({
@@ -2303,11 +2313,11 @@ function Boot({ onBegin, hasPlan, theme, onThemeToggle }) {
 
       {/* Extra keyframes */}
       <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Space+Grotesk:wght@500;600;700&family=Space+Mono:wght@400;700&family=Inter:wght@400;500&display=swap');
         @keyframes shrb{0%,100%{opacity:.2;}50%{opacity:.75;}}
         @keyframes rscan{0%{left:-80%;}100%{left:180%;}}
         @keyframes tk{0%{transform:translateX(0);}100%{transform:translateX(-50%);}}
         @keyframes hpx{0%,100%{filter:drop-shadow(0 0 4px #f5a000);}50%{filter:drop-shadow(0 0 16px #f5a000);}}
-        @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Space+Mono:wght@400;700&display=swap');
       `}</style>
     </div>
   );
