@@ -2046,6 +2046,7 @@ function Boot({ onBegin, hasPlan, theme, onThemeToggle }) {
   const sbodyStyle=(vis,delay=0)=>({
     fontFamily:"'Inter',sans-serif",fontWeight:400,fontSize:15,
     letterSpacing:"0.01em",lineHeight:1.82,color:"#8a7040",
+    textAlign:"left",
     opacity:vis?1:0,transform:vis?"translateY(0)":"translateY(7px)",
     transition:`opacity .5s ${delay}ms,transform .5s ${delay}ms`,
   });
@@ -2147,7 +2148,7 @@ function Boot({ onBegin, hasPlan, theme, onThemeToggle }) {
 
         {/* ── SECTION 1: Who Are You ── */}
         <section data-sec="s1" style={{minHeight:"70vh",position:"relative",zIndex:2,display:"flex",flexDirection:"column",justifyContent:"center",padding:"clamp(40px,6vh,70px) clamp(24px,6vw,90px)"}}>
-          <div style={{maxWidth:680}}>
+          <div style={{maxWidth:680,textAlign:"left"}}>
             <div style={{fontFamily:"'Space Mono',monospace",fontWeight:400,fontSize:9,letterSpacing:"0.44em",color:"#6a5820",textTransform:"uppercase",marginBottom:20,opacity:s1vis?1:0,transform:s1vis?"translateX(0)":"translateX(-16px)",transition:"opacity .5s,transform .5s"}}>SUBJECT ANALYSIS</div>
             <div style={{width:"100%",height:1,background:"#3a2800",marginBottom:44,position:"relative",overflow:"hidden",opacity:s1vis?1:0,transition:"opacity .3s .1s"}}>
               <div style={{content:"''",position:"absolute",left:"-100%",top:0,width:"80%",height:"100%",background:"linear-gradient(90deg,transparent,rgba(245,160,0,.7),transparent)",animation:"rscan 5s ease-in-out infinite"}}/>
@@ -2171,7 +2172,7 @@ function Boot({ onBegin, hasPlan, theme, onThemeToggle }) {
 
         {/* ── SECTION 2: Your Brain Has Changed ── */}
         <section data-sec="s2" style={{minHeight:"70vh",position:"relative",zIndex:2,display:"flex",flexDirection:"column",justifyContent:"center",padding:"clamp(40px,6vh,70px) clamp(24px,6vw,90px)"}}>
-          <div style={{maxWidth:680}}>
+          <div style={{maxWidth:680,textAlign:"left"}}>
             <div style={{fontFamily:"'Space Mono',monospace",fontWeight:400,fontSize:9,letterSpacing:"0.44em",color:"#6a5820",textTransform:"uppercase",marginBottom:20,opacity:s2vis?1:0,transform:s2vis?"translateX(0)":"translateX(-16px)",transition:"opacity .5s,transform .5s"}}>NEURAL ASSESSMENT</div>
             <div style={{width:"100%",height:1,background:"#3a2800",marginBottom:44,opacity:s2vis?1:0,transition:"opacity .3s .1s"}}/>
             <h2 style={stitleStyle(s2vis)}>YOUR BRAIN<br/>HAS CHANGED.</h2>
@@ -2190,7 +2191,7 @@ function Boot({ onBegin, hasPlan, theme, onThemeToggle }) {
 
         {/* ── SECTION 3: We Can Map It ── */}
         <section data-sec="s3" style={{minHeight:"70vh",position:"relative",zIndex:2,display:"flex",flexDirection:"column",justifyContent:"center",padding:"clamp(40px,6vh,70px) clamp(24px,6vw,90px)"}}>
-          <div style={{maxWidth:680}}>
+          <div style={{maxWidth:680,textAlign:"left"}}>
             <div style={{fontFamily:"'Space Mono',monospace",fontWeight:400,fontSize:9,letterSpacing:"0.44em",color:"#6a5820",textTransform:"uppercase",marginBottom:20,opacity:s3vis?1:0,transform:s3vis?"translateX(0)":"translateX(-16px)",transition:"opacity .5s,transform .5s"}}>RECOVERY ARCHITECTURE</div>
             <div style={{width:"100%",height:1,background:"#3a2800",marginBottom:44,opacity:s3vis?1:0,transition:"opacity .3s .1s"}}/>
             <h2 style={stitleStyle(s3vis)}>WE CAN<br/>MAP IT.</h2>
