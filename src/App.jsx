@@ -1562,7 +1562,7 @@ function AdminDashboard({theme,onClose}){
 
 // ─── END ADMIN DASHBOARD ─────────────────────────────────────────────────────
 
-function ProfileSheet({user,theme,onThemeToggle,onClose,onSignOut,onPhotoUpdate,onAdminOpen}){
+function ProfileSheet({user,theme,onThemeToggle,onClose,onSignOut,onPhotoUpdate,onAdminOpen,onFeedback}){
   const isL=theme==="light";
   const initials=(user?.name||user?.email||"U").split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase();
   const [uploading,setUploading]=useState(false);
@@ -1764,15 +1764,22 @@ function ProfileSheet({user,theme,onThemeToggle,onClose,onSignOut,onPhotoUpdate,
             </div>
           )}
 
+          {/* Feedback */}
+          <div onClick={()=>{onClose();onFeedback&&onFeedback();}} style={{display:"flex",alignItems:"center",gap:12,padding:"14px 16px",borderRadius:14,background:isL?"rgba(192,225,210,0.15)":"rgba(255,255,255,0.03)",border:isL?"1px solid rgba(192,225,210,0.4)":"1px solid rgba(255,255,255,0.07)",cursor:"pointer",transition:"all .2s",marginTop:4}}>
+            <span style={{fontSize:18}}>💬</span>
+            <div>
+              <div style={{fontSize:13,fontWeight:500,color:"var(--text)"}}>Share Feedback</div>
+              <div style={{fontSize:11,color:"var(--text4)",marginTop:1}}>Help us build what you need</div>
+            </div>
+          </div>
           {/* Sign out */}
-          <div onClick={onSignOut} style={{display:"flex",alignItems:"center",gap:12,padding:"14px 16px",borderRadius:14,background:"rgba(255,60,60,0.04)",border:"1px solid rgba(255,60,60,0.1)",cursor:"pointer",transition:"all .2s",marginTop:8}}>
+          <div onClick={onSignOut} style={{display:"flex",alignItems:"center",gap:12,padding:"14px 16px",borderRadius:14,background:"rgba(255,60,60,0.04)",border:"1px solid rgba(255,60,60,0.1)",cursor:"pointer",transition:"all .2s",marginTop:4}}>
             <span style={{fontSize:18}}>🚪</span>
             <div>
               <div style={{fontSize:13,fontWeight:500,color:"rgba(255,90,90,0.9)"}}>Sign Out</div>
               <div style={{fontSize:11,color:"var(--text4)",marginTop:1}}>Your progress stays saved</div>
             </div>
           </div>
-          {/* Close */}
           <button onClick={onClose} style={{width:"100%",padding:"13px",borderRadius:14,background:"transparent",border:isL?"1px solid rgba(192,225,210,0.35)":"1px solid rgba(255,255,255,0.07)",color:"var(--text3)",fontSize:13,cursor:"pointer",marginTop:4}}>
             ← Close
           </button>
@@ -1786,6 +1793,7 @@ function Nav({screen,goTo,savedPlan,onReset,theme,onThemeToggle,user}) {
   const [scrolled,setScrolled]=useState(false);
   const [showProfile,setShowProfile]=useState(false);
   const [showAdmin,setShowAdmin]=useState(false);
+  const [showFeedback,setShowFeedback]=useState(false);
   useEffect(()=>{const h=()=>setScrolled(window.scrollY>40);window.addEventListener("scroll",h);return()=>window.removeEventListener("scroll",h);},[]);
   const isLight=theme==="light";
   const initials=(user?.name||user?.email||"U").split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase();
@@ -1829,8 +1837,9 @@ function Nav({screen,goTo,savedPlan,onReset,theme,onThemeToggle,user}) {
         <button className={`nav-pill${screen==="confess"?" active":""}`} onClick={()=>goTo("confess")} style={{flexShrink:0}}>Confess</button>
       </div>
     </nav>
-    {showProfile&&<ProfileSheet user={user} theme={theme} onThemeToggle={()=>{onThemeToggle();}} onClose={()=>setShowProfile(false)} onSignOut={handleSignOut} onPhotoUpdate={(url)=>{user.photoURL=url;}} onAdminOpen={()=>setShowAdmin(true)}/>}
+    {showProfile&&<ProfileSheet user={user} theme={theme} onThemeToggle={()=>{onThemeToggle();}} onClose={()=>setShowProfile(false)} onSignOut={handleSignOut} onPhotoUpdate={(url)=>{user.photoURL=url;}} onAdminOpen={()=>setShowAdmin(true)} onFeedback={()=>setShowFeedback(true)}/>}
     {showAdmin&&<AdminDashboard theme={theme} onClose={()=>setShowAdmin(false)}/>}
+    {showFeedback&&<FeedbackSheet theme={theme} onClose={()=>setShowFeedback(false)}/>}
     </>
   );
 }
@@ -4507,6 +4516,136 @@ function BattlePlanPreview({plan,loading,onAuth,onBack}){
 }
 
 /* ─── MILESTONE CELEBRATION ─────────────────────────────────────────────── */
+function FeedbackSheet({theme,onClose}){
+  const isL=theme==="light";
+  const [rating,setRating]=useState(0);
+  const [best,setBest]=useState("");
+  const [improve,setImprove]=useState("");
+  const [recommend,setRecommend]=useState("");
+  const [submitted,setSubmitted]=useState(false);
+  const [submitting,setSubmitting]=useState(false);
+
+  const handleSubmit=async()=>{
+    if(!rating) return;
+    setSubmitting(true);
+    const user=JSON.parse(localStorage.getItem("syn_user")||"{}");
+    const body=[
+      `⭐ Rating: ${rating}/5`,
+      `👤 User: ${user.name||"Anonymous"} (${user.email||"unknown"})`,
+      `🏹 Archetype: ${JSON.parse(localStorage.getItem("syn_archetype")||"{}").title||"—"}`,
+      `📅 Streak: ${localStorage.getItem("syn_streak")||0} days`,
+      ``,
+      `✅ What's working best:`,
+      best||"(not answered)",
+      ``,
+      `🔧 What should we improve:`,
+      improve||"(not answered)",
+      ``,
+      `💬 Would recommend: ${recommend||"(not answered)"}`,
+    ].join("\n");
+
+    // Use mailto as fallback — works without backend
+    const subject=encodeURIComponent(`SYNAPSE Feedback — ${rating}⭐ — ${user.name||"User"}`);
+    const mailBody=encodeURIComponent(body);
+    window.open(`mailto:synapserewire@gmail.com?subject=${subject}&body=${mailBody}`,"_blank");
+
+    // Also save to Firestore feedbacks collection
+    try{
+      const {db}=await import("./firebase");
+      const {collection,addDoc,serverTimestamp}=await import("firebase/firestore");
+      if(db){
+        await addDoc(collection(db,"feedbacks"),{
+          uid:user.uid||"anonymous",
+          name:user.name||"",
+          email:user.email||"",
+          rating,
+          best,
+          improve,
+          recommend,
+          streak:parseInt(localStorage.getItem("syn_streak")||0),
+          archetype:JSON.parse(localStorage.getItem("syn_archetype")||"{}").title||"",
+          timestamp:serverTimestamp(),
+        });
+      }
+    }catch(e){console.warn("Feedback Firestore:",e);}
+
+    setSubmitting(false);
+    setSubmitted(true);
+    setTimeout(onClose,2500);
+  };
+
+  const inp={
+    width:"100%",background:isL?"rgba(255,255,255,0.7)":"rgba(255,255,255,0.05)",
+    border:isL?"1px solid rgba(192,225,210,0.5)":"1px solid rgba(255,255,255,0.1)",
+    borderRadius:10,padding:"12px 14px",color:"var(--text)",fontSize:13,
+    outline:"none",fontFamily:"'Inter',sans-serif",resize:"none",
+    boxSizing:"border-box",lineHeight:1.6,
+  };
+
+  return(
+    <>
+      <div onClick={onClose} style={{position:"fixed",inset:0,zIndex:900,background:"rgba(0,0,0,0.6)",backdropFilter:"blur(8px)"}}/>
+      <div style={{position:"fixed",bottom:0,left:0,right:0,zIndex:901,background:isL?"#f6f4e8":"#0d0b14",borderTop:isL?"1px solid rgba(192,225,210,0.5)":"1px solid rgba(255,140,0,0.15)",borderRadius:"24px 24px 0 0",padding:"8px 0 40px",maxHeight:"92vh",overflowY:"auto",animation:"slideUp .35s cubic-bezier(.16,1,.3,1)"}}>
+        <div style={{width:40,height:4,borderRadius:2,background:isL?"rgba(26,18,9,0.15)":"rgba(255,255,255,0.15)",margin:"12px auto 24px"}}/>
+
+        {submitted?(
+          <div style={{padding:"40px 24px",textAlign:"center"}}>
+            <div style={{fontSize:48,marginBottom:16}}>🙏</div>
+            <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:15,fontWeight:700,color:isL?"#c47a7a":"#ff9500",letterSpacing:1,marginBottom:8}}>Thank You</div>
+            <div style={{fontSize:13,color:"var(--text3)",lineHeight:1.7}}>Your feedback shapes SYNAPSE.<br/>We read every single one.</div>
+          </div>
+        ):(
+          <div style={{padding:"0 24px"}}>
+            {/* Header */}
+            <div style={{marginBottom:24}}>
+              <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:13,fontWeight:700,color:isL?"#c47a7a":"#ff9500",letterSpacing:1,marginBottom:4}}>SHARE YOUR EXPERIENCE</div>
+              <div style={{fontSize:12,color:"var(--text3)",lineHeight:1.6}}>Help us build the recovery tool you actually need. Takes 60 seconds.</div>
+            </div>
+
+            {/* Star rating */}
+            <div style={{marginBottom:20}}>
+              <div style={{fontSize:11,color:"var(--text3)",marginBottom:10,fontWeight:500,letterSpacing:.5}}>How would you rate SYNAPSE so far?</div>
+              <div style={{display:"flex",gap:8}}>
+                {[1,2,3,4,5].map(s=>(
+                  <div key={s} onClick={()=>setRating(s)} style={{fontSize:28,cursor:"pointer",filter:s<=rating?"none":"grayscale(1) opacity(0.3)",transition:"all .15s",transform:s<=rating?"scale(1.1)":"scale(1)"}}>⭐</div>
+                ))}
+              </div>
+            </div>
+
+            {/* Q1 */}
+            <div style={{marginBottom:16}}>
+              <div style={{fontSize:11,color:"var(--text3)",marginBottom:8,fontWeight:500,letterSpacing:.5}}>✅ What's working best for you so far?</div>
+              <textarea value={best} onChange={e=>setBest(e.target.value)} placeholder="The daily check-ins, the battle plan, the AI coach..." rows={3} style={inp}/>
+            </div>
+
+            {/* Q2 */}
+            <div style={{marginBottom:16}}>
+              <div style={{fontSize:11,color:"var(--text3)",marginBottom:8,fontWeight:500,letterSpacing:.5}}>🔧 What's one thing we should improve?</div>
+              <textarea value={improve} onChange={e=>setImprove(e.target.value)} placeholder="Be honest — we can handle it." rows={3} style={inp}/>
+            </div>
+
+            {/* Q3 */}
+            <div style={{marginBottom:24}}>
+              <div style={{fontSize:11,color:"var(--text3)",marginBottom:10,fontWeight:500,letterSpacing:.5}}>💬 Would you recommend SYNAPSE to a friend?</div>
+              <div style={{display:"flex",gap:8}}>
+                {["Absolutely 🔥","Maybe 🤔","Not yet ❌"].map(opt=>(
+                  <div key={opt} onClick={()=>setRecommend(opt)} style={{flex:1,padding:"10px 6px",borderRadius:10,textAlign:"center",fontSize:11,fontWeight:600,cursor:"pointer",transition:"all .2s",background:recommend===opt?(isL?"rgba(196,122,122,0.15)":"rgba(255,140,0,0.12)"):(isL?"rgba(229,238,228,0.5)":"rgba(255,255,255,0.04)"),border:`1px solid ${recommend===opt?(isL?"rgba(196,122,122,0.5)":"rgba(255,140,0,0.4)"):(isL?"rgba(192,225,210,0.4)":"rgba(255,255,255,0.08)")}`,color:recommend===opt?(isL?"#c47a7a":"#ff9500"):"var(--text3)"}}>{opt}</div>
+                ))}
+              </div>
+            </div>
+
+            {/* Submit */}
+            <button onClick={handleSubmit} disabled={!rating||submitting} style={{width:"100%",padding:"14px",borderRadius:14,background:!rating?"rgba(255,255,255,0.06)":(isL?"linear-gradient(135deg,#c47a7a,#a85c5c)":"linear-gradient(135deg,#ff9500,#ff5000)"),border:"none",color:!rating?"var(--text4)":"#fff",fontSize:13,fontWeight:700,cursor:!rating?"not-allowed":"pointer",transition:"all .3s",display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
+              {submitting?<><div style={{width:14,height:14,border:"2px solid rgba(255,255,255,0.3)",borderTop:"2px solid #fff",borderRadius:"50%",animation:"spin 0.7s linear infinite"}}/> Sending...</>:"Send Feedback →"}
+            </button>
+            <button onClick={onClose} style={{width:"100%",padding:"12px",borderRadius:14,background:"transparent",border:"none",color:"var(--text4)",fontSize:12,cursor:"pointer",marginTop:8}}>Maybe later</button>
+          </div>
+        )}
+      </div>
+    </>
+  );
+}
+
 function MilestoneCelebration({day,onClose}){
   const m=MILESTONE_DATA[day];
   const canvasRef=useRef(null);
@@ -4630,6 +4769,7 @@ export default function App() {
   const [theme,setTheme]    =useState(()=>ls.get("syn_theme","dark"));
   const [showInstallPrompt,setShowInstallPrompt]=useState(false);
   const [showNotifPrompt,setShowNotifPrompt]=useState(false);
+  const [showFeedback,setShowFeedback]=useState(false);
   const [fcmToast,setFcmToast]=useState(null);
   const deferredInstallPrompt=useRef(null);
   const audioPlayRef = useRef(null);
@@ -4948,6 +5088,12 @@ export default function App() {
       setTimeout(()=>setShowInstallPrompt(true), 1500);
     }
 
+    // Show feedback after 3rd, 7th, 15th checkin
+    const totalCI=history.length+1;
+    if([3,7,15,30].includes(totalCI)){
+      setTimeout(()=>setShowFeedback(true), 3000);
+    }
+
     return {reply, status};
   };
 
@@ -5002,6 +5148,7 @@ export default function App() {
           {milestone&&<MilestoneCelebration day={milestone} onClose={()=>setMilestone(null)}/>}
           <FcmToast toast={fcmToast} theme={theme}/>
           {showNotifPrompt&&<NotifPrompt theme={theme} onAllow={requestNotifPermission} onDismiss={()=>setShowNotifPrompt(false)}/>}
+          {showFeedback&&<FeedbackSheet theme={theme} onClose={()=>setShowFeedback(false)}/>}
           {showInstallPrompt&&<InstallPrompt theme={theme} onDismiss={()=>{setShowInstallPrompt(false);ls.set("syn_pwa_prompted","1");}} onInstall={async()=>{
             const prompt=deferredInstallPrompt.current||window.__installPrompt;
             if(prompt){
