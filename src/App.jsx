@@ -1838,84 +1838,458 @@ function RotatingTaglines() {
    This is the first page the user sees. No separate screens.
 ══════════════════════════════════════════════════════════════════════════ */
 function Boot({ onBegin, hasPlan, theme, onThemeToggle }) {
-  const [step, setStep] = useState(0);
-  const [ready, setReady] = useState(false);
-  const lines = ["Neural scanner............ONLINE","Dopamine analyzer.........ACTIVE","Recovery protocol engine..LOADED","Confession vault..........ARMED"];
+  const canvasRef=useRef(null);
+  const curRef=useRef(null);
+  const [bootDone,setBootDone]=useState(false);
+  const [mainVisible,setMainVisible]=useState(false);
+  const [wmOn,setWmOn]=useState(false);
+  const [ht1On,setHt1On]=useState(false);
+  const [ht2On,setHt2On]=useState(false);
+  const [hmetaOn,setHmetaOn]=useState(false);
+  const [blogLines,setBlogLines]=useState([]);
+  const [bpct,setBpct]=useState(0);
+  const [showProgress,setShowProgress]=useState(false);
+  const [glitch,setGlitch]=useState(false);
+  const [s1vis,setS1vis]=useState(false);
+  const [s2vis,setS2vis]=useState(false);
+  const [s3vis,setS3vis]=useState(false);
+  const [s4vis,setS4vis]=useState(false);
+  const [s5vis,setS5vis]=useState(false);
+  const [ctaCharged,setCtaCharged]=useState(false);
+  const [ctaFill,setCtaFill]=useState(0);
+  const [metric1,setMetric1]=useState(0);
+  const [metric2,setMetric2]=useState(0);
+  const chargeRef=useRef(null);
+  const chargeVal=useRef(0);
+
+  const BL=[
+    "> ACCESSING NEURAL INTERFACE...",
+    "> IDENTITY VERIFIED.",
+    "> DOPAMINE PROFILE LOADED.",
+    "> CALIBRATING RECOVERY MATRIX...",
+    "> INITIALIZING SYNAPSE PROTOCOL v2.0...",
+  ];
+
+  // Boot sequence
   useEffect(()=>{
-    if(step<lines.length){ const t=setTimeout(()=>setStep(s=>s+1),400); return()=>clearTimeout(t); }
-    else setTimeout(()=>setReady(true),300);
-  },[step]);
+    let i=0;
+    const addLine=()=>{
+      if(i>=BL.length){ setShowProgress(true); return; }
+      setBlogLines(l=>[...l,BL[i]]);
+      i++;
+      setTimeout(addLine, i<=2?480:340);
+    };
+    setTimeout(addLine,500);
+  },[]);
+
+  // Progress bar
+  useEffect(()=>{
+    if(!showProgress) return;
+    let p=0;
+    const iv=setInterval(()=>{
+      p=Math.min(p+(p<65?1.4:p<88?.75:.35),100);
+      setBpct(Math.round(p));
+      if(p>=100){ clearInterval(iv); setTimeout(launch,180); }
+    },16);
+    return()=>clearInterval(iv);
+  },[showProgress]);
+
+  function launch(){
+    setBootDone(true);
+    setTimeout(()=>{
+      setMainVisible(true);
+      setTimeout(()=>{ setWmOn(true); },360);
+      setTimeout(()=>setHt1On(true),800);
+      setTimeout(()=>setHt2On(true),1000);
+      setTimeout(()=>setHmetaOn(true),1280);
+      setTimeout(()=>trigGlitch(),2100);
+    },250);
+  }
+
+  function trigGlitch(){
+    setGlitch(true); setTimeout(()=>setGlitch(false),100);
+    setTimeout(()=>{ setGlitch(true); setTimeout(()=>setGlitch(false),75); },170);
+    setTimeout(()=>{ setGlitch(true); setTimeout(()=>setGlitch(false),85); },290);
+  }
+  useEffect(()=>{
+    const iv=setInterval(trigGlitch,9000);
+    return()=>clearInterval(iv);
+  },[]);
+
+  // Scroll reveal
+  useEffect(()=>{
+    if(!mainVisible) return;
+    const obs=new IntersectionObserver(entries=>{
+      entries.forEach(e=>{
+        if(!e.isIntersecting) return;
+        const id=e.target.getAttribute("data-sec");
+        if(id==="s1") setTimeout(()=>setS1vis(true),80);
+        if(id==="s2") setTimeout(()=>setS2vis(true),80);
+        if(id==="s3") setTimeout(()=>setS3vis(true),80);
+        if(id==="s4"){ setTimeout(()=>setS4vis(true),80); setTimeout(()=>{ let c=0; const iv=setInterval(()=>{ c=Math.min(c+5,90); setMetric1(c); if(c>=90)clearInterval(iv); },40); },900); setTimeout(()=>{ let c=0; const iv=setInterval(()=>{ c=Math.min(c+1,7); setMetric2(c); if(c>=7)clearInterval(iv); },80); },900); }
+        if(id==="s5") setTimeout(()=>setS5vis(true),80);
+      });
+    },{threshold:.22});
+    document.querySelectorAll("[data-sec]").forEach(el=>obs.observe(el));
+    return()=>obs.disconnect();
+  },[mainVisible]);
+
+  // Neural canvas
+  useEffect(()=>{
+    if(!mainVisible||!canvasRef.current) return;
+    const canvas=canvasRef.current;
+    const ctx=canvas.getContext("2d");
+    let W,H,lastT=0,speedMult=1,pulseStr=0,mouse={x:0,y:0};
+    class Neuron{ constructor(x,y){this.x=x;this.y=y;this.nbrs=[];this.act=0;this.ref=0;} update(dt){this.act=Math.max(0,this.act-dt*2.2);this.ref=Math.max(0,this.ref-dt);} canFire(){return this.ref<=0;} fire(){this.act=1;this.ref=1.4+Math.random()*.8;} }
+    class Signal{ constructor(f,t){this.f=f;this.t=t;this.p=0;this.sp=.22+Math.random()*.18;this.done=false;} update(dt,sm){this.p+=this.sp*dt*sm;if(this.p>=1){this.done=true;if(this.t.canFire()&&Math.random()<.55){this.t.fire();if(sigs.length<35)this.t.nbrs.slice(0,1+Math.floor(Math.random()*2)).forEach(n=>{if(n!==this.f&&Math.random()<.45)sigs.push(new Signal(this.t,n));});}}} draw(){const x=this.f.x+(this.t.x-this.f.x)*this.p,y=this.f.y+(this.t.y-this.f.y)*this.p;ctx.beginPath();ctx.arc(x,y,5,0,Math.PI*2);ctx.fillStyle="rgba(245,160,0,.18)";ctx.fill();ctx.beginPath();ctx.arc(x,y,2.2,0,Math.PI*2);ctx.fillStyle="rgba(245,160,0,.95)";ctx.fill();} }
+    const neurs=[],sigs=[];
+    function initN(){neurs.length=0;sigs.length=0;for(let i=0;i<38;i++){const a=(i/38)*Math.PI*2,r=.08+Math.random()*.44;let x=W*.5+Math.cos(a)*r*W*.55+(Math.random()-.5)*W*.28,y=H*.5+Math.sin(a)*r*H*.55+(Math.random()-.5)*H*.28;x=Math.max(60,Math.min(W-60,x));y=Math.max(60,Math.min(H-60,y));neurs.push(new Neuron(x,y));}neurs.forEach(n=>{n.nbrs=neurs.filter(m=>m!==n).sort((a,b)=>Math.hypot(a.x-n.x,a.y-n.y)-Math.hypot(b.x-n.x,b.y-n.y)).slice(0,2+Math.floor(Math.random()*3));});}
+    const onMM=e=>{mouse.x=e.clientX;mouse.y=e.clientY;};
+    window.addEventListener("mousemove",onMM);
+    let lastFire=0,raf;
+    function ntick(ts){
+      const dt=Math.min((ts-lastT)/1000,.05);lastT=ts;
+      speedMult=1+pulseStr*2.8;
+      if(ts-lastFire>900){lastFire=ts;const el=neurs.filter(n=>n.canFire()&&n.nbrs.length>0);if(el.length&&sigs.length<28){const src=el[Math.floor(Math.random()*el.length)];src.fire();src.nbrs.slice(0,1+Math.floor(Math.random()*2)).forEach(t=>sigs.push(new Signal(src,t)));}}
+      neurs.forEach(n=>{const dx=n.x-mouse.x,dy=n.y-mouse.y,d=Math.sqrt(dx*dx+dy*dy);if(d<140){const f=(140-d)/140*.0015;n.x+=dx*f;n.y+=dy*f;}n.update(dt);});
+      ctx.clearRect(0,0,W,H);
+      neurs.forEach(n=>{n.nbrs.forEach(m=>{const dist=Math.hypot(n.x-m.x,n.y-m.y),actv=Math.max(n.act,m.act),base=Math.max(.025,.08-dist/2800),alpha=base+actv*.28;ctx.beginPath();ctx.moveTo(n.x,n.y);ctx.lineTo(m.x,m.y);ctx.strokeStyle=`rgba(245,160,0,${alpha})`;ctx.lineWidth=actv>.3?.8:.35;ctx.stroke();});});
+      neurs.forEach(n=>{const r=1.8+n.act*4,a=.3+n.act*.7;if(n.act>.25){const g=ctx.createRadialGradient(n.x,n.y,0,n.x,n.y,r*7);g.addColorStop(0,`rgba(245,160,0,${n.act*.38})`);g.addColorStop(1,"rgba(0,0,0,0)");ctx.beginPath();ctx.arc(n.x,n.y,r*7,0,Math.PI*2);ctx.fillStyle=g;ctx.fill();}ctx.beginPath();ctx.arc(n.x,n.y,r,0,Math.PI*2);ctx.fillStyle=`rgba(245,160,0,${a})`;ctx.fill();});
+      sigs.forEach(s=>s.update(dt,speedMult));sigs.forEach(s=>s.draw());
+      for(let i=sigs.length-1;i>=0;i--)if(sigs[i].done)sigs.splice(i,1);
+      raf=requestAnimationFrame(ntick);
+    }
+    function resize(){W=canvas.width=window.innerWidth;H=canvas.height=window.innerHeight;}
+    const onR=()=>{resize();initN();};
+    window.addEventListener("resize",onR);
+    resize();initN();
+    raf=requestAnimationFrame(ts=>{lastT=ts;ntick(ts);});
+    return()=>{cancelAnimationFrame(raf);window.removeEventListener("mousemove",onMM);window.removeEventListener("resize",onR);};
+  },[mainVisible]);
+
+  // Cursor
+  useEffect(()=>{
+    const cur=curRef.current;
+    if(!cur) return;
+    let cx=0,cy=0,tx=0,ty=0,raf;
+    const onM=e=>{tx=e.clientX;ty=e.clientY;};
+    window.addEventListener("mousemove",onM);
+    const tick=()=>{cx+=(tx-cx)*.13;cy+=(ty-cy)*.13;cur.style.left=cx+"px";cur.style.top=cy+"px";raf=requestAnimationFrame(tick);};
+    raf=requestAnimationFrame(tick);
+    return()=>{cancelAnimationFrame(raf);window.removeEventListener("mousemove",onM);};
+  },[]);
+
+  // CTA charge
+  const handleCtaEnter=()=>{
+    if(ctaCharged) return;
+    clearInterval(chargeRef.current);
+    chargeRef.current=setInterval(()=>{
+      chargeVal.current=Math.min(chargeVal.current+1.1,100);
+      setCtaFill(chargeVal.current);
+      if(chargeVal.current>=100){ clearInterval(chargeRef.current); setCtaCharged(true); }
+    },16);
+  };
+  const handleCtaLeave=()=>{
+    if(ctaCharged) return;
+    clearInterval(chargeRef.current);
+    chargeRef.current=setInterval(()=>{
+      chargeVal.current=Math.max(chargeVal.current-4,0);
+      setCtaFill(chargeVal.current);
+      if(chargeVal.current<=0) clearInterval(chargeRef.current);
+    },16);
+  };
+
+  const slineStyle=(vis,delay=0)=>({
+    fontFamily:"'Space Mono',monospace",fontWeight:400,fontSize:10,letterSpacing:"0.06em",
+    color:"#8a7040",display:"flex",alignItems:"center",gap:9,
+    opacity:vis?1:0,transform:vis?"translateX(0)":"translateX(-12px)",
+    transition:`opacity .4s ${delay}ms,transform .4s ${delay}ms`,
+  });
+
+  const stitleStyle=(vis)=>({
+    fontFamily:"'Space Grotesk',sans-serif",fontWeight:700,
+    fontSize:"clamp(30px,5.2vw,66px)",lineHeight:1.05,letterSpacing:"-0.025em",
+    color:"#fff8e7",marginBottom:40,
+    opacity:vis?1:0,transform:vis?"translateY(0)":"translateY(20px)",
+    transition:"opacity .7s,transform .7s cubic-bezier(.1,0,0,1)",
+  });
+
+  const sbodyStyle=(vis,delay=0)=>({
+    fontFamily:"'Inter',sans-serif",fontWeight:400,fontSize:15,
+    letterSpacing:"0.01em",lineHeight:1.82,color:"#8a7040",
+    opacity:vis?1:0,transform:vis?"translateY(0)":"translateY(7px)",
+    transition:`opacity .5s ${delay}ms,transform .5s ${delay}ms`,
+  });
 
   return(
-    <div style={{minHeight:"100vh",display:"flex",flexDirection:"column",position:"relative",overflow:"hidden",width:"100%",boxSizing:"border-box"}}>
-      {/* Theme toggle — top right */}
-      <button onClick={onThemeToggle} title={theme==="light"?"Switch to Dark":"Switch to Light"}
-        style={{position:"fixed",top:16,right:16,zIndex:600,background:"var(--surface2)",border:"1px solid var(--border)",borderRadius:999,width:36,height:36,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,transition:"all .25s",boxShadow:"0 2px 12px var(--shadow)"}}>
-        {theme==="light"?"🌙":"☀️"}
-      </button>
-      <div className="boot-inner" style={{flex:1,display:"flex",alignItems:"center",padding:"120px 8vw 80px",position:"relative",zIndex:3,width:"100%",boxSizing:"border-box"}}>
-        <div style={{maxWidth:760,width:"100%"}}>
-          {/* Terminal lines */}
-          <div style={{marginBottom:60,fontFamily:"'JetBrains Mono',monospace"}}>
-            {lines.map((l,i)=>(
-              <div key={i} style={{display:"flex",alignItems:"center",gap:10,marginBottom:7,opacity:step>i?1:.06,transform:step>i?"translateX(0)":"translateX(-14px)",transition:"all .55s cubic-bezier(.16,1,.3,1)"}}>
-                <div style={{width:6,height:6,borderRadius:"50%",background:step>i?"#88ff44":"rgba(255,255,255,0.08)",boxShadow:step>i?"0 0 10px #88ff44,0 0 20px #88ff4460":"none",transition:"all .4s",flexShrink:0}}/>
-                <span style={{fontSize:11,letterSpacing:2.5,color:step>i?"rgba(255,180,80,0.52)":"rgba(255,255,255,0.08)",textTransform:"uppercase",fontWeight:500}}>{l}</span>
-              </div>
-            ))}
-          </div>
+    <div style={{background:"#0a0800",minHeight:"100vh",position:"relative",overflowX:"hidden",fontFamily:"'Inter',sans-serif",cursor:"none"}}>
 
-          {/* Branding */}
-          <div style={{opacity:ready?1:0,transform:ready?"translateY(0)":"translateY(20px)",transition:"all 1.1s cubic-bezier(.16,1,.3,1)"}}>
-            <div className="s1" style={{display:"flex",alignItems:"center",gap:16,marginBottom:32}}>
-              <NeuralMark size={64}/>
-              <div>
-                <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:11,fontWeight:800,letterSpacing:4,color:"rgba(255,180,80,0.42)",marginBottom:6}}>AI-POWERED RECOVERY</div>
-                <div className="tag" style={{display:"inline-flex"}}><span className="d"/>Dopamine Reset Protocol</div>
-              </div>
-            </div>
+      {/* Custom cursor */}
+      <div ref={curRef} style={{position:"fixed",pointerEvents:"none",zIndex:9999,transform:"translate(-50%,-50%)",transition:"none"}}>
+        <svg width="26" height="26"><circle cx="13" cy="13" r="11" fill="none" stroke="rgba(245,160,0,.7)" strokeWidth="1"/></svg>
+      </div>
 
-            {/* Glitch headline */}
-            <div style={{position:"relative",lineHeight:.88,marginBottom:14}}>
-              <h1 style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(32px,8vw,104px)",fontWeight:900,letterSpacing:-2,background:"var(--gradient-text)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",animation:"glitch1 9s ease-in-out infinite",lineHeight:.88,whiteSpace:"nowrap",overflow:"hidden"}}>SYNAPSE</h1>
-              <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(32px,8vw,104px)",fontWeight:900,letterSpacing:-2,color:"rgba(255,80,0,.35)",animation:"glitch2 9s ease-in-out infinite",position:"absolute",top:0,left:0,lineHeight:.88,whiteSpace:"nowrap",overflow:"hidden"}}>SYNAPSE</div>
-            </div>
-
-            <div className="s3" style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(8px,1vw,12px)",fontWeight:700,letterSpacing:3,color:"rgba(255,140,0,0.65)",textTransform:"uppercase",marginBottom:32,display:"flex",alignItems:"center",gap:10,flexWrap:"nowrap",overflow:"hidden"}}>
-              <div style={{width:24,height:1,background:"linear-gradient(90deg,transparent,rgba(255,140,0,0.5))",flexShrink:0}}/>
-              <span style={{whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>GET BACK TO YOUR DOPAMINE BASELINE</span>
-              <div style={{width:24,height:1,background:"linear-gradient(90deg,rgba(255,140,0,0.5),transparent)",flexShrink:0}}/>
-            </div>
-
-            <RotatingTaglines/>
-
-            {/* CTA */}
-            <div className="s4" style={{display:"flex",gap:16,flexWrap:"wrap",marginBottom:60,marginTop:36}}>
-              <button className="btn-primary" onClick={onBegin} style={{fontSize:15,padding:"18px 56px",borderRadius:999,letterSpacing:.5}}>
-                {hasPlan ? "Resume Mission →" : "Let's Begin →"}
-              </button>
-            </div>
-
-            {/* Stats */}
-            <div className="s5" style={{display:"flex",gap:40,paddingTop:28,borderTop:"1px solid rgba(255,140,0,0.08)",flexWrap:"wrap"}}>
-              {[["90+","Day Protocol"],["7","Recovery Levels"],["AI","Daily Coach"],["∞","Personalized"]].map(([n,l])=>(
-                <div key={l}>
-                  <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:26,fontWeight:800,background:"linear-gradient(135deg,#ff9500,#ffcc00)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",lineHeight:1}}>{n}</div>
-                  <div style={{fontSize:11,color:"var(--text4)",marginTop:5,letterSpacing:.5}}>{l}</div>
+      {/* Boot overlay */}
+      {!bootDone&&(
+        <div style={{position:"fixed",inset:0,background:"#000",zIndex:8000,display:"flex",alignItems:"center",justifyContent:"center"}}>
+          <div style={{width:520,maxWidth:"88vw"}}>
+            <div style={{marginBottom:28}}>
+              {blogLines.map((l,i)=>(
+                <div key={i} style={{fontFamily:"'Space Mono',monospace",fontWeight:400,fontSize:12,letterSpacing:"0.06em",lineHeight:2.2,color:"#f5a000",opacity:1,transition:"opacity .2s"}}>
+                  {l}
                 </div>
               ))}
             </div>
-
-            {/* One-liner */}
-            <div className="s5" style={{marginTop:28,padding:"16px 22px",background:"rgba(255,140,0,0.03)",border:"1px solid rgba(255,140,0,0.09)",borderRadius:12,maxWidth:560}}>
-              <p style={{fontSize:12,color:"var(--text4)",fontWeight:300,lineHeight:1.9,fontStyle:"italic",letterSpacing:.3}}>
-                "Confess your addictions. Get your plan. Show up every day. Take your brain back."
-              </p>
-            </div>
+            {showProgress&&(
+              <div style={{display:"flex",flexDirection:"column",gap:10}}>
+                <div style={{height:2,background:"#1a1200",border:"1px solid #3a2800"}}>
+                  <div style={{height:"100%",width:bpct+"%",background:"#f5a000",boxShadow:"0 0 10px #f5a000",transition:"width .016s linear"}}/>
+                </div>
+                <div style={{fontFamily:"'Space Mono',monospace",fontSize:9,letterSpacing:"0.25em",color:"#6a5820",textAlign:"right"}}>{bpct}%</div>
+              </div>
+            )}
           </div>
         </div>
+      )}
+
+      {/* Main content */}
+      <div style={{opacity:mainVisible?1:0,pointerEvents:mainVisible?"auto":"none",transition:"opacity .7s",position:"relative"}}>
+
+        {/* Neural canvas */}
+        <canvas ref={canvasRef} style={{position:"fixed",inset:0,pointerEvents:"none",zIndex:0}}/>
+
+        {/* Ambient halos */}
+        <div style={{position:"fixed",inset:0,pointerEvents:"none",zIndex:1,overflow:"hidden"}}>
+          <div style={{position:"absolute",width:500,height:500,borderRadius:"50%",filter:"blur(100px)",opacity:mainVisible?.09:0,transition:"opacity 2.5s",background:"radial-gradient(circle,#f5a000,transparent 70%)",top:"-10%",left:"-5%"}}/>
+          <div style={{position:"absolute",width:600,height:600,borderRadius:"50%",filter:"blur(100px)",opacity:mainVisible?.09:0,transition:"opacity 2.5s",background:"radial-gradient(circle,#cc5500,transparent 70%)",top:"20%",right:"-15%"}}/>
+          <div style={{position:"absolute",width:400,height:400,borderRadius:"50%",filter:"blur(100px)",opacity:mainVisible?.09:0,transition:"opacity 2.5s",background:"radial-gradient(circle,#cc7a00,transparent 70%)",bottom:"-5%",left:"30%"}}/>
+        </div>
+
+        {/* Border frame */}
+        <div style={{position:"fixed",inset:3,border:"1px solid #1a0f00",pointerEvents:"none",zIndex:200}}/>
+
+        {/* ── SECTION 0: Hero ── */}
+        <section style={{minHeight:"100vh",position:"relative",zIndex:2,display:"flex",flexDirection:"column",justifyContent:"center",alignItems:"center",textAlign:"center",padding:"clamp(40px,6vh,70px) clamp(24px,6vw,90px)"}}>
+          {/* H-rules */}
+          <div style={{width:"100%",height:1,background:"#cc7a00",marginBottom:18,clipPath:wmOn?"inset(0 0% 0 0)":"inset(0 100% 0 0)",transition:"clip-path 1s cubic-bezier(.4,0,.1,1)"}}/>
+
+          {/* SYNAPSE wordmark */}
+          <div style={{position:"relative",width:"100%",textAlign:"center",overflow:"visible",padding:"18px 0"}}>
+            <span style={{
+              fontFamily:"'Orbitron',sans-serif",fontWeight:900,
+              fontSize:"clamp(44px,12vw,196px)",letterSpacing:"-0.03em",lineHeight:.9,
+              fontFeatureSettings:'"kern" 1,"liga" 0',
+              background:"linear-gradient(165deg,#fff8e7 0%,#fff8e7 18%,#f5a000 52%,#ff5500 100%)",
+              WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",backgroundClip:"text",
+              filter:"drop-shadow(0 0 50px rgba(245,160,0,.4))",
+              userSelect:"none",display:"block",width:"100%",
+              opacity:wmOn?1:0,transform:wmOn?"translateY(0) scale(1)":"translateY(-26px) scale(1.03)",
+              transition:"opacity .7s,transform .7s cubic-bezier(.1,0,0,1)",
+              position:"relative",
+            }}>
+              SYNAPSE
+              {glitch&&<>
+                <span style={{position:"absolute",top:0,left:0,width:"100%",fontFamily:"'Orbitron',sans-serif",fontWeight:900,fontSize:"inherit",letterSpacing:"-0.03em",lineHeight:.9,background:"linear-gradient(165deg,#ff8800,#ff5500)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",backgroundClip:"text",clipPath:"polygon(0 12%,100% 12%,100% 34%,0 34%)",transform:"translateX(-4px)",opacity:.88}}>SYNAPSE</span>
+                <span style={{position:"absolute",top:0,left:0,width:"100%",fontFamily:"'Orbitron',sans-serif",fontWeight:900,fontSize:"inherit",letterSpacing:"-0.03em",lineHeight:.9,background:"linear-gradient(165deg,#f5a000,#d4920a)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",backgroundClip:"text",clipPath:"polygon(0 64%,100% 64%,100% 82%,0 82%)",transform:"translateX(4px)",opacity:.88}}>SYNAPSE</span>
+              </>}
+            </span>
+          </div>
+
+          {/* Taglines */}
+          <div style={{margin:"10px 0 4px"}}>
+            <div style={{fontFamily:"'Space Mono',monospace",fontWeight:400,fontSize:"clamp(9px,0.85vw,12px)",letterSpacing:"0.42em",lineHeight:1.7,color:"#f5a000",opacity:ht1On?1:0,transition:"opacity .6s",margin:"2px 0"}}>GET BACK TO YOUR</div>
+            <div style={{fontFamily:"'Space Mono',monospace",fontWeight:400,fontSize:"clamp(9px,0.85vw,12px)",letterSpacing:"0.42em",lineHeight:1.7,color:"#f5a000",opacity:ht2On?1:0,transition:"opacity .6s",margin:"2px 0"}}>DOPAMINE BASELINE</div>
+          </div>
+
+          <div style={{width:"100%",height:1,background:"#cc7a00",marginTop:18,clipPath:wmOn?"inset(0 0% 0 0)":"inset(0 100% 0 0)",transition:"clip-path 1s cubic-bezier(.4,0,.1,1) .2s"}}/>
+
+          {/* Meta */}
+          <div style={{fontFamily:"'Space Mono',monospace",fontWeight:400,fontSize:8,letterSpacing:"0.28em",color:"#6a5820",marginTop:28,display:"flex",gap:12,justifyContent:"center",alignItems:"center",flexWrap:"wrap",opacity:hmetaOn?1:0,transition:"opacity .6s"}}>
+            <span>AI RECOVERY SYSTEM</span>
+            <span style={{color:"#3a2800"}}>·</span>
+            <span>VERSION 2.4.1</span>
+            <span style={{color:"#3a2800"}}>·</span>
+            <span>STATUS:&nbsp;<span style={{color:"#00ff88"}}>ONLINE</span></span>
+          </div>
+
+          {/* Scroll hint */}
+          <div style={{position:"absolute",bottom:32,left:"50%",transform:"translateX(-50%)",fontFamily:"'Space Mono',monospace",fontSize:8,letterSpacing:"0.4em",color:"#6a5820",animation:"shrb 2.2s ease-in-out infinite",whiteSpace:"nowrap"}}>▼ SCROLL TO CONTINUE</div>
+        </section>
+
+        {/* ── SECTION 1: Who Are You ── */}
+        <section data-sec="s1" style={{minHeight:"70vh",position:"relative",zIndex:2,display:"flex",flexDirection:"column",justifyContent:"center",padding:"clamp(40px,6vh,70px) clamp(24px,6vw,90px)"}}>
+          <div style={{maxWidth:680}}>
+            <div style={{fontFamily:"'Space Mono',monospace",fontWeight:400,fontSize:9,letterSpacing:"0.44em",color:"#6a5820",textTransform:"uppercase",marginBottom:20,opacity:s1vis?1:0,transform:s1vis?"translateX(0)":"translateX(-16px)",transition:"opacity .5s,transform .5s"}}>SUBJECT ANALYSIS</div>
+            <div style={{width:"100%",height:1,background:"#3a2800",marginBottom:44,position:"relative",overflow:"hidden",opacity:s1vis?1:0,transition:"opacity .3s .1s"}}>
+              <div style={{content:"''",position:"absolute",left:"-100%",top:0,width:"80%",height:"100%",background:"linear-gradient(90deg,transparent,rgba(245,160,0,.7),transparent)",animation:"rscan 5s ease-in-out infinite"}}/>
+            </div>
+            <h2 style={stitleStyle(s1vis)}>WHO ARE YOU?</h2>
+            <div style={{maxWidth:"56ch"}}>
+              {[
+                {t:"You reach for your phone before you're out of bed.",d:0},
+                {t:"You can't finish a thought without an interruption.",d:65},
+                {t:"You scroll not to find something —",d:130},
+                {t:"to feel something.",d:195},
+                {t:"Your dopamine system has been hijacked.",d:260,amber:true},
+                {t:"This is not a willpower problem.",d:340,dim:true},
+                {t:"This is neuroscience.",d:405,dim:true},
+              ].map((p,i)=>(
+                <p key={i} style={{...sbodyStyle(s1vis,560+p.d),color:p.amber?"#f5a000":p.dim?"#6a5820":"#8a7040",fontWeight:p.amber?500:400,marginTop:i===4||i===5?18:0}}>{p.t}</p>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ── SECTION 2: Your Brain Has Changed ── */}
+        <section data-sec="s2" style={{minHeight:"70vh",position:"relative",zIndex:2,display:"flex",flexDirection:"column",justifyContent:"center",padding:"clamp(40px,6vh,70px) clamp(24px,6vw,90px)"}}>
+          <div style={{maxWidth:680}}>
+            <div style={{fontFamily:"'Space Mono',monospace",fontWeight:400,fontSize:9,letterSpacing:"0.44em",color:"#6a5820",textTransform:"uppercase",marginBottom:20,opacity:s2vis?1:0,transform:s2vis?"translateX(0)":"translateX(-16px)",transition:"opacity .5s,transform .5s"}}>NEURAL ASSESSMENT</div>
+            <div style={{width:"100%",height:1,background:"#3a2800",marginBottom:44,opacity:s2vis?1:0,transition:"opacity .3s .1s"}}/>
+            <h2 style={stitleStyle(s2vis)}>YOUR BRAIN<br/>HAS CHANGED.</h2>
+            <div style={{maxWidth:"56ch"}}>
+              {[
+                {t:"Chronic overstimulation has altered your dopamine baseline threshold.",d:0},
+                {t:"Tasks that once felt rewarding now feel impossible.",d:65},
+                {t:"The problem isn't you.",d:145,amber:true},
+                {t:"The problem is the loop you're stuck in.",d:210,amber:true},
+              ].map((p,i)=>(
+                <p key={i} style={{...sbodyStyle(s2vis,560+p.d),color:p.amber?"#f5a000":"#8a7040",fontWeight:p.amber?500:400,marginTop:i>=2?18:0}}>{p.t}</p>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ── SECTION 3: We Can Map It ── */}
+        <section data-sec="s3" style={{minHeight:"70vh",position:"relative",zIndex:2,display:"flex",flexDirection:"column",justifyContent:"center",padding:"clamp(40px,6vh,70px) clamp(24px,6vw,90px)"}}>
+          <div style={{maxWidth:680}}>
+            <div style={{fontFamily:"'Space Mono',monospace",fontWeight:400,fontSize:9,letterSpacing:"0.44em",color:"#6a5820",textTransform:"uppercase",marginBottom:20,opacity:s3vis?1:0,transform:s3vis?"translateX(0)":"translateX(-16px)",transition:"opacity .5s,transform .5s"}}>RECOVERY ARCHITECTURE</div>
+            <div style={{width:"100%",height:1,background:"#3a2800",marginBottom:44,opacity:s3vis?1:0,transition:"opacity .3s .1s"}}/>
+            <h2 style={stitleStyle(s3vis)}>WE CAN<br/>MAP IT.</h2>
+            <div style={{maxWidth:"56ch"}}>
+              <p style={sbodyStyle(s3vis,560)}>SYNAPSE builds your protocol from:</p>
+              <div style={{display:"flex",flexDirection:"column",gap:11,margin:"22px 0"}}>
+                {["ADDICTION PATTERN ANALYSIS","PSYCHOLOGICAL ARCHETYPE","BEHAVIORAL HISTORY","DAILY CHECK-IN DATA"].map((item,i)=>(
+                  <div key={i} style={{fontFamily:"'Space Grotesk',sans-serif",fontWeight:600,fontSize:11,letterSpacing:"0.22em",textTransform:"uppercase",color:"#f5a000",display:"flex",alignItems:"center",gap:14,opacity:s3vis?1:0,transform:s3vis?"translateX(0)":"translateX(-12px)",transition:`opacity .4s ${680+i*110}ms,transform .4s ${680+i*110}ms`}}>
+                    <span style={{color:"#d4920a",fontSize:8}}>◆</span>{item}
+                  </div>
+                ))}
+              </div>
+              <p style={{...sbodyStyle(s3vis,1100),color:"#f5a000",fontWeight:500}}>Not generic advice. Precision recovery.</p>
+            </div>
+          </div>
+        </section>
+
+        {/* ── SECTION 4: System Status + Metrics ── */}
+        <section data-sec="s4" style={{minHeight:"70vh",position:"relative",zIndex:2,display:"flex",flexDirection:"column",justifyContent:"center",padding:"clamp(40px,6vh,70px) clamp(24px,6vw,90px)"}}>
+          <div style={{maxWidth:1040,width:"100%"}}>
+            <div style={{fontFamily:"'Space Mono',monospace",fontWeight:400,fontSize:9,letterSpacing:"0.44em",color:"#6a5820",textTransform:"uppercase",marginBottom:20,opacity:s4vis?1:0,transform:s4vis?"translateX(0)":"translateX(-16px)",transition:"opacity .5s,transform .5s"}}>SYSTEM STATUS</div>
+            <div style={{width:"100%",height:1,background:"#3a2800",marginBottom:44,opacity:s4vis?1:0,transition:"opacity .3s .1s"}}/>
+            <div style={{display:"flex",flexDirection:"column",gap:15}}>
+              {[
+                ["NEURAL SCANNER","ONLINE"],
+                ["DOPAMINE ANALYZER","ACTIVE"],
+                ["RECOVERY PROTOCOL ENGINE","LOADED"],
+                ["CONFESSION VAULT","ARMED"],
+              ].map(([label,val],i)=>(
+                <div key={i} style={slineStyle(s4vis,480+i*140)}>
+                  <span style={{color:"#00ff88",textShadow:"0 0 10px #00ff88",fontSize:9}}>●</span>
+                  <span>{label}</span>
+                  <span style={{flex:1,color:"#2a1a00",overflow:"hidden",whiteSpace:"nowrap",letterSpacing:"0.15em"}}>{"·".repeat(60)}</span>
+                  <span style={{fontFamily:"'Space Mono',monospace",fontWeight:700,fontSize:10,letterSpacing:"0.06em",color:"#f5a000",flexShrink:0}}>{val}</span>
+                </div>
+              ))}
+            </div>
+            <div style={{width:"100%",height:1,background:"#3a2800",margin:"44px 0 40px",opacity:s4vis?1:0,transition:"opacity .3s .2s"}}/>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)"}}>
+              {[
+                [metric1+"+","DAY RESET"],
+                [metric2,"RECOVERY PHASES"],
+                ["AI","DAILY COACH"],
+                ["∞","ADAPTIVE"],
+              ].map(([num,lbl],i)=>(
+                <div key={i} style={{display:"flex",flexDirection:"column",alignItems:"center",gap:10,padding:"8px 0",opacity:s4vis?1:0,transform:s4vis?"translateY(0)":"translateY(16px)",transition:`opacity .5s ${740+i*140}ms,transform .5s ${740+i*140}ms`}}>
+                  <div style={{fontFamily:"'Orbitron',sans-serif",fontWeight:700,fontSize:"clamp(28px,4vw,58px)",fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em",lineHeight:1,color:"#f5a000",filter:"drop-shadow(0 0 12px rgba(245,160,0,.45))"}}>{num}</div>
+                  <div style={{fontFamily:"'Space Mono',monospace",fontSize:8,color:"#5a4200",letterSpacing:"-0.1em"}}>━━━━━━━━━━</div>
+                  <div style={{fontFamily:"'Space Mono',monospace",fontWeight:400,fontSize:8,letterSpacing:"0.22em",color:"#6a5820",textAlign:"center"}}>{lbl}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ── SECTION 5: CTA ── */}
+        <section data-sec="s5" style={{minHeight:"70vh",position:"relative",zIndex:2,display:"flex",flexDirection:"column",justifyContent:"center",alignItems:"center",textAlign:"center",padding:"clamp(40px,6vh,70px) clamp(24px,6vw,90px)"}}>
+          <div style={{maxWidth:680,width:"100%",textAlign:"center",margin:"0 auto"}}>
+            <div style={{fontFamily:"'Space Mono',monospace",fontWeight:400,fontSize:9,letterSpacing:"0.44em",color:"#6a5820",textTransform:"uppercase",marginBottom:20,display:"flex",justifyContent:"center",opacity:s5vis?1:0,transition:"opacity .5s"}}>READY TO RECLAIM CONTROL?</div>
+            <div style={{width:"100%",height:1,background:"#3a2800",marginBottom:44,opacity:s5vis?1:0,transition:"opacity .3s .1s"}}/>
+            {/* CTA Button */}
+            <button
+              onMouseEnter={handleCtaEnter}
+              onMouseLeave={handleCtaLeave}
+              onClick={onBegin}
+              style={{
+                position:"relative",overflow:"hidden",
+                fontFamily:"'Orbitron',sans-serif",fontWeight:700,fontSize:11,
+                letterSpacing:"0.45em",textRendering:"geometricPrecision",
+                padding:"22px 64px",paddingLeft:"calc(64px + 0.45em)",
+                background:"transparent",
+                border:`1px solid ${ctaCharged?"#ff5500":"#f5a000"}`,
+                color:ctaCharged?"#fff":"#f5a000",
+                cursor:"pointer",
+                display:"inline-flex",alignItems:"center",justifyContent:"center",
+                transition:"border-color .4s,color .4s,box-shadow .4s",
+                boxShadow:ctaCharged?"0 0 40px rgba(255,85,0,.35)":"none",
+                opacity:s5vis?1:0,transform:s5vis?"translateY(0)":"translateY(16px)",
+              }}>
+              <div style={{position:"absolute",left:0,top:0,bottom:0,width:ctaFill+"%",background:ctaCharged?"#ff5500":"linear-gradient(90deg,rgba(255,85,0,.08),rgba(255,85,0,.22))",transition:ctaCharged?"none":"none"}}/>
+              <span style={{position:"relative",zIndex:1}}>
+                {ctaCharged?"BEGIN RESET ›": hasPlan?"RESUME MISSION ›":"INITIALIZE PROTOCOL"}
+              </span>
+            </button>
+            <div style={{fontFamily:"'Space Mono',monospace",fontWeight:400,fontSize:8,letterSpacing:"0.4em",color:"#6a5820",marginTop:28,opacity:s5vis?1:0,transition:"opacity .5s .2s"}}>
+              CONFESS &nbsp;·&nbsp; PLAN &nbsp;·&nbsp; RECOVER
+            </div>
+          </div>
+        </section>
+
+        {/* Ticker */}
+        <div style={{position:"fixed",bottom:0,left:0,right:0,height:28,background:"#0f0900",borderTop:"1px solid #3a2800",overflow:"hidden",display:"flex",alignItems:"center",zIndex:20}}>
+          <div style={{fontFamily:"'Space Mono',monospace",fontWeight:400,fontSize:8,letterSpacing:"0.28em",color:"#d4920a",display:"flex",whiteSpace:"nowrap",animation:"tk 30s linear infinite"}}>
+            {[1,2].map(k=><span key={k}>DOPAMINE &nbsp;·&nbsp; REWIRE YOUR BRAIN &nbsp;·&nbsp; RISE ABOVE ADDICTION &nbsp;·&nbsp; SYNAPSE PROTOCOL &nbsp;·&nbsp; RESET YOUR DOPAMINE &nbsp;·&nbsp; REWIRE YOUR BRAIN &nbsp;·&nbsp; DOPAMINE &nbsp;·&nbsp; RISE ABOVE ADDICTION &nbsp;·&nbsp; SYNAPSE PROTOCOL &nbsp;·&nbsp; RESET YOUR DOPAMINE &nbsp;·&nbsp;&nbsp;&nbsp;</span>)}
+          </div>
+        </div>
+
+        {/* Hex badge */}
+        <div style={{position:"fixed",top:20,right:24,zIndex:10,animation:"hpx 3s ease-in-out infinite"}}>
+          <svg width="28" height="28" viewBox="0 0 28 28">
+            <polygon points="14,2 25,8 25,20 14,26 3,20 3,8" fill="none" stroke="#f5a000" strokeWidth="1.5"/>
+            <polygon points="14,7 22,11.5 22,16.5 14,21 6,16.5 6,11.5" fill="#f5a000" opacity=".75"/>
+          </svg>
+        </div>
+
+        {/* Wave badge */}
+        <div style={{position:"fixed",bottom:38,right:18,width:36,height:36,border:"1px solid #cc7a00",borderRadius:"50%",background:"#1a1000",display:"flex",alignItems:"center",justifyContent:"center",zIndex:10}}>
+          <svg width="20" height="14" viewBox="0 0 20 14">
+            <rect x="0" y="4" width="2" height="6" fill="#f5a000" opacity=".7"/>
+            <rect x="3" y="2" width="2" height="10" fill="#f5a000" opacity=".85"/>
+            <rect x="6" y="0" width="2" height="14" fill="#f5a000"/>
+            <rect x="9" y="3" width="2" height="8" fill="#f5a000" opacity=".85"/>
+            <rect x="12" y="5" width="2" height="4" fill="#f5a000" opacity=".65"/>
+            <rect x="15" y="2" width="2" height="10" fill="#f5a000" opacity=".75"/>
+            <rect x="18" y="5" width="2" height="4" fill="#f5a000" opacity=".5"/>
+          </svg>
+        </div>
+
       </div>
-      <Marquee/>
+
+      {/* Extra keyframes */}
+      <style>{`
+        @keyframes shrb{0%,100%{opacity:.2;}50%{opacity:.75;}}
+        @keyframes rscan{0%{left:-80%;}100%{left:180%;}}
+        @keyframes tk{0%{transform:translateX(0);}100%{transform:translateX(-50%);}}
+        @keyframes hpx{0%,100%{filter:drop-shadow(0 0 4px #f5a000);}50%{filter:drop-shadow(0 0 16px #f5a000);}}
+        @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Space+Mono:wght@400;700&display=swap');
+      `}</style>
     </div>
   );
 }
@@ -2315,9 +2689,9 @@ function ArchetypeStep({ onSelect, selected }) {
       </div>
       <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(28px,7vw,88px)",fontWeight:900,letterSpacing:-3,background:"var(--gradient-text)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",lineHeight:.9,marginBottom:20}}>YOU BECOMING?</div>
 
-      <p style={{fontSize:15,color:"var(--text3)",fontWeight:300,lineHeight:1.75,maxWidth:500,marginBottom:52}}>
+      <p style={{fontSize:15,color:"var(--text3)",fontWeight:300,lineHeight:1.75,maxWidth:500,marginBottom:52,textAlign:"center",margin:"0 auto 52px auto"}}>
         Choose the archetype that resonates with the version of yourself you're fighting to become.{" "}
-        <span style={{color:"rgba(255,180,80,.5)"}}>This shapes your recovery identity.</span>
+        <span style={{color:document.documentElement.classList.contains("light")?"rgba(164,90,90,0.85)":"rgba(255,180,80,.5)",fontWeight:500}}>This shapes your recovery identity.</span>
       </p>
 
       {/* Archetype cards grid */}
@@ -2450,21 +2824,27 @@ function ConfessStep1({selected, onToggle, onNext}) {
       <div className="addiction-grid" style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(190px,1fr))",gap:14,marginBottom:48}}>
         {ADDICTIONS.map((a,i)=>{
           const sel=selected.includes(a.id);
+          const isL=document.documentElement.classList.contains("light");
           const rgb=a.color.replace('#','').match(/.{2}/g).map(x=>parseInt(x,16)).join(',');
+          const cardBg  = isL?(sel?`rgba(${rgb},0.1)`:"rgba(229,238,228,0.6)"):(sel?`rgba(${rgb},0.12)`:"rgba(255,255,255,.025)");
+          const cardBdr = isL?(sel?a.color+"99":"rgba(192,225,210,.45)"):(sel?a.color+"88":"rgba(255,255,255,.07)");
+          const lblClr  = isL?(sel?"#1a1a1a":"rgba(26,26,26,.75)"):(sel?"#fff":"rgba(255,255,255,.42)");
+          const descClr = isL?(sel?a.color:"rgba(26,26,26,.5)"):(sel?`${a.color}cc`:"rgba(255,255,255,.16)");
+          const emojiFilter=isL?(sel?"none":"grayscale(10%) opacity(.7)"):(sel?"none":"grayscale(40%) opacity(.6)");
           return(
-            <div key={a.id} onClick={()=>onToggle(a.id)} style={{padding:"20px 18px",borderRadius:16,background:sel?`rgba(${rgb},0.12)`:"rgba(255,255,255,.025)",border:`1px solid ${sel?a.color+"88":"rgba(255,255,255,.07)"}`,cursor:"pointer",transition:"all .25s cubic-bezier(.16,1,.3,1)",transform:sel?"translateY(-3px)":"translateY(0)",boxShadow:sel?`0 0 30px ${a.color}22,0 8px 24px rgba(0,0,0,.4)`:"none",animation:`fadeUp .6s cubic-bezier(.16,1,.3,1) ${i*.04}s both`,position:"relative",overflow:"hidden"}}>
-              {sel&&<div style={{position:"absolute",inset:0,background:`radial-gradient(ellipse at top left, ${a.color}18, transparent 65%)`,pointerEvents:"none"}}/>}
-              <div style={{fontSize:26,marginBottom:10,filter:sel?"none":"grayscale(40%) opacity(.6)",transition:"filter .25s"}}>{a.emoji}</div>
-              <div style={{fontSize:12,fontWeight:600,color:sel?"#fff":"rgba(255,255,255,.42)",marginBottom:3,transition:"color .25s"}}>{a.label}</div>
-              <div style={{fontSize:10,color:sel?`${a.color}cc`:"rgba(255,255,255,.16)",lineHeight:1.5,transition:"color .25s"}}>{a.desc}</div>
-              {sel&&<div style={{position:"absolute",top:10,right:10,width:16,height:16,borderRadius:"50%",background:a.color,display:"flex",alignItems:"center",justifyContent:"center",fontSize:9,fontWeight:800,color:"#000"}}>✓</div>}
+            <div key={a.id} onClick={()=>onToggle(a.id)} style={{padding:"20px 18px",borderRadius:16,background:cardBg,border:`1px solid ${cardBdr}`,cursor:"pointer",transition:"all .25s cubic-bezier(.16,1,.3,1)",transform:sel?"translateY(-3px)":"translateY(0)",boxShadow:sel?(isL?`0 0 20px ${a.color}18,0 4px 16px rgba(100,80,80,.1)`:`0 0 30px ${a.color}22,0 8px 24px rgba(0,0,0,.4)`):"none",animation:`fadeUp .6s cubic-bezier(.16,1,.3,1) ${i*.04}s both`,position:"relative",overflow:"hidden"}}>
+              {sel&&<div style={{position:"absolute",inset:0,background:`radial-gradient(ellipse at top left, ${a.color}${isL?"12":"18"}, transparent 65%)`,pointerEvents:"none"}}/>}
+              <div style={{fontSize:26,marginBottom:10,filter:emojiFilter,transition:"filter .25s"}}>{a.emoji}</div>
+              <div style={{fontSize:12,fontWeight:600,color:lblClr,marginBottom:3,transition:"color .25s"}}>{a.label}</div>
+              <div style={{fontSize:10,color:descClr,lineHeight:1.5,transition:"color .25s"}}>{a.desc}</div>
+              {sel&&<div style={{position:"absolute",top:10,right:10,width:16,height:16,borderRadius:"50%",background:isL?"#c47a7a":a.color,display:"flex",alignItems:"center",justifyContent:"center",fontSize:9,fontWeight:800,color:"#fff"}}>✓</div>}
             </div>
           );
         })}
       </div>
-      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",paddingTop:24,borderTop:"1px solid rgba(255,140,0,.08)"}}>
-        <div style={{fontSize:12,color:"var(--text4)",fontFamily:"'JetBrains Mono',monospace",letterSpacing:1}}>{selected.length===0?"Select at least one":`${selected.length} poison${selected.length>1?"s":""} identified`}</div>
-        <button onClick={onNext} disabled={selected.length===0} style={{background:"linear-gradient(135deg,#ff9500,#ff5000)",border:"none",color:"var(--text)",padding:"14px 40px",borderRadius:12,fontFamily:"'Inter',sans-serif",fontSize:13,fontWeight:700,letterSpacing:.3,transition:"all .3s",boxShadow:selected.length?"0 0 40px rgba(255,140,0,.4),0 6px 24px rgba(0,0,0,.4)":"none",opacity:selected.length?1:.3,cursor:"pointer"}}>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",paddingTop:24,borderTop:document.documentElement.classList.contains("light")?"1px solid rgba(192,225,210,.4)":"1px solid rgba(255,140,0,.08)"}}>
+        <div style={{fontSize:12,color:"var(--text3)",fontFamily:"'JetBrains Mono',monospace",letterSpacing:1}}>{selected.length===0?"Select at least one":`${selected.length} poison${selected.length>1?"s":""} identified`}</div>
+        <button onClick={onNext} disabled={selected.length===0} style={{background:document.documentElement.classList.contains("light")?"linear-gradient(135deg,#c47a7a,#a85c5c)":"linear-gradient(135deg,#ff9500,#ff5000)",border:"none",color:"#fff",padding:"14px 40px",borderRadius:12,fontFamily:"'Inter',sans-serif",fontSize:13,fontWeight:700,letterSpacing:.3,transition:"all .3s",boxShadow:selected.length?"0 0 30px rgba(255,140,0,.3),0 6px 20px rgba(0,0,0,.3)":"none",opacity:selected.length?1:.35,cursor:"pointer"}}>
           Analyze Damage → Step 2
         </button>
       </div>
