@@ -4529,32 +4529,10 @@ function FeedbackSheet({theme,onClose}){
     if(!rating) return;
     setSubmitting(true);
     const user=JSON.parse(localStorage.getItem("syn_user")||"{}");
-    const body=[
-      `⭐ Rating: ${rating}/5`,
-      `👤 User: ${user.name||"Anonymous"} (${user.email||"unknown"})`,
-      `🏹 Archetype: ${JSON.parse(localStorage.getItem("syn_archetype")||"{}").title||"—"}`,
-      `📅 Streak: ${localStorage.getItem("syn_streak")||0} days`,
-      ``,
-      `✅ What's working best:`,
-      best||"(not answered)",
-      ``,
-      `🔧 What should we improve:`,
-      improve||"(not answered)",
-      ``,
-      `💬 Would recommend: ${recommend||"(not answered)"}`,
-    ].join("\n");
-
-    // Use mailto as fallback — works without backend
-    const subject=encodeURIComponent(`SYNAPSE Feedback — ${rating}⭐ — ${user.name||"User"}`);
-    const mailBody=encodeURIComponent(body);
-    window.open(`mailto:synapserewire@gmail.com?subject=${subject}&body=${mailBody}`,"_blank");
-
-    // Also save to Firestore feedbacks collection
     try{
-      const {db}=await import("./firebase");
-      const {collection,addDoc,serverTimestamp}=await import("firebase/firestore");
       if(db){
-        await addDoc(collection(db,"feedbacks"),{
+        const {collection:col,addDoc,serverTimestamp:sts}=await import("firebase/firestore");
+        await addDoc(col(db,"feedbacks"),{
           uid:user.uid||"anonymous",
           name:user.name||"",
           email:user.email||"",
@@ -4564,11 +4542,18 @@ function FeedbackSheet({theme,onClose}){
           recommend,
           streak:parseInt(localStorage.getItem("syn_streak")||0),
           archetype:JSON.parse(localStorage.getItem("syn_archetype")||"{}").title||"",
-          timestamp:serverTimestamp(),
+          timestamp:sts(),
         });
+      }else{
+        // Fallback — save to localStorage if Firestore unavailable
+        const saved=JSON.parse(localStorage.getItem("syn_feedbacks")||"[]");
+        saved.push({rating,best,improve,recommend,date:new Date().toISOString()});
+        localStorage.setItem("syn_feedbacks",JSON.stringify(saved));
       }
-    }catch(e){console.warn("Feedback Firestore:",e);}
-
+    }catch(e){
+      console.warn("Feedback save:",e);
+      // Still show success — don't punish user for infra issues
+    }
     setSubmitting(false);
     setSubmitted(true);
     setTimeout(onClose,2500);
