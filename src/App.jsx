@@ -15,14 +15,14 @@ import {
    Calls go through /api/chat (Vercel serverless function).
    GROQ_KEY lives in Vercel env variables — never in the frontend bundle.
 ──────────────────────────────────────────────────────────────────────────── */
-async function callAI(userMessages, systemPrompt) {
+async function callAI(userMessages, systemPrompt, opts={}) {
   const res = await fetch("/api/chat", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       model: "llama-3.3-70b-versatile",
-      max_tokens: 1024,
-      temperature: 0.85,
+      max_tokens: opts.max_tokens ?? 1024,
+      temperature: opts.temperature ?? 0.85,
       messages: [
         { role: "system", content: systemPrompt },
         ...userMessages,
@@ -33,6 +33,25 @@ async function callAI(userMessages, systemPrompt) {
   if (res.status === 429) throw new Error("Too many requests — wait a minute and try again.");
   if (data.error) throw new Error(data.error.message);
   return data.choices?.[0]?.message?.content || "Keep going. You showed up today — that's the mission.";
+}
+
+const SYSTEM_SAFETY_CLASSIFIER = `You are a mental health safety classifier. Analyze the user message for indirect or subtle signs of suicidal ideation, self-harm intent, or severe hopelessness — including phrases like "everyone would be better off without me", "I don't see the point anymore", "I can't do this anymore", "I just want it to stop", "nobody would miss me", or similar indirect language. Respond with ONLY valid JSON: {"risk": true} or {"risk": false}. No explanation. No other text.`;
+
+async function checkSafetyRisk(text) {
+  // Fail closed — if anything goes wrong, treat as risk
+  try {
+    const raw = await callAI(
+      [{ role: "user", content: text }],
+      SYSTEM_SAFETY_CLASSIFIER,
+      { temperature: 0, max_tokens: 20 }
+    );
+    const clean = raw.replace(/```json|```/g,"").trim();
+    const parsed = JSON.parse(clean);
+    return parsed.risk === true;
+  } catch(e) {
+    console.warn("Safety classifier error (failing closed):", e.message);
+    return true; // fail closed
+  }
 }
 
 /* ─── CONFESS SYSTEM PROMPTS (per mode) ──────────────────────────────────── */
@@ -3741,7 +3760,15 @@ function Checkin({streak,savedPlan,lastCheckin,onCheckin,onGoChat}) {
       appendChatHistory({role:"user",text:txt},{role:"ai",text:CRISIS_RESPONSE,crisis:true});
       return;
     }
+    // AI safety classifier for indirect language
     setChatLoading(true);
+    const aiRisk=await checkSafetyRisk(txt);
+    if(aiRisk){
+      setChatMsgs(m=>[...m,{role:"ai",text:CRISIS_RESPONSE,crisis:true}]);
+      appendChatHistory({role:"user",text:txt},{role:"ai",text:CRISIS_RESPONSE,crisis:true});
+      setChatLoading(false);
+      return;
+    }
     try{
       const arch=JSON.parse(ls.get("syn_archetype","null"));
       const archetypeCtx=arch?`\n\nUser archetype: ${arch.title} — ${arch.sub}`:"";
@@ -4321,7 +4348,14 @@ function Chat({streak,savedPlan}){
       setMsgs(m=>{ const next=[...m,{role:"ai",text:CRISIS_RESPONSE,crisis:true}]; saveChatHistory(next); return next; });
       return;
     }
+    // AI safety classifier for indirect language
     setLoading(true);
+    const aiRisk=await checkSafetyRisk(txt);
+    if(aiRisk){
+      setMsgs(m=>{ const next=[...m,{role:"ai",text:CRISIS_RESPONSE,crisis:true}]; saveChatHistory(next); return next; });
+      setLoading(false);
+      return;
+    }
     try{
       // Build context — last 12 messages for memory, includes checkin reports too
       const ctx=([...msgs,userMsg]).slice(-12).map(m=>({role:m.role==="user"?"user":"assistant",content:m.text}));
@@ -4633,14 +4667,16 @@ export default function App() {
     try{
       const {initializeApp,getApps}=await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js");
       const {getMessaging,getToken}=await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging.js");
-      const fcmApp=getApps().find(a=>a.name==="fcm-token")||initializeApp({
-        apiKey:"AIzaSyCJSNckvatpfSlyvy9Z8Z1DiTYTYAJAQ7c",
-        authDomain:"classpredictor.firebaseapp.com",
-        projectId:"classpredictor",
-        storageBucket:"classpredictor.firebasestorage.app",
-        messagingSenderId:"4567824313",
-        appId:"1:4567824313:web:cf97fa1bdcd32f7f56a868",
-      },"fcm-token");
+      // Use same config as firebase.js — pulled from Vite env at build time
+      const fcmConfig={
+        apiKey:           import.meta.env.VITE_FIREBASE_API_KEY,
+        authDomain:       import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+        projectId:        import.meta.env.VITE_FIREBASE_PROJECT_ID,
+        storageBucket:    import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+        messagingSenderId:import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+        appId:            import.meta.env.VITE_FIREBASE_APP_ID,
+      };
+      const fcmApp=getApps().find(a=>a.name==="fcm-token")||initializeApp(fcmConfig,"fcm-token");
       const fcmMsg=getMessaging(fcmApp);
       const swReg=await navigator.serviceWorker.register("/firebase-messaging-sw.js",{scope:"/"});
       const token=await getToken(fcmMsg,{
@@ -4805,6 +4841,9 @@ export default function App() {
 
   const handleCheckin=async msg=>{
     if(detectCrisis(msg)) return {reply:CRISIS_RESPONSE, status:"CRISIS"};
+    // AI safety classifier for indirect language (runs only if regex didn't catch it)
+    const aiRisk = await checkSafetyRisk(msg);
+    if(aiRisk) return {reply:CRISIS_RESPONSE, status:"CRISIS"};
     const today=new Date().toDateString();
     let rawReply="[STATUS:MID]\n\nYou showed up. That matters. Keep going.";
     try{
