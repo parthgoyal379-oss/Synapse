@@ -10,6 +10,15 @@ import {
   collection, doc, setDoc, getDoc, getDocs,
   orderBy, query, serverTimestamp, limit
 } from "firebase/firestore";
+import {
+  Zap, Flame, Check, X, Moon, Sun, Bell, BellOff, ClipboardList,
+  MessageSquare, Lock, Shield, DoorOpen, Camera, Users, BarChart2,
+  Brain, Wrench, Smartphone, Download, RefreshCw, AlertTriangle,
+  Sunrise, Sunset, Eye, TrendingDown, Clock, Heart, ThumbsUp,
+  ThumbsDown, Meh, Skull, Send, HelpCircle, CheckCircle, XCircle,
+  ChevronRight, ChevronDown, ChevronUp, Star, Award, Target,
+  Activity, LogOut, Settings, User, Mail
+} from "lucide-react";
 
 /* ─── GROQ API HELPER ─────────────────────────────────────────────────────
    Calls go through /api/chat (Vercel serverless function).
@@ -1169,6 +1178,7 @@ function AdminDashboard({theme,onClose}){
   const [range,setRange]=useState("7d");
   const [selectedUser,setSelectedUser]=useState(null);
   const [dbError,setDbError]=useState(false);
+  const [feedbacks,setFeedbacks]=useState([]);
 
   // Colors
   const bg    = isL?"#f6f4e8":"#09070f";
@@ -1184,15 +1194,18 @@ function AdminDashboard({theme,onClose}){
       // Try Firestore first
       try{
         if(!db) throw new Error("db undefined — firebase.js not updated yet");
-        const [uSnap,cSnap]=await Promise.all([
+        const [uSnap,cSnap,fSnap]=await Promise.all([
           getDocs(collection(db,"users")),
-          getDocs(query(collection(db,"checkins"),orderBy("timestamp","desc"),limit(500)))
+          getDocs(query(collection(db,"checkins"),orderBy("timestamp","desc"),limit(500))),
+          getDocs(query(collection(db,"feedbacks"),orderBy("timestamp","desc"),limit(200))),
         ]);
         const uData=uSnap.docs.map(d=>({id:d.id,...d.data()}));
         const cData=cSnap.docs.map(d=>({id:d.id,...d.data()}));
+        const fData=fSnap.docs.map(d=>({id:d.id,...d.data()}));
         if(uData.length>0||cData.length>0){
           setUsers(uData);
           setCheckins(cData);
+          setFeedbacks(fData);
           setLoading(false);
           return;
         }
@@ -1318,7 +1331,7 @@ function AdminDashboard({theme,onClose}){
       {/* Firestore status banner */}
       {dbError&&(
         <div style={{background:"rgba(251,191,36,0.08)",border:"none",borderBottom:"1px solid rgba(251,191,36,0.2)",padding:"10px 20px",display:"flex",alignItems:"center",gap:10}}>
-          <span style={{fontSize:14}}>⚠️</span>
+          <AlertTriangle size={14} color={amber}/>
           <div style={{fontSize:11,color:amber,lineHeight:1.5}}>
             <strong>Firestore offline</strong> — showing local data only. Update <code style={{background:"rgba(251,191,36,0.1)",padding:"1px 5px",borderRadius:4}}>src/firebase.js</code> with db export to see all users.
           </div>
@@ -1327,7 +1340,7 @@ function AdminDashboard({theme,onClose}){
 
       {/* ── Tab bar ── */}
       <div style={{display:"flex",gap:0,borderBottom:`1px solid ${bdr}`,padding:"0 20px",overflowX:"auto"}}>
-        {[["overview","📊 Overview"],["users","👥 Users"],["checkins","📋 Check-ins"],["addictions","🧠 Addictions"]].map(([t,l])=>(
+        {[["overview","📊 Overview"],["users","👥 Users"],["checkins","📋 Check-ins"],["addictions","🧠 Addictions"],["feedbacks","💬 Feedback"]].map(([t,l])=>(
           <button key={t} onClick={()=>setTab(t)} style={{padding:"12px 16px",background:"none",border:"none",borderBottom:`2px solid ${tab===t?acc:"transparent"}`,color:tab===t?acc:txt2,fontSize:11,fontWeight:tab===t?700:400,cursor:"pointer",letterSpacing:.5,transition:"all .2s",whiteSpace:"nowrap",flexShrink:0}}>{l}</button>
         ))}
       </div>
@@ -1554,6 +1567,67 @@ function AdminDashboard({theme,onClose}){
             </div>
           </>)}
 
+          {/* ══ FEEDBACKS TAB ══ */}
+          {tab==="feedbacks"&&(
+            <div style={{display:"flex",flexDirection:"column",gap:10}}>
+              {/* Summary stats */}
+              <div style={{display:"flex",gap:10,flexWrap:"wrap",marginBottom:4}}>
+                <div style={{background:card,border:`1px solid ${bdr}`,borderRadius:14,padding:"16px 20px",flex:1,minWidth:120}}>
+                  <div style={{fontSize:10,color:txt2,letterSpacing:1,textTransform:"uppercase",marginBottom:6}}>Total</div>
+                  <div style={{fontSize:28,fontWeight:800,fontFamily:"'Orbitron',sans-serif",color:acc}}>{feedbacks.length}</div>
+                </div>
+                <div style={{background:card,border:`1px solid ${bdr}`,borderRadius:14,padding:"16px 20px",flex:1,minWidth:120}}>
+                  <div style={{fontSize:10,color:txt2,letterSpacing:1,textTransform:"uppercase",marginBottom:6}}>Avg Rating</div>
+                  <div style={{fontSize:28,fontWeight:800,fontFamily:"'Orbitron',sans-serif",color:amber}}>{feedbacks.length?( feedbacks.reduce((s,f)=>s+(f.rating||0),0)/feedbacks.length).toFixed(1):"—"} ⭐</div>
+                </div>
+                <div style={{background:card,border:`1px solid ${bdr}`,borderRadius:14,padding:"16px 20px",flex:1,minWidth:120}}>
+                  <div style={{fontSize:10,color:txt2,letterSpacing:1,textTransform:"uppercase",marginBottom:6}}>Would Recommend</div>
+                  <div style={{fontSize:28,fontWeight:800,fontFamily:"'Orbitron',sans-serif",color:green}}>
+                    {feedbacks.length?Math.round(feedbacks.filter(f=>f.recommend?.includes("Absolutely")).length/feedbacks.length*100):0}%
+                  </div>
+                </div>
+              </div>
+
+              {feedbacks.length===0&&<div style={{textAlign:"center",color:txt2,padding:40,fontSize:13}}>No feedback yet — it'll appear here after users submit.</div>}
+
+              {feedbacks.map(f=>{
+                const ts=f.timestamp?.toDate?.();
+                const timeStr=ts?ts.toLocaleString("en-IN",{day:"2-digit",month:"short",hour:"2-digit",minute:"2-digit"}):"—";
+                const stars="⭐".repeat(f.rating||0);
+                return(
+                  <div key={f.id} style={{background:card,border:`1px solid ${bdr}`,borderRadius:14,padding:"16px"}}>
+                    {/* Header */}
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:10}}>
+                      <div>
+                        <div style={{fontSize:13,fontWeight:600,color:txt}}>{f.name||"Anonymous"}</div>
+                        <div style={{fontSize:11,color:txt2,marginTop:2}}>{f.email||""}</div>
+                      </div>
+                      <div style={{textAlign:"right",flexShrink:0}}>
+                        <div style={{fontSize:14}}>{stars}</div>
+                        <div style={{fontSize:10,color:txt2,marginTop:2}}>{timeStr}</div>
+                      </div>
+                    </div>
+                    {/* Meta badges */}
+                    <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:10}}>
+                      {f.archetype&&<span style={{padding:"2px 8px",borderRadius:999,background:`rgba(${isL?"196,122,122":"255,140,0"},0.1)`,border:`1px solid rgba(${isL?"196,122,122":"255,140,0"},0.25)`,fontSize:10,color:acc}}>{f.archetype}</span>}
+                      {f.streak>0&&<span style={{padding:"2px 8px",borderRadius:999,background:card,border:`1px solid ${bdr}`,fontSize:10,color:txt2}}>Day {f.streak}</span>}
+                      {f.recommend&&<span style={{padding:"2px 8px",borderRadius:999,background:f.recommend.includes("Absolutely")?"rgba(74,222,128,0.1)":f.recommend.includes("Not")?"rgba(248,113,113,0.1)":"rgba(251,191,36,0.1)",border:`1px solid ${f.recommend.includes("Absolutely")?"rgba(74,222,128,0.3)":f.recommend.includes("Not")?"rgba(248,113,113,0.3)":"rgba(251,191,36,0.3)"}`,fontSize:10,color:f.recommend.includes("Absolutely")?green:f.recommend.includes("Not")?red:amber}}>{f.recommend}</span>}
+                    </div>
+                    {/* Answers */}
+                    {f.best&&<div style={{marginBottom:8}}>
+                      <div style={{fontSize:10,color:green,fontWeight:600,letterSpacing:.5,marginBottom:3}}>✅ What's working</div>
+                      <div style={{fontSize:12,color:txt,lineHeight:1.6}}>{f.best}</div>
+                    </div>}
+                    {f.improve&&<div>
+                      <div style={{fontSize:10,color:amber,fontWeight:600,letterSpacing:.5,marginBottom:3}}>🔧 Improve</div>
+                      <div style={{fontSize:12,color:txt,lineHeight:1.6}}>{f.improve}</div>
+                    </div>}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
         </div>
       )}
     </div>
@@ -1697,7 +1771,7 @@ function ProfileSheet({user,theme,onThemeToggle,onClose,onSignOut,onPhotoUpdate,
           {/* Admin Dashboard — only for admin UIDs */}
           {ADMIN_UIDS.includes(auth.currentUser?.uid)&&(
             <div onClick={()=>{onClose();onAdminOpen();}} style={{display:"flex",alignItems:"center",gap:12,padding:"14px 16px",borderRadius:14,background:isL?"rgba(196,122,122,0.06)":"rgba(255,140,0,0.06)",border:isL?"1px solid rgba(196,122,122,0.2)":"1px solid rgba(255,140,0,0.15)",cursor:"pointer",transition:"all .2s"}}>
-              <span style={{fontSize:18}}>🛡️</span>
+              <Shield size={18}/>
               <div>
                 <div style={{fontSize:13,fontWeight:600,color:isL?"#c47a7a":"#ff9500"}}>Admin Dashboard</div>
                 <div style={{fontSize:11,color:"var(--text4)",marginTop:1}}>Users · Check-ins · Analytics</div>
@@ -1708,7 +1782,7 @@ function ProfileSheet({user,theme,onThemeToggle,onClose,onSignOut,onPhotoUpdate,
           {/* Theme toggle */}
           <div onClick={onThemeToggle} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"14px 16px",borderRadius:14,background:isL?"rgba(229,238,228,0.5)":"rgba(255,255,255,0.03)",border:isL?"1px solid rgba(192,225,210,0.4)":"1px solid rgba(255,255,255,0.06)",cursor:"pointer",transition:"all .2s"}}>
             <div style={{display:"flex",alignItems:"center",gap:12}}>
-              <span style={{fontSize:18}}>{isL?"🌙":"☀️"}</span>
+              <span style={{fontSize:18}}>{isL?<Moon size={18}/>:<Sun size={18}/>}</span>
               <div>
                 <div style={{fontSize:13,fontWeight:500,color:"var(--text)"}}>Theme</div>
                 <div style={{fontSize:11,color:"var(--text3)",marginTop:1}}>{isL?"Switch to Dark Mode":"Switch to Light Mode"}</div>
@@ -1736,7 +1810,7 @@ function ProfileSheet({user,theme,onThemeToggle,onClose,onSignOut,onPhotoUpdate,
                 setShowNotifInfo(true);
               }} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"14px 16px",borderRadius:14,background:isL?"rgba(229,238,228,0.5)":"rgba(255,255,255,0.03)",border:isL?"1px solid rgba(192,225,210,0.4)":"1px solid rgba(255,255,255,0.06)",cursor:"pointer",transition:"all .2s"}}>
                 <div style={{display:"flex",alignItems:"center",gap:12}}>
-                  <span style={{fontSize:18}}>{granted?"🔔":denied?"🔕":"🔔"}</span>
+                  <span style={{fontSize:18}}>{granted?<Bell size={18}/>:denied?<BellOff size={18}/>:<Bell size={18}/>}</span>
                   <div>
                     <div style={{fontSize:13,fontWeight:500,color:"var(--text)"}}>Notifications</div>
                     <div style={{fontSize:11,color:granted?"#4ade80":denied?"#f87171":"var(--text3)",marginTop:1}}>
@@ -1766,7 +1840,7 @@ function ProfileSheet({user,theme,onThemeToggle,onClose,onSignOut,onPhotoUpdate,
 
           {/* Feedback */}
           <div onClick={()=>{onClose();onFeedback&&onFeedback();}} style={{display:"flex",alignItems:"center",gap:12,padding:"14px 16px",borderRadius:14,background:isL?"rgba(192,225,210,0.15)":"rgba(255,255,255,0.03)",border:isL?"1px solid rgba(192,225,210,0.4)":"1px solid rgba(255,255,255,0.07)",cursor:"pointer",transition:"all .2s",marginTop:4}}>
-            <span style={{fontSize:18}}>💬</span>
+            <MessageSquare size={18}/>
             <div>
               <div style={{fontSize:13,fontWeight:500,color:"var(--text)"}}>Share Feedback</div>
               <div style={{fontSize:11,color:"var(--text4)",marginTop:1}}>Help us build what you need</div>
@@ -1774,7 +1848,7 @@ function ProfileSheet({user,theme,onThemeToggle,onClose,onSignOut,onPhotoUpdate,
           </div>
           {/* Sign out */}
           <div onClick={onSignOut} style={{display:"flex",alignItems:"center",gap:12,padding:"14px 16px",borderRadius:14,background:"rgba(255,60,60,0.04)",border:"1px solid rgba(255,60,60,0.1)",cursor:"pointer",transition:"all .2s",marginTop:4}}>
-            <span style={{fontSize:18}}>🚪</span>
+            <LogOut size={18}/>
             <div>
               <div style={{fontSize:13,fontWeight:500,color:"rgba(255,90,90,0.9)"}}>Sign Out</div>
               <div style={{fontSize:11,color:"var(--text4)",marginTop:1}}>Your progress stays saved</div>
@@ -2398,7 +2472,7 @@ function TCModal({isL,onAccept,onClose}){
         </div>
         {/* Footer */}
         <div style={{padding:"20px 28px",borderTop:isL?"1px solid rgba(192,225,210,0.4)":"1px solid rgba(255,255,255,0.06)",flexShrink:0,display:"flex",gap:12}}>
-          <button onClick={onAccept} style={{flex:1,padding:"13px",borderRadius:12,background:isL?"linear-gradient(135deg,#c47a7a,#a85c5c)":"linear-gradient(135deg,#ff9500,#ff5000)",border:"none",color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer"}}>✓ Accept & Continue</button>
+          <button onClick={onAccept} style={{flex:1,padding:"13px",borderRadius:12,background:isL?"linear-gradient(135deg,#c47a7a,#a85c5c)":"linear-gradient(135deg,#ff9500,#ff5000)",border:"none",color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer"}}><Check size={14} style={{display:"inline",marginRight:6}}/>Accept & Continue</button>
           <button onClick={onClose} style={{padding:"13px 20px",borderRadius:12,background:"transparent",border:isL?"1px solid rgba(192,225,210,0.5)":"1px solid rgba(255,255,255,0.1)",color:isL?"rgba(26,18,9,0.5)":"rgba(255,255,255,0.4)",fontSize:13,cursor:"pointer"}}>Cancel</button>
         </div>
       </div>
@@ -3494,7 +3568,7 @@ function Plan({plan,loading,onBegin,onRetry}) {
 </style>
 </head>
 <body>
-<button class="print-btn" onclick="window.print()">⬇ Save as PDF</button>
+<button class="print-btn" onclick="window.print()"><Download size={14} style={{display:"inline",marginRight:4}}/>Save as PDF</button>
 <div class="watermark">S</div>
 <div class="page">
 <div class="header">
@@ -3969,9 +4043,9 @@ function Checkin({streak,savedPlan,lastCheckin,onCheckin,onGoChat}) {
                 const archName=arch?.title||"WARRIOR"; const archSymbol=arch?.symbol||"⚡";
                 const formatted=savedPlan.replace(/\*\*(.+?)\*\*/g,"<strong>$1</strong>").split("\n").map(line=>line.startsWith("**")&&line.endsWith("**")?`<h3>${line.replace(/\*\*/g,"")}</h3>`:line.trim()==="---"?`<hr/>`:!line.trim()?`<div style="height:4px"></div>`:`<p>${line}</p>`).join("");
                 const w=window.open("","_blank","width=900,height=800");
-                w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"/><title>SYNAPSE — Battle Plan</title><style>@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Inter:wght@300;400;500;600;700&display=swap');*{margin:0;padding:0;box-sizing:border-box;word-wrap:break-word;overflow-wrap:break-word;}@page{margin:0.5in 0.6in;size:A4 portrait;}html,body{background:#fff;color:#111;font-family:'Inter',sans-serif;font-size:10px;line-height:1.35;}body{width:100%;padding:0;}.header{display:flex;align-items:center;justify-content:space-between;padding:0 0 8px;border-bottom:1.5px solid #f0f0f0;margin-bottom:6px;}.brand{display:flex;align-items:center;gap:7px;}.brand-logo{width:22px;height:22px;border-radius:5px;background:linear-gradient(135deg,#ff9500,#ff5000);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;font-family:'Orbitron',sans-serif;color:#fff;flex-shrink:0;}.brand-name{font-family:'Orbitron',sans-serif;font-size:11px;font-weight:900;letter-spacing:2px;color:#ff6000;line-height:1;}.brand-tagline{font-size:6.5px;color:#bbb;letter-spacing:2px;text-transform:uppercase;margin-top:1px;}.doc-title{font-family:'Orbitron',sans-serif;font-size:15px;font-weight:900;color:#111;letter-spacing:-0.5px;line-height:1;text-align:right;}.doc-subtitle{font-size:6.5px;color:#e06000;letter-spacing:1.5px;text-transform:uppercase;font-weight:600;margin-top:2px;text-align:right;}.meta{display:flex;gap:16px;padding:5px 0;border-bottom:1px solid #f5f5f5;margin-bottom:8px;align-items:center;flex-wrap:wrap;}.meta-label{font-size:6px;color:#ccc;letter-spacing:1.5px;text-transform:uppercase;font-weight:600;}.meta-value{font-size:10px;color:#111;font-weight:600;margin-top:1px;}.arch-badge{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:999px;border:1px solid #ffb347;background:#fff8f0;font-family:'Orbitron',sans-serif;font-size:7.5px;font-weight:700;color:#b35000;letter-spacing:0.5px;}.section-label{font-size:6.5px;color:#e06000;letter-spacing:2.5px;text-transform:uppercase;font-weight:700;margin-bottom:6px;}.card{border:1px solid #f0f0f0;border-left:2.5px solid #ff6000;border-radius:4px;padding:8px 12px;}.plan-text{font-size:9.5px;line-height:1.55;color:#222;}.plan-text p{margin-bottom:0;}.plan-text h3{font-size:7.5px;font-weight:700;color:#c05000;letter-spacing:1.5px;text-transform:uppercase;margin:8px 0 3px;padding-top:6px;border-top:1px solid #f5f5f5;}.plan-text h3:first-child{margin-top:0;padding-top:0;border-top:none;}.plan-text hr{border:none;border-top:1px solid #f5f5f5;margin:5px 0;}.plan-text strong{color:#b35000;font-weight:700;}.plan-text div[style]{height:3px!important;}.footer{display:flex;justify-content:space-between;padding:5px 0 0;border-top:1px solid #f5f5f5;margin-top:6px;font-size:6.5px;color:#ccc;}.watermark{position:fixed;bottom:-10px;right:-5px;font-family:'Orbitron',sans-serif;font-size:100px;font-weight:900;color:rgba(255,100,0,.03);pointer-events:none;line-height:1;}.print-btn{position:fixed;top:10px;right:10px;background:linear-gradient(135deg,#ff9500,#ff5000);border:none;color:#fff;padding:7px 18px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;z-index:999;}@media print{.print-btn{display:none!important;}}@media screen{body{max-width:680px;margin:0 auto;padding:20px;background:#f8f8f8;}.page{background:#fff;padding:0.35in 0.45in;box-shadow:0 2px 20px rgba(0,0,0,.1);border-radius:4px;}}</style></head><body><button class="print-btn" onclick="window.print()">⬇ Save as PDF</button><div class="watermark">S</div><div class="page"><div class="header"><div class="brand"><div class="brand-logo">S</div><div><div class="brand-name">SYNAPSE</div><div class="brand-tagline">Dopamine Recovery Protocol</div></div></div><div style="text-align:right"><div class="doc-title">BATTLE PLAN</div><div class="doc-subtitle">Personalized Recovery Protocol — Classified</div></div></div><div class="meta"><div><div class="meta-label">Soldier</div><div class="meta-value">${soldierName}</div></div><div><div class="meta-label">Streak</div><div class="meta-value">Day ${streakVal}</div></div><div><div class="meta-label">Issued</div><div class="meta-value">${date}</div></div><div><div class="meta-label">Archetype</div><div class="arch-badge">${archSymbol} ${archName}</div></div></div><div class="content"><div class="section-label">Mission Briefing</div><div class="card"><div class="plan-text">${formatted}</div></div></div><div class="footer"><div>Generated by SYNAPSE • synapserewire@gmail.com</div><div>synapserewire.site • ${date}</div></div></div></body></html>`);
+                w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"/><title>SYNAPSE — Battle Plan</title><style>@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Inter:wght@300;400;500;600;700&display=swap');*{margin:0;padding:0;box-sizing:border-box;word-wrap:break-word;overflow-wrap:break-word;}@page{margin:0.5in 0.6in;size:A4 portrait;}html,body{background:#fff;color:#111;font-family:'Inter',sans-serif;font-size:10px;line-height:1.35;}body{width:100%;padding:0;}.header{display:flex;align-items:center;justify-content:space-between;padding:0 0 8px;border-bottom:1.5px solid #f0f0f0;margin-bottom:6px;}.brand{display:flex;align-items:center;gap:7px;}.brand-logo{width:22px;height:22px;border-radius:5px;background:linear-gradient(135deg,#ff9500,#ff5000);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;font-family:'Orbitron',sans-serif;color:#fff;flex-shrink:0;}.brand-name{font-family:'Orbitron',sans-serif;font-size:11px;font-weight:900;letter-spacing:2px;color:#ff6000;line-height:1;}.brand-tagline{font-size:6.5px;color:#bbb;letter-spacing:2px;text-transform:uppercase;margin-top:1px;}.doc-title{font-family:'Orbitron',sans-serif;font-size:15px;font-weight:900;color:#111;letter-spacing:-0.5px;line-height:1;text-align:right;}.doc-subtitle{font-size:6.5px;color:#e06000;letter-spacing:1.5px;text-transform:uppercase;font-weight:600;margin-top:2px;text-align:right;}.meta{display:flex;gap:16px;padding:5px 0;border-bottom:1px solid #f5f5f5;margin-bottom:8px;align-items:center;flex-wrap:wrap;}.meta-label{font-size:6px;color:#ccc;letter-spacing:1.5px;text-transform:uppercase;font-weight:600;}.meta-value{font-size:10px;color:#111;font-weight:600;margin-top:1px;}.arch-badge{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:999px;border:1px solid #ffb347;background:#fff8f0;font-family:'Orbitron',sans-serif;font-size:7.5px;font-weight:700;color:#b35000;letter-spacing:0.5px;}.section-label{font-size:6.5px;color:#e06000;letter-spacing:2.5px;text-transform:uppercase;font-weight:700;margin-bottom:6px;}.card{border:1px solid #f0f0f0;border-left:2.5px solid #ff6000;border-radius:4px;padding:8px 12px;}.plan-text{font-size:9.5px;line-height:1.55;color:#222;}.plan-text p{margin-bottom:0;}.plan-text h3{font-size:7.5px;font-weight:700;color:#c05000;letter-spacing:1.5px;text-transform:uppercase;margin:8px 0 3px;padding-top:6px;border-top:1px solid #f5f5f5;}.plan-text h3:first-child{margin-top:0;padding-top:0;border-top:none;}.plan-text hr{border:none;border-top:1px solid #f5f5f5;margin:5px 0;}.plan-text strong{color:#b35000;font-weight:700;}.plan-text div[style]{height:3px!important;}.footer{display:flex;justify-content:space-between;padding:5px 0 0;border-top:1px solid #f5f5f5;margin-top:6px;font-size:6.5px;color:#ccc;}.watermark{position:fixed;bottom:-10px;right:-5px;font-family:'Orbitron',sans-serif;font-size:100px;font-weight:900;color:rgba(255,100,0,.03);pointer-events:none;line-height:1;}.print-btn{position:fixed;top:10px;right:10px;background:linear-gradient(135deg,#ff9500,#ff5000);border:none;color:#fff;padding:7px 18px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;z-index:999;}@media print{.print-btn{display:none!important;}}@media screen{body{max-width:680px;margin:0 auto;padding:20px;background:#f8f8f8;}.page{background:#fff;padding:0.35in 0.45in;box-shadow:0 2px 20px rgba(0,0,0,.1);border-radius:4px;}}</style></head><body><button class="print-btn" onclick="window.print()"><Download size={14} style={{display:"inline",marginRight:4}}/>Save as PDF</button><div class="watermark">S</div><div class="page"><div class="header"><div class="brand"><div class="brand-logo">S</div><div><div class="brand-name">SYNAPSE</div><div class="brand-tagline">Dopamine Recovery Protocol</div></div></div><div style="text-align:right"><div class="doc-title">BATTLE PLAN</div><div class="doc-subtitle">Personalized Recovery Protocol — Classified</div></div></div><div class="meta"><div><div class="meta-label">Soldier</div><div class="meta-value">${soldierName}</div></div><div><div class="meta-label">Streak</div><div class="meta-value">Day ${streakVal}</div></div><div><div class="meta-label">Issued</div><div class="meta-value">${date}</div></div><div><div class="meta-label">Archetype</div><div class="arch-badge">${archSymbol} ${archName}</div></div></div><div class="content"><div class="section-label">Mission Briefing</div><div class="card"><div class="plan-text">${formatted}</div></div></div><div class="footer"><div>Generated by SYNAPSE • synapserewire@gmail.com</div><div>synapserewire.site • ${date}</div></div></div></body></html>`);
                 w.document.close();
-              }} style={{flexShrink:0,background:"var(--accent3)",border:"1px solid var(--border)",color:"var(--accent2)",padding:"10px 14px",borderRadius:10,fontSize:11,fontWeight:600,cursor:"pointer",transition:"all .25s",whiteSpace:"nowrap"}}>⬇ Plan</button>
+              }} style={{flexShrink:0,background:"var(--accent3)",border:"1px solid var(--border)",color:"var(--accent2)",padding:"10px 14px",borderRadius:10,fontSize:11,fontWeight:600,cursor:"pointer",transition:"all .25s",whiteSpace:"nowrap"}}><Download size={14} style={{display:"inline",marginRight:4}}/>Plan</button>
             </div>}
 
             {/* Submit button */}
