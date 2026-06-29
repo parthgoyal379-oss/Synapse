@@ -1171,16 +1171,28 @@ const ADMIN_UIDS=["r2JKcDHrBOgGD1A14M9ugGQ6rzc2","bOFNjETZWjOU6nDBagxKSyB4szS2"]
 
 function AdminDashboard({theme,onClose}){
   const isL=theme==="light";
-  const [users,setUsers]=useState([]);
-  const [checkins,setCheckins]=useState([]);
-  const [loading,setLoading]=useState(true);
+
+  // Load from cache instantly
+  const getCached=()=>{
+    try{
+      const c=sessionStorage.getItem("syn_admin_cache");
+      if(c){ const p=JSON.parse(c); return p; }
+    }catch(e){}
+    return null;
+  };
+
+  const cached=getCached();
+  const [users,setUsers]=useState(cached?.users||[]);
+  const [checkins,setCheckins]=useState(cached?.checkins||[]);
+  const [feedbacks,setFeedbacks]=useState(cached?.feedbacks||[]);
+  const [loading,setLoading]=useState(!cached);
+  const [refreshing,setRefreshing]=useState(false);
   const [tab,setTab]=useState("overview");
   const [range,setRange]=useState("7d");
   const [selectedUser,setSelectedUser]=useState(null);
   const [dbError,setDbError]=useState(false);
-  const [feedbacks,setFeedbacks]=useState([]);
+  const [lastUpdated,setLastUpdated]=useState(cached?.ts?new Date(cached.ts):null);
 
-  // Colors
   const bg    = isL?"#f6f4e8":"#09070f";
   const card  = isL?"rgba(229,238,228,0.65)":"rgba(255,255,255,0.03)";
   const bdr   = isL?"rgba(192,225,210,0.45)":"rgba(255,255,255,0.07)";
@@ -1189,70 +1201,51 @@ function AdminDashboard({theme,onClose}){
   const txt2  = isL?"rgba(26,18,9,0.5)":"rgba(255,255,255,0.38)";
   const green = "#4ade80"; const amber = "#fbbf24"; const red = "#f87171";
 
-  useEffect(()=>{
-    (async()=>{
-      // Try Firestore first
-      try{
-        if(!db) throw new Error("db undefined — firebase.js not updated yet");
-        const [uSnap,cSnap,fSnap]=await Promise.all([
-          getDocs(collection(db,"users")),
-          getDocs(query(collection(db,"checkins"),orderBy("timestamp","desc"),limit(500))),
-          getDocs(query(collection(db,"feedbacks"),orderBy("timestamp","desc"),limit(200))),
-        ]);
-        const uData=uSnap.docs.map(d=>({id:d.id,...d.data()}));
-        const cData=cSnap.docs.map(d=>({id:d.id,...d.data()}));
-        const fData=fSnap.docs.map(d=>({id:d.id,...d.data()}));
-        if(uData.length>0||cData.length>0){
-          setUsers(uData);
-          setCheckins(cData);
-          setFeedbacks(fData);
-          setLoading(false);
-          return;
-        }
-      }catch(e){
-        console.warn("Firestore unavailable, falling back to localStorage:",e.message);
-        setDbError(true);
+  const fetchData=async(isRefresh=false)=>{
+    if(isRefresh) setRefreshing(true);
+    else if(!cached) setLoading(true);
+    setDbError(false);
+    try{
+      if(!db) throw new Error("db undefined");
+      const [uSnap,cSnap,fSnap]=await Promise.all([
+        getDocs(collection(db,"users")),
+        getDocs(query(collection(db,"checkins"),orderBy("timestamp","desc"),limit(500))),
+        getDocs(query(collection(db,"feedbacks"),orderBy("timestamp","desc"),limit(200))),
+      ]);
+      const uData=uSnap.docs.map(d=>({id:d.id,...d.data()}));
+      const cData=cSnap.docs.map(d=>({id:d.id,...d.data()}));
+      const fData=fSnap.docs.map(d=>({id:d.id,...d.data()}));
+      setUsers(uData); setCheckins(cData); setFeedbacks(fData);
+      const ts=Date.now();
+      setLastUpdated(new Date(ts));
+      // Cache in sessionStorage — persists for tab session
+      try{ sessionStorage.setItem("syn_admin_cache",JSON.stringify({users:uData,checkins:cData,feedbacks:fData,ts})); }catch(e){}
+    }catch(e){
+      console.warn("Firestore fetch failed:",e.message);
+      setDbError(true);
+      if(!cached){
+        // localStorage fallback
+        try{
+          const u=JSON.parse(localStorage.getItem("syn_user")||"{}");
+          const h=JSON.parse(localStorage.getItem("syn_history")||"[]");
+          const archetype=JSON.parse(localStorage.getItem("syn_archetype")||"{}");
+          const confess=JSON.parse(localStorage.getItem("syn_confess")||"{}");
+          const streak=parseInt(localStorage.getItem("syn_streak")||"0");
+          setUsers([{id:u.uid||"local",uid:u.uid||"local",name:u.name||"You",email:u.email||"",photoURL:u.photoURL||"",archetype:archetype?.title||"",addictions:confess?.addictions||[],hoursPerDay:confess?.hours||{},currentStreak:streak,lastCheckin:localStorage.getItem("syn_last")||"",dob:u.dob||"",gender:u.gender||"",lastSeen:{toDate:()=>new Date()}}]);
+          setCheckins(h.map((entry,i)=>({id:`local_${i}`,uid:u.uid||"local",date:entry.date||"",status:entry.status||"win",streak:entry.streak||0,msg:entry.msg||"",timestamp:{toDate:()=>new Date(entry.date||Date.now())}})));
+        }catch(le){console.error(le);}
       }
+    }finally{
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
 
-      // Fallback — build data from localStorage
-      try{
-        const u=JSON.parse(localStorage.getItem("syn_user")||"{}");
-        const h=JSON.parse(localStorage.getItem("syn_history")||"[]");
-        const archetype=JSON.parse(localStorage.getItem("syn_archetype")||"{}");
-        const confess=JSON.parse(localStorage.getItem("syn_confess")||"{}");
-        const streak=parseInt(localStorage.getItem("syn_streak")||"0");
-
-        const localUser={
-          id:u.uid||"local",
-          uid:u.uid||"local",
-          name:u.name||"You",
-          email:u.email||"",
-          photoURL:u.photoURL||"",
-          archetype:archetype?.title||"",
-          addictions:confess?.addictions||[],
-          hoursPerDay:confess?.hours||{},
-          currentStreak:streak,
-          lastCheckin:localStorage.getItem("syn_last")||"",
-          dob:u.dob||"",
-          gender:u.gender||"",
-          lastSeen:{toDate:()=>new Date()},
-        };
-
-        const localCheckins=h.map((entry,i)=>({
-          id:`local_${i}`,
-          uid:u.uid||"local",
-          date:entry.date||"",
-          status:entry.status||"win",
-          streak:entry.streak||0,
-          msg:entry.msg||"",
-          timestamp:{toDate:()=>new Date(entry.date||Date.now())},
-        }));
-
-        setUsers([localUser]);
-        setCheckins(localCheckins);
-      }catch(le){console.error("localStorage fallback failed:",le);}
-      finally{setLoading(false);}
-    })();
+  useEffect(()=>{
+    // If no cache, fetch immediately
+    // If cache exists, fetch in background silently
+    if(!cached) fetchData(false);
+    else fetchData(true); // silent background refresh
   },[]);
 
   // ── Range filter ──
@@ -1323,7 +1316,11 @@ function AdminDashboard({theme,onClose}){
           <div style={{fontSize:10,color:txt2,marginTop:1,letterSpacing:.5}}>Founders Dashboard — Confidential</div>
         </div>
         <div style={{display:"flex",gap:8,alignItems:"center"}}>
-          <div style={{fontSize:10,color:txt2}}>{loading?"Loading...":new Date().toLocaleString("en-IN",{day:"2-digit",month:"short",hour:"2-digit",minute:"2-digit"})}</div>
+          {lastUpdated&&<div style={{fontSize:10,color:txt2}}>Updated {lastUpdated.toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit"})}</div>}
+          <button onClick={()=>fetchData(true)} disabled={refreshing} style={{padding:"6px 12px",borderRadius:999,background:card,border:`1px solid ${bdr}`,color:refreshing?txt2:acc,fontSize:10,cursor:"pointer",display:"flex",alignItems:"center",gap:4}}>
+            <RefreshCw size={11} style={{animation:refreshing?"spin 0.7s linear infinite":"none"}}/>{refreshing?"Syncing...":"Refresh"}
+          </button>
+          <div style={{fontSize:10,color:txt2}}>{loading?"Loading...":""}</div>
           <button onClick={onClose} style={{width:32,height:32,borderRadius:"50%",background:card,border:`1px solid ${bdr}`,color:txt2,fontSize:18,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",lineHeight:1}}>×</button>
         </div>
       </div>
@@ -2980,9 +2977,11 @@ function ConfessStep2({selected, hours, onHoursChange, onNext, onBack}) {
         <div style={{width:6,height:6,borderRadius:"50%",background:"#ff8c00",boxShadow:"0 0 10px #ff8c00"}}/>
         <span style={{fontSize:10,fontWeight:600,letterSpacing:2.5,color:"rgba(255,180,80,.65)",textTransform:"uppercase"}}>Step 03 of 05 — Measure the Damage</span>
       </div>
-      <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(26px,7vw,84px)",fontWeight:900,letterSpacing:-3,background:"var(--gradient-text)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",lineHeight:.9,marginBottom:8,overflow:"visible",width:"100%"}}>HOW MUCH</div>
-      <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(26px,7vw,84px)",fontWeight:900,letterSpacing:-3,background:"var(--gradient-text)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",lineHeight:.9,marginBottom:28,overflow:"visible",width:"100%"}}>& HOW OFTEN?</div>
-      <p style={{fontSize:14,color:"var(--text3)",fontWeight:300,lineHeight:1.9,maxWidth:440,marginBottom:40,textAlign:"left"}}>Screen addictions are measured in hours per day. Urge-based addictions are measured in times per week. Be brutally honest.</p>
+      <div style={{textAlign:"center",marginBottom:28}}>
+        <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(26px,7vw,84px)",fontWeight:900,letterSpacing:-3,background:"var(--gradient-text)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",lineHeight:.9,overflow:"visible",width:"100%"}}>HOW MUCH</div>
+        <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(26px,7vw,84px)",fontWeight:900,letterSpacing:-3,background:"var(--gradient-text)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",lineHeight:.9,overflow:"visible",width:"100%",marginTop:8}}>& HOW OFTEN?</div>
+        <p style={{fontSize:14,color:"var(--text3)",fontWeight:300,lineHeight:1.9,maxWidth:480,marginBottom:0,textAlign:"center",margin:"20px auto 0"}}>Screen addictions are measured in hours per day. Urge-based addictions are measured in times per week. Be brutally honest.</p>
+      </div>
       <div style={{display:"flex",flexDirection:"column",gap:18,marginBottom:40}}>
         {selectedAddictions.map((a,i)=>{
           const v=hours[a.id]||0;
