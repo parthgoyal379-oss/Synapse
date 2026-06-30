@@ -234,11 +234,22 @@ Under 80 words total. No headers. No emojis. Write like you're whispering fire i
 SAFETY RULE — ALWAYS PRESENT: If the message contains any language suggesting self-harm or suicidal ideation beyond a normal relapse urge, stop everything and respond ONLY with: "This is bigger than a relapse. India: KIRAN 1800-599-0019 | USA: 988. Call right now. Your mission waits."`;
 
 /* ─── CHAT SYSTEM PROMPT ─────────────────────────────────────────────────── */
-const SYSTEM_CHAT=`You are SYNAPSE — an AI recovery coach. You ONLY discuss topics directly related to: dopamine recovery, addiction (any type), porn addiction, social media addiction, gaming addiction, junk food, substance use, mental health struggles, motivation, habit breaking, urges, cravings, relapses, streaks, discipline, focus, self-improvement, and withdrawal.
+const SYSTEM_CHAT=`You are SYNAPSE — an AI recovery coach inside the SYNAPSE app. You discuss topics related to: dopamine recovery, addiction (any type), porn addiction, social media addiction, gaming addiction, junk food, substance use, mental health struggles, motivation, habit breaking, urges, cravings, relapses, streaks, discipline, focus, self-improvement, and withdrawal.
 
-STRICT RULE: If the user's message is off-topic (anything unrelated to recovery, addiction, mental health, or self-improvement), you MUST respond with ONLY this exact token and nothing else: [OFF_TOPIC]
+You also ALWAYS respond (never [OFF_TOPIC]) to:
+- Greetings and small talk ("hi", "hey", "what's up") — reply warmly and briefly, then invite them to share what's on their mind or how their day is going. Don't lecture them for just saying hi.
+- Questions about how the SYNAPSE app itself works — answer using these facts, don't guess or invent features:
+  • Streak: counts consecutive days checked in. Miss a full calendar day with no check-in and the streak resets to 0.
+  • Lifeline: one per calendar month. If you miss a day, it forgives the gap and keeps your streak alive — use it from the prompt that appears when a missed day is detected.
+  • Check-in: a daily report where you mark each tracked addiction as Clean, Partial, or Slipped — this determines whether the day counts as a WIN, MID, or SLIP.
+  • Archetypes: SOVEREIGN (self-mastery), ARBITER (logic/precision), STOIC (endurance/roots), ASCENDANT (growth/hunger) — chosen once during onboarding, shapes the coaching tone.
+  • Levels: COMPROMISED → AWAKENING → STABILIZING → REWIRING → RECALIBRATED → OPTIMIZED → SYNAPSED, unlocked at streak milestones (3/7/14/30/60/90 days).
+  • Battle Plan: the personalized recovery plan generated from your Confess answers.
+  If asked something about the app you're not certain of, say so plainly instead of making it up.
 
-For on-topic messages: speak like a tough, direct recovery coach who genuinely believes in the person. No therapy speak. No "I understand your feelings." Practical, honest, fired up. Keep responses under 120 words unless depth is truly needed. No bullet points — flowing prose only.
+STRICT RULE: Only for messages with NO connection to recovery, mental health, self-improvement, greetings, or the app itself (e.g. unrelated trivia, coding help, news, homework, general chit-chat with no tie-in) — respond with ONLY this exact token and nothing else: [OFF_TOPIC]
+
+For on-topic messages: speak like a tough, direct recovery coach who genuinely believes in the person. No therapy speak. No "I understand your feelings." Practical, honest, fired up. Keep responses under 120 words unless depth is truly needed. No bullet points — flowing prose only. (Greetings and app-feature questions can be shorter and more relaxed in tone than this.)
 
 SAFETY RULE — ALWAYS PRESENT: If the message contains any language suggesting self-harm or suicidal ideation, stop everything and respond ONLY with: "This is bigger than recovery coaching. India: KIRAN 1800-599-0019 | USA: 988. Talk to a real person right now."`;
 
@@ -2101,7 +2112,7 @@ function RotatingTaglines() {
    SPLIT LAYOUT — Boot (branding left) + Auth (form right) simultaneously
    This is the first page the user sees. No separate screens.
 ══════════════════════════════════════════════════════════════════════════ */
-function Boot({ onBegin, hasPlan, theme, onThemeToggle }) {
+function Boot({ onBegin, onLogin, hasPlan, theme, onThemeToggle }) {
   const canvasRef=useRef(null);
   const curRef=useRef(null);
   const [bootDone,setBootDone]=useState(false);
@@ -2326,6 +2337,14 @@ function Boot({ onBegin, hasPlan, theme, onThemeToggle }) {
           </div>
         </div>
       )}
+
+      {/* Direct login entry — returning users with an account shouldn't have
+          to go through the whole Confess → Plan flow just to sign in. */}
+      <button onClick={onLogin} style={{position:"fixed",top:18,right:"clamp(14px,4vw,32px)",zIndex:7000,background:"rgba(245,160,0,0.08)",border:"1px solid rgba(245,160,0,0.3)",color:"#f5a000",padding:"9px 18px",borderRadius:999,fontFamily:"'Space Mono',monospace",fontSize:9,letterSpacing:"0.15em",textTransform:"uppercase",cursor:"pointer",backdropFilter:"blur(8px)",transition:"all .25s"}}
+        onMouseEnter={e=>{e.currentTarget.style.background="rgba(245,160,0,0.16)";e.currentTarget.style.borderColor="rgba(245,160,0,0.55)";}}
+        onMouseLeave={e=>{e.currentTarget.style.background="rgba(245,160,0,0.08)";e.currentTarget.style.borderColor="rgba(245,160,0,0.3)";}}>
+        Log In →
+      </button>
 
       {/* Main content */}
       <div style={{opacity:mainVisible?1:0,pointerEvents:mainVisible?"auto":"none",transition:"opacity .7s",position:"relative"}}>
@@ -2579,6 +2598,11 @@ function getErrorMsg(code) {
     "auth/too-many-requests":    "Too many attempts. Try again later.",
     "auth/popup-blocked":        "Popup blocked — allow popups for this site.",
     "auth/popup-closed-by-user": "",
+    "auth/cancelled-popup-request": "",
+    "auth/network-request-failed": "Network error — check your connection and try again.",
+    "auth/unauthorized-domain":  "This domain isn't authorized for Google sign-in yet — contact support.",
+    "auth/account-exists-with-different-credential": "An account already exists with this email using a different sign-in method.",
+    "auth/internal-error":       "Sign-in service hiccup — try again in a moment.",
   };
   return map[code] || "Something went wrong. Try again.";
 }
@@ -2716,32 +2740,57 @@ function Auth({ onAuth, context="" }) {
       setError("Please accept the Terms & Conditions to continue."); setShake(true); setTimeout(()=>setShake(false),600); return;
     }
     setLoading(true); setError("");
+    let cred;
     try {
       if(mode === "signup") {
-        const cred = await createUserWithEmailAndPassword(auth, email.trim(), password);
+        cred = await createUserWithEmailAndPassword(auth, email.trim(), password);
         await updateProfile(cred.user, { displayName: name.trim() });
-        onAuth({ email: cred.user.email, name: name.trim(), uid: cred.user.uid });
       } else {
-        const cred = await signInWithEmailAndPassword(auth, email.trim(), password);
-        onAuth({ email: cred.user.email, name: cred.user.displayName||email.split("@")[0], uid: cred.user.uid });
+        cred = await signInWithEmailAndPassword(auth, email.trim(), password);
       }
     } catch(e) {
+      // Auth itself failed — this IS a sign-in error, show it.
+      console.error("Email auth failed:", e.code, e.message);
       const msg = getErrorMsg(e.code);
       if(msg){ setError(msg); setShake(true); setTimeout(()=>setShake(false),600); }
+      setLoading(false);
+      return;
     }
     setLoading(false);
+    // Auth succeeded at this point. Anything below is post-auth app setup,
+    // not a sign-in failure — never show the user a "wrong password"-style
+    // error for something that happens after they're already logged in.
+    try {
+      onAuth({ email: cred.user.email, name: cred.user.displayName||name.trim()||cred.user.email.split("@")[0], uid: cred.user.uid });
+    } catch(e) {
+      console.error("Post-auth setup error (user IS signed in):", e);
+    }
   };
 
   const handleGoogle = async () => {
     setLoading(true); setError("");
+    let cred;
     try {
-      const cred = await signInWithPopup(auth, googleProvider);
-      onAuth({ email: cred.user.email, name: cred.user.displayName||cred.user.email.split("@")[0], uid: cred.user.uid });
+      cred = await signInWithPopup(auth, googleProvider);
     } catch(e) {
+      // Real sign-in failure (popup blocked, network, wrong config, etc).
+      // Logged in full so the actual Firebase error code is visible in
+      // devtools even when it's not one of the mapped messages below.
+      console.error("Google sign-in failed:", e.code, e.message);
       const msg = getErrorMsg(e.code);
       if(msg) setError(msg);
+      setLoading(false);
+      return;
     }
     setLoading(false);
+    // Sign-in itself succeeded here — anything below is post-auth app setup,
+    // not an auth failure. A bug in onAuth should never look like a failed
+    // Google login to the user, since they ARE signed in at this point.
+    try {
+      onAuth({ email: cred.user.email, name: cred.user.displayName||cred.user.email.split("@")[0], uid: cred.user.uid });
+    } catch(e) {
+      console.error("Post-auth setup error (user IS signed in):", e);
+    }
   };
 
   const handleForgotPassword = async () => {
@@ -4622,7 +4671,7 @@ function Report({history,savedPlan,streak,planHistory}) {
 }
 
 /* ─── CHAT ───────────────────────────────────────────────────────────────── */
-const OFF_TOPIC_MSG="Stay on mission, soldier. I only respond to questions about recovery, addiction, urges, streaks, or mental health. Ask me something specific to your journey.";
+const OFF_TOPIC_MSG="That's outside what I can help with here. Ask me about your recovery, urges, streaks, how SYNAPSE works, or just say what's on your mind.";
 
 function ChatBubble({msg,idx}){
   const isUser=msg.role==="user";
@@ -5540,7 +5589,7 @@ export default function App() {
         <div style={{position:"relative",zIndex:2}}>
           {screen==="confess" && <Confess onSubmit={handleConfess} loading={planLoading}/>}
           {screen==="plan"    && <Plan plan={plan} loading={planLoading} onBegin={()=>setShowAuth(true)} onRetry={()=>goTo("confess")}/>}
-          {screen==="boot"    && <Boot onBegin={handleBegin} hasPlan={false} theme={theme} onThemeToggle={handleThemeToggle}/>}
+          {screen==="boot"    && <Boot onBegin={handleBegin} onLogin={()=>setShowAuth(true)} hasPlan={false} theme={theme} onThemeToggle={handleThemeToggle}/>}
         </div>
       )}
     </div>
