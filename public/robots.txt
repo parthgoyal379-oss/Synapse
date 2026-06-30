@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://synapse-parth.vercel.app/sitemap.xml
+Sitemap: https://www.synapserewire.site/sitemap.xml
