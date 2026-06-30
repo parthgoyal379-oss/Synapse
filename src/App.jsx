@@ -317,21 +317,35 @@ const getConfessPrompt=()=>({operator:SYSTEM_CONFESS_OPERATOR,commander:SYSTEM_C
 const getCheckinPrompt=()=>({operator:SYSTEM_CHECKIN_OPERATOR,commander:SYSTEM_CHECKIN_COMMANDER,warlord:SYSTEM_CHECKIN_WARLORD}[ls.get("syn_mode","commander")]||SYSTEM_CHECKIN_COMMANDER);
 const withTone=(prompt)=>prompt; // Emergency/Chat still use single prompt + this is now a passthrough for those
 
-/* ─── SHARED COACH CONTEXT (archetype + trigger pattern) ─────────────────────
+/* ─── SHARED COACH CONTEXT (archetype + addictions + recent trend + pattern) ─
    Single source of truth for "what does the AI know about this person beyond
-   the raw chat log" — their chosen archetype, and any recurring trigger/time
-   patterns from the last 14 days of check-ins. Originally this lived inline
-   only inside handleCheckin(); extracted here so the full Coach screen
-   (Chat.send) and the inline checkin chat (Checkin.sendChat) build the exact
-   same context instead of two of three places quietly knowing less than
-   the third. Pure function — reads localStorage, returns a string, no
-   side effects, so it's safe to call from anywhere.
+   the raw chat log" — their chosen archetype, what they're fighting, their
+   last 5 check-in outcomes, and any recurring trigger/time patterns from the
+   last 14 days. Originally only archetype+pattern lived inline inside
+   handleCheckin(); extracted and expanded here so the full Coach screen
+   (Chat.send), the inline checkin chat (Checkin.sendChat), and handleCheckin
+   itself all build the exact same context instead of quietly knowing
+   different amounts about the same person. Pure function — reads
+   localStorage, returns a string, no side effects, safe to call anywhere.
 ──────────────────────────────────────────────────────────────────────────── */
 function getCoachContext() {
   let archetypeCtx = "";
   try {
     const arch = JSON.parse(ls.get("syn_archetype","null"));
     if(arch) archetypeCtx = `\n\nUser's chosen archetype: ${arch.title} (${arch.sub}) — weave this into your response naturally.`;
+  } catch{}
+  let addictionCtx = "";
+  try {
+    const confess = JSON.parse(ls.get("syn_confess","null"));
+    const list = (confess?.addictions||[]).map(a=>a.label||a.id).filter(Boolean);
+    if(list.length) addictionCtx = `\n\nUser is fighting: ${list.join(", ")}.`;
+  } catch{}
+  let trendCtx = "";
+  try {
+    const h = JSON.parse(ls.get("syn_history","[]"));
+    // history is stored newest-first
+    const recent = h.slice(0,5).map(e=>e.status?.toUpperCase()||"?").reverse();
+    if(recent.length) trendCtx = `\n\nLast ${recent.length} check-in${recent.length>1?"s":""} (oldest→newest): ${recent.join(", ")}.`;
   } catch{}
   let patternCtx = "";
   try {
@@ -354,7 +368,7 @@ function getCoachContext() {
       patternCtx=`\n\nPATTERN DATA (last 14 days, for your awareness only — mention naturally if relevant, don't force it every time): Recurring triggers: ${trigStr||"none significant"}. Recurring slip times: ${timeStr||"none significant"}.`;
     }
   } catch{}
-  return archetypeCtx + patternCtx;
+  return archetypeCtx + addictionCtx + trendCtx + patternCtx;
 }
 const MILESTONE_DATA={
   7: {emoji:"🔥",name:"IGNITION",   color:"#ff9500",rgb:"255,149,0",  msg:"7 days. Your dopamine receptors are beginning to reset. The fog is lifting. This is where most people quit — you didn't."},
@@ -1209,6 +1223,33 @@ if(typeof window !== "undefined"){
 }
 
 // ─── NOTIFICATION PERMISSION PROMPT ─────────────────────────────────────────
+// ─── MISSED-DAY LIFELINE PROMPT ──────────────────────────────────────────────
+function LifelinePrompt({theme,missedDays,onUse,onDecline}){
+  const isL=theme==="light";
+  return(
+    <div style={{position:"fixed",inset:0,zIndex:1150,display:"flex",alignItems:"flex-end",justifyContent:"center",padding:"0 0 24px"}}>
+      {/* No backdrop dismiss — this decision matters, don't let it get swiped away by accident */}
+      <div style={{position:"absolute",inset:0,background:"rgba(0,0,0,0.65)",backdropFilter:"blur(8px)"}}/>
+      <div style={{position:"relative",width:"100%",maxWidth:480,background:isL?"#f6f4e8":"#0d0b14",border:isL?"1px solid rgba(192,225,210,0.5)":"1px solid rgba(255,140,0,0.25)",borderRadius:24,padding:"28px 24px 24px",margin:"0 16px",animation:"slideUp .4s cubic-bezier(.16,1,.3,1)",boxShadow:isL?"0 -4px 40px rgba(192,225,210,0.2)":"0 -4px 40px rgba(255,140,0,0.15)"}}>
+        <div style={{width:52,height:52,borderRadius:14,background:"linear-gradient(135deg,#44ddff,#2299cc)",display:"flex",alignItems:"center",justifyContent:"center",marginBottom:16,fontSize:24}}>🛡️</div>
+        <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:15,fontWeight:800,color:"var(--text)",letterSpacing:.5,marginBottom:8}}>You Missed {missedDays} Day{missedDays>1?"s":""}</div>
+        <div style={{fontSize:13,color:"var(--text3)",lineHeight:1.7,marginBottom:20}}>
+          Your streak is about to reset. You have <strong style={{color:"#44ddff"}}>one lifeline this month</strong> — use it to forgive the gap and keep your streak alive, no questions asked.
+        </div>
+        <div style={{display:"flex",flexDirection:"column",gap:10}}>
+          <button onClick={onUse} style={{padding:"14px",borderRadius:14,background:"linear-gradient(135deg,#44ddff,#2299cc)",border:"none",color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer",boxShadow:"0 4px 16px rgba(68,221,255,0.35)"}}>
+            🛡️ Use My Lifeline — Keep Streak
+          </button>
+          <button onClick={onDecline} style={{padding:"14px 18px",borderRadius:14,background:"transparent",border:isL?"1px solid rgba(192,225,210,0.5)":"1px solid rgba(255,255,255,0.1)",color:"var(--text3)",fontSize:13,cursor:"pointer"}}>
+            No — reset my streak
+          </button>
+        </div>
+        <div style={{marginTop:14,fontSize:10,color:"var(--text4)",textAlign:"center"}}>One lifeline available per calendar month.</div>
+      </div>
+    </div>
+  );
+}
+
 function NotifPrompt({theme,onAllow,onDismiss}){
   const isL=theme==="light";
   return(
@@ -3829,6 +3870,25 @@ const getDailyQuote=()=>{
   return DAILY_QUOTES[dayOfYear%DAILY_QUOTES.length];
 };
 
+/* ─── CHECKIN COUNTDOWN ──────────────────────────────────────────────────── */
+function CheckinCountdown(){
+  const [label,setLabel]=useState("");
+  useEffect(()=>{
+    const tick=()=>{
+      const now=new Date();
+      const midnight=new Date(now); midnight.setHours(24,0,0,0);
+      const diff=Math.max(0,midnight-now);
+      const h=Math.floor(diff/3600000);
+      const m=Math.floor((diff%3600000)/60000);
+      setLabel(h>0?`${h}h ${m}m`:`${m}m`);
+    };
+    tick();
+    const id=setInterval(tick,30000);
+    return ()=>clearInterval(id);
+  },[]);
+  return <strong style={{color:"var(--accent2)",fontWeight:700}}>{label}</strong>;
+}
+
 function Checkin({streak,savedPlan,lastCheckin,onCheckin,onGoChat}) {
   // Load saved confess data (addictions + baseline values)
   const confessData = useMemo(()=>{ try{ return JSON.parse(ls.get("syn_confess","null")); }catch{ return null; } },[]);
@@ -3950,12 +4010,31 @@ function Checkin({streak,savedPlan,lastCheckin,onCheckin,onGoChat}) {
     }catch{}
   };
 
+  // Deterministic WIN / MID / SLIP verdict — computed from the user's own
+  // explicit per-addiction answers (the clean/partial/slip pills above),
+  // not guessed by the AI from free text. This is the actual source of
+  // truth passed to handleCheckin; the AI only writes the coaching tone
+  // for whichever verdict this produces, it doesn't get to overrule it.
+  //   - Any addiction marked "slip"     -> SLIP
+  //   - Else any addiction marked "partial" -> MID
+  //   - All addictions "clean" (or none tracked) -> WIN
+  const computeStatus=()=>{
+    if(addictions.length===0) return "WIN";
+    const statuses=addictions.map(a=>adStatus[a.id]);
+    if(statuses.some(s=>s==="slip")) return "SLIP";
+    if(statuses.some(s=>s==="partial")) return "MID";
+    return "WIN";
+  };
+  const liveVerdict = addictions.length>0 ? computeStatus() : null;
+  const VERDICT_DISPLAY={WIN:{label:"WIN",icon:"✅",color:"#88ff44"},MID:{label:"MID",icon:"🟡",color:"#ffcc00"},SLIP:{label:"SLIP",icon:"🔴",color:"#ff5555"}};
+
   const submit=async()=>{
     if(done||!mood) return;
     setLoading(true);
     const report=buildReport();
+    const computedStatus=computeStatus();
     logTriggerData();
-    const result=await onCheckin(report);
+    const result=await onCheckin(report,computedStatus);
     setReply(result.reply);
     setStatus(result.status);
     setLoading(false);
@@ -4044,6 +4123,16 @@ function Checkin({streak,savedPlan,lastCheckin,onCheckin,onGoChat}) {
 
         {!done?(
           <>
+            {/* Check-in countdown — visual reminder of the daily deadline.
+                Mirrors the actual streak-break rule in App: miss a full
+                calendar day with no check-in and no lifeline, streak resets. */}
+            <div style={{marginBottom:24,display:"flex",alignItems:"center",gap:10,padding:"12px 18px",borderRadius:12,background:"rgba(255,140,0,0.05)",border:"1px solid rgba(255,140,0,0.15)"}}>
+              <span style={{fontSize:16}}>⏳</span>
+              <span style={{fontSize:12,color:"var(--text2)"}}>
+                <CheckinCountdown/> left to check in {streak>0?"and keep your streak alive":"and start your streak"}
+              </span>
+            </div>
+
             {/* Section: Addiction Cards */}
             {addictions.length>0&&(
               <div style={{marginBottom:28}}>
@@ -4121,6 +4210,13 @@ function Checkin({streak,savedPlan,lastCheckin,onCheckin,onGoChat}) {
                       </div>
                     );
                   })}
+                </div>
+                {/* Live verdict — transparently shows what today will be logged as,
+                    computed deterministically from the statuses picked above. */}
+                <div style={{marginTop:14,display:"flex",alignItems:"center",gap:8,padding:"10px 16px",borderRadius:10,background:`${VERDICT_DISPLAY[liveVerdict].color}14`,border:`1px solid ${VERDICT_DISPLAY[liveVerdict].color}40`}}>
+                  <span style={{fontSize:14}}>{VERDICT_DISPLAY[liveVerdict].icon}</span>
+                  <span style={{fontSize:11,letterSpacing:1,color:VERDICT_DISPLAY[liveVerdict].color,fontWeight:700}}>TODAY'S VERDICT: {VERDICT_DISPLAY[liveVerdict].label}</span>
+                  <span style={{fontSize:10,color:"var(--text4)",marginLeft:4}}>— based on your answers above</span>
                 </div>
               </div>
             )}
@@ -4964,6 +5060,12 @@ export default function App() {
   const [showNotifPrompt,setShowNotifPrompt]=useState(false);
   const [showFeedback,setShowFeedback]=useState(false);
   const [fcmToast,setFcmToast]=useState(null);
+  // Monthly lifeline — one free pass per calendar month to forgive a missed
+  // check-in day without resetting the streak. Stored as "YYYY-MM" of the
+  // month it was last used; available again once the month rolls over.
+  const [lifelineMonth,setLifelineMonth]=useState(()=>ls.get("syn_lifeline_month",""));
+  const [showLifelinePrompt,setShowLifelinePrompt]=useState(false);
+  const [missedDays,setMissedDays]=useState(0);
   const deferredInstallPrompt=useRef(null);
   const audioPlayRef = useRef(null);
 
@@ -5193,7 +5295,7 @@ export default function App() {
     goTo("checkin");
   };
 
-  const handleCheckin=async msg=>{
+  const handleCheckin=async (msg,forcedStatus)=>{
     if(detectCrisis(msg)) return {reply:CRISIS_RESPONSE, status:"CRISIS"};
     // AI safety classifier for indirect language (runs only if regex didn't catch it)
     const aiRisk = await checkSafetyRisk(msg);
@@ -5205,16 +5307,27 @@ export default function App() {
       // two coach entry points (Checkin.sendChat, Chat.send) so the AI has
       // identical "memory" everywhere, not just here.
       const coachCtx = getCoachContext();
+      // If the caller computed a deterministic verdict from the user's own
+      // structured answers (Checkin.computeStatus), tell the AI definitively
+      // — it writes the coaching tone for that verdict, it doesn't get to
+      // pick a different one. This is what actually drives the streak below.
+      const verdictInstruction = forcedStatus
+        ? `\n\n[OFFICIAL VERDICT: Today's outcome is ${forcedStatus}, based on the user's own structured report. Start your reply with "[STATUS:${forcedStatus}]" on its own line, then respond per your IF [STATUS:${forcedStatus}] instructions. This verdict is final — do not assign a different status.]`
+        : "";
       rawReply=await callAI([
-        {role:"user",content:savedPlan + coachCtx},
+        {role:"user",content:savedPlan + coachCtx + verdictInstruction},
         {role:"assistant",content:"Your mission begins now. Show up every day."},
         {role:"user",content:`Day ${streak+1} check-in: ${msg}`}
       ],getCheckinPrompt());
     }catch{}
 
-    // Parse status tag from AI response
+    // The deterministic verdict (from the user's own structured answers) is
+    // the actual source of truth — NOT something parsed/guessed from the
+    // AI's free-text reply. We still strip any [STATUS:...] tag from the
+    // displayed text. Only falls back to AI-parsed status if no forcedStatus
+    // was provided (defensive — current app always provides one).
     const statusMatch = rawReply.match(/\[STATUS:(WIN|SLIP|MID)\]/);
-    const status = statusMatch ? statusMatch[1] : "MID";
+    const status = forcedStatus || (statusMatch ? statusMatch[1] : "MID");
     // Remove the tag from displayed reply
     const reply = rawReply.replace(/\[STATUS:(WIN|SLIP|MID)\]\n?/, "").trim();
 
@@ -5278,6 +5391,72 @@ export default function App() {
     return {reply, status};
   };
 
+  /* ─── MISSED-DAY STREAK BREAK + MONTHLY LIFELINE ────────────────────────
+     The app previously had no enforcement at all for missed days — if a
+     user skipped check-ins for several days then came back, their streak
+     just continued incrementing from wherever it was, completely ignoring
+     the gap. This checks, once on load, whether more than one full
+     calendar day has passed since the last check-in. If so:
+       - If the monthly lifeline hasn't been used yet this month, ask the
+         user whether to spend it to forgive the gap and keep the streak.
+       - Otherwise (or if declined), the streak resets to 0, same as a SLIP.
+     Calendar-day based (matches how "today"/"done" is computed everywhere
+     else in this app via toDateString()), not a literal rolling 24h clock
+     from the exact check-in timestamp — so a user who checks in at 11pm
+     one day and 1am the next still counts as "checked in two days running".
+  ──────────────────────────────────────────────────────────────────────── */
+  const thisMonthKey=()=>new Date().toISOString().slice(0,7); // "2026-07"
+
+  const breakStreak=(missed)=>{
+    const today=new Date().toDateString();
+    setStreak(0);
+    ls.set("syn_streak","0");
+    const nh=[{date:today,msg:`(missed ${missed} day${missed>1?"s":""} — streak auto-reset)`,streak:0,status:"slip",auto:true},...history];
+    setHistory(nh); ls.set("syn_history",JSON.stringify(nh));
+    const uid=auth.currentUser?.uid;
+    if(uid){
+      durableWrite(`userstreak_${uid}`, "users", uid, {currentStreak:0, lastSeen:serverTimestamp()});
+    }
+  };
+
+  useEffect(()=>{
+    if(!lastCI || streak<=0) return; // nothing to break for a brand-new or already-zero streak
+    const todayStart=new Date(); todayStart.setHours(0,0,0,0);
+    const lastStart=new Date(lastCI); lastStart.setHours(0,0,0,0);
+    const gapDays=Math.round((todayStart-lastStart)/86400000);
+    // gapDays 0 = checked in today already, 1 = checked in yesterday (fine).
+    // 2+ = at least one full day was skipped entirely.
+    if(gapDays>=2){
+      const missed=gapDays-1;
+      if(lifelineMonth!==thisMonthKey()){
+        setMissedDays(missed);
+        setShowLifelinePrompt(true);
+      } else {
+        breakStreak(missed);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[]); // run once on mount, against the initially-loaded streak/lastCI/lifeline values
+
+  const useLifeline=()=>{
+    const month=thisMonthKey();
+    ls.set("syn_lifeline_month",month);
+    setLifelineMonth(month);
+    setShowLifelinePrompt(false);
+    // Streak is forgiven — we deliberately don't touch streak or lastCI here.
+    // Today's check-in (when the user does it) proceeds normally through
+    // handleCheckin and increments the streak as usual.
+    const uid=auth.currentUser?.uid;
+    if(uid){
+      durableWrite(`lifeline_${uid}_${month}`, "users", uid, {lastLifelineUsed:month, lastSeen:serverTimestamp()});
+    }
+  };
+
+  const declineLifeline=()=>{
+    setShowLifelinePrompt(false);
+    breakStreak(missedDays);
+  };
+
   const handleReset=()=>{
     if(!confirm("Reset all progress? This cannot be undone."))return;
     ["syn_streak","syn_last","syn_plan","syn_plan_history","syn_history","syn_user","syn_archetype","syn_milestones","syn_confess","syn_trigger_log","syn_chat_history"].forEach(k=>ls.remove(k));
@@ -5328,6 +5507,7 @@ export default function App() {
           {emergency&&<EmergencyOverlay savedPlan={savedPlan} streak={streak} onClose={()=>setEmergency(false)} onCoach={()=>{setEmergency(false);goTo("chat");}}/>}
           {milestone&&<MilestoneCelebration day={milestone} onClose={()=>setMilestone(null)}/>}
           <FcmToast toast={fcmToast} theme={theme}/>
+          {showLifelinePrompt&&<LifelinePrompt theme={theme} missedDays={missedDays} onUse={useLifeline} onDecline={declineLifeline}/>}
           {showNotifPrompt&&<NotifPrompt theme={theme} onAllow={requestNotifPermission} onDismiss={()=>setShowNotifPrompt(false)}/>}
           {showFeedback&&<FeedbackSheet theme={theme} onClose={()=>setShowFeedback(false)}/>}
           {showInstallPrompt&&<InstallPrompt theme={theme} onDismiss={()=>{setShowInstallPrompt(false);ls.set("syn_pwa_prompted","1");}} onInstall={async()=>{
