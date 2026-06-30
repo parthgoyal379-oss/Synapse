@@ -316,6 +316,46 @@ const appendChatHistory=(...newMsgs)=>{
 const getConfessPrompt=()=>({operator:SYSTEM_CONFESS_OPERATOR,commander:SYSTEM_CONFESS_COMMANDER,warlord:SYSTEM_CONFESS_WARLORD}[ls.get("syn_mode","commander")]||SYSTEM_CONFESS_COMMANDER);
 const getCheckinPrompt=()=>({operator:SYSTEM_CHECKIN_OPERATOR,commander:SYSTEM_CHECKIN_COMMANDER,warlord:SYSTEM_CHECKIN_WARLORD}[ls.get("syn_mode","commander")]||SYSTEM_CHECKIN_COMMANDER);
 const withTone=(prompt)=>prompt; // Emergency/Chat still use single prompt + this is now a passthrough for those
+
+/* ─── SHARED COACH CONTEXT (archetype + trigger pattern) ─────────────────────
+   Single source of truth for "what does the AI know about this person beyond
+   the raw chat log" — their chosen archetype, and any recurring trigger/time
+   patterns from the last 14 days of check-ins. Originally this lived inline
+   only inside handleCheckin(); extracted here so the full Coach screen
+   (Chat.send) and the inline checkin chat (Checkin.sendChat) build the exact
+   same context instead of two of three places quietly knowing less than
+   the third. Pure function — reads localStorage, returns a string, no
+   side effects, so it's safe to call from anywhere.
+──────────────────────────────────────────────────────────────────────────── */
+function getCoachContext() {
+  let archetypeCtx = "";
+  try {
+    const arch = JSON.parse(ls.get("syn_archetype","null"));
+    if(arch) archetypeCtx = `\n\nUser's chosen archetype: ${arch.title} (${arch.sub}) — weave this into your response naturally.`;
+  } catch{}
+  let patternCtx = "";
+  try {
+    const log = JSON.parse(ls.get("syn_trigger_log","[]"));
+    const recent = log.slice(-14);
+    const triggerCounts = {}; const timeCounts = {};
+    recent.forEach(entry=>{
+      (entry.addictions||[]).forEach(a=>{
+        (a.triggers||[]).forEach(t=>{ triggerCounts[t]=(triggerCounts[t]||0)+1; });
+        if(a.timeOfDay) timeCounts[a.timeOfDay]=(timeCounts[a.timeOfDay]||0)+1;
+      });
+    });
+    const topTriggers=Object.entries(triggerCounts).sort((a,b)=>b[1]-a[1]).slice(0,3).filter(([,c])=>c>=2);
+    const topTimes=Object.entries(timeCounts).sort((a,b)=>b[1]-a[1]).slice(0,2).filter(([,c])=>c>=2);
+    if(topTriggers.length||topTimes.length){
+      const trigNames={bored:"boredom",stressed:"stress",lonely:"loneliness",alone_room:"being alone in their room",phone_bed:"phone in bed",after_argument:"arguments",tired:"tiredness/late nights",social_media:"social media exposure",friends_around:"certain friends",failure:"feeling like a failure",free_time:"too much free time",habit_cue:"autopilot/habit"};
+      const timeNames={morning:"mornings",afternoon:"afternoons",evening:"evenings",late_night:"late nights"};
+      const trigStr=topTriggers.map(([id])=>trigNames[id]||id).join(", ");
+      const timeStr=topTimes.map(([id])=>timeNames[id]||id).join(", ");
+      patternCtx=`\n\nPATTERN DATA (last 14 days, for your awareness only — mention naturally if relevant, don't force it every time): Recurring triggers: ${trigStr||"none significant"}. Recurring slip times: ${timeStr||"none significant"}.`;
+    }
+  } catch{}
+  return archetypeCtx + patternCtx;
+}
 const MILESTONE_DATA={
   7: {emoji:"🔥",name:"IGNITION",   color:"#ff9500",rgb:"255,149,0",  msg:"7 days. Your dopamine receptors are beginning to reset. The fog is lifting. This is where most people quit — you didn't."},
   21:{emoji:"⚡",name:"REWIRED",    color:"#ffcc00",rgb:"255,204,0",  msg:"21 days. Neural pathways are physically changing. Old cravings are losing their signal. You are not the same person who started."},
@@ -467,6 +507,91 @@ const ls = {
   set: (key, val) => { try { localStorage.setItem(key,val); } catch {} },
   remove: (key) => { try { localStorage.removeItem(key); } catch {} },
 };
+
+/* ─── DURABLE FIRESTORE SYNC QUEUE ────────────────────────────────────────
+   Problem this solves: every existing Firestore write in this app is
+   fire-and-forget (`setDoc(...).catch(console.warn)`). On a network blip,
+   or if auth.currentUser isn't ready yet, the write is just lost forever —
+   the data only survives in localStorage and the admin dashboard (which
+   reads from Firestore) never sees it.
+
+   This queue makes writes durable WITHOUT changing any existing data shape,
+   document IDs, or admin dashboard read logic:
+   1. Every write is first persisted to a localStorage queue (survives reload/close).
+   2. We attempt it immediately, with retry + exponential backoff (3 tries).
+   3. On success, it's removed from the queue.
+   4. On final failure, it STAYS in the queue and gets retried automatically
+      next time the app opens (or comes back online) — instead of vanishing.
+   5. Each queued write has a stable `key` (e.g. "checkin_<id>") so re-queuing
+      the same logical write just overwrites the pending entry, never duplicates.
+──────────────────────────────────────────────────────────────────────────── */
+const SYNC_QUEUE_KEY = "syn_sync_queue";
+
+const loadSyncQueue = () => { try { return JSON.parse(ls.get(SYNC_QUEUE_KEY,"[]")); } catch { return []; } };
+const saveSyncQueue = (q) => { try { ls.set(SYNC_QUEUE_KEY, JSON.stringify(q.slice(-50))); } catch {} };
+
+function enqueueSyncWrite(key, collectionName, docId, data) {
+  const q = loadSyncQueue();
+  const existingIdx = q.findIndex(item => item.key === key);
+  const entry = { key, collectionName, docId, data, queuedAt: Date.now(), attempts: 0 };
+  if (existingIdx >= 0) q[existingIdx] = entry;
+  else q.push(entry);
+  saveSyncQueue(q);
+}
+
+function dequeueSyncWrite(key) {
+  const q = loadSyncQueue().filter(item => item.key !== key);
+  saveSyncQueue(q);
+}
+
+const _wait = (ms) => new Promise(res => setTimeout(res, ms));
+
+// Attempts a single queued write with retry + exponential backoff.
+// Returns true on success, false if all attempts failed (write stays queued).
+async function _attemptWrite(item) {
+  const delays = [0, 800, 2500]; // immediate, then ~0.8s, then ~2.5s
+  for (let i = 0; i < delays.length; i++) {
+    if (delays[i]) await _wait(delays[i]);
+    try {
+      await setDoc(doc(db, item.collectionName, item.docId), item.data, { merge: true });
+      return true;
+    } catch (e) {
+      if (i === delays.length - 1) console.warn(`Sync queue write failed (${item.key}) after ${delays.length} attempts:`, e.message);
+    }
+  }
+  return false;
+}
+
+// Public helper — use this instead of calling setDoc directly for any write
+// that must not be silently lost. Persists to the durable queue first, then
+// tries immediately. If it fails, it's retried automatically by flushSyncQueue()
+// on next app load or reconnect, so the data is never dropped on the floor.
+async function durableWrite(key, collectionName, docId, data) {
+  enqueueSyncWrite(key, collectionName, docId, data);
+  const ok = await _attemptWrite({ key, collectionName, docId, data });
+  if (ok) dequeueSyncWrite(key);
+  return ok;
+}
+
+// Flushes any writes left over from a previous session (app was closed mid-sync,
+// or every retry failed while offline). Call this once on auth-ready + on
+// regaining network connectivity. Safe to call repeatedly — it's a no-op if
+// the queue is empty, and each item is independent so one failure doesn't
+// block the others.
+let _flushInFlight = false;
+async function flushSyncQueue() {
+  if (_flushInFlight) return;
+  _flushInFlight = true;
+  try {
+    const q = loadSyncQueue();
+    for (const item of q) {
+      const ok = await _attemptWrite(item);
+      if (ok) dequeueSyncWrite(item.key);
+    }
+  } finally {
+    _flushInFlight = false;
+  }
+}
 
 // Perf flag — lighten the always-on background animations on phones (fewer particles,
 // lower internal canvas resolution, capped frame rate, pause when tab/app is hidden).
@@ -1683,11 +1808,10 @@ function ProfileSheet({user,theme,onThemeToggle,onClose,onSignOut,onPhotoUpdate,
     localStorage.setItem("syn_user",JSON.stringify({...stored,dob,gender}));
     setSaved(true);
     setTimeout(()=>setSaved(false),2000);
-    // 2. Firestore in background — non-blocking
+    // 2. Firestore in background — non-blocking, durable (queued + retried)
     const uid=auth.currentUser?.uid;
     if(uid&&db){
-      setDoc(doc(db,"users",uid),{dob,gender,lastSeen:serverTimestamp()},{merge:true})
-        .catch(e=>console.warn("Firestore profile sync (non-critical):",e));
+      durableWrite(`profile_${uid}`, "users", uid, {dob,gender,lastSeen:serverTimestamp()});
     }
   };
 
@@ -3862,12 +3986,13 @@ function Checkin({streak,savedPlan,lastCheckin,onCheckin,onGoChat}) {
       return;
     }
     try{
-      const arch=JSON.parse(ls.get("syn_archetype","null"));
-      const archetypeCtx=arch?`\n\nUser archetype: ${arch.title} — ${arch.sub}`:"";
+      // Archetype + recurring trigger pattern context — shared with handleCheckin
+      // and the full Coach screen so this inline chat has the same "memory".
+      const coachCtx = getCoachContext();
       // Pull full shared history for context — includes today's report, past days, everything
       const sharedHistory=loadChatHistory();
       const ctx=[
-        {role:"user",content:savedPlan+archetypeCtx},
+        {role:"user",content:savedPlan+coachCtx},
         {role:"assistant",content:"Your mission begins now."},
         ...sharedHistory.slice(-12).map(m=>({role:m.role==="user"?"user":"assistant",content:m.text})),
         {role:"user",content:txt}
@@ -4459,8 +4584,11 @@ function Chat({streak,savedPlan}){
     try{
       // Build context — last 12 messages for memory, includes checkin reports too
       const ctx=([...msgs,userMsg]).slice(-12).map(m=>({role:m.role==="user"?"user":"assistant",content:m.text}));
-      // Add streak context to first message
-      ctx[0]={...ctx[0],content:`[User context: Day ${streak} of recovery. Plan: ${savedPlan?savedPlan.slice(0,120)+"...":"not set yet"}]\n\n${ctx[0].content}`};
+      // Add streak + archetype + recurring trigger pattern context to first message —
+      // same coach context handleCheckin and the inline checkin chat already use,
+      // so the full Coach screen doesn't "know less" about the user than they do.
+      const coachCtx = getCoachContext();
+      ctx[0]={...ctx[0],content:`[User context: Day ${streak} of recovery. Plan: ${savedPlan?savedPlan.slice(0,120)+"...":"not set yet"}]${coachCtx}\n\n${ctx[0].content}`};
       const reply=await callAI(ctx,withTone(SYSTEM_CHAT));
       if(reply.includes("[OFF_TOPIC]")){
         setMsgs(m=>{ const next=[...m,{role:"ai",text:OFF_TOPIC_MSG,offTopic:true}]; saveChatHistory(next); return next; });
@@ -4903,8 +5031,7 @@ export default function App() {
         const stored=JSON.parse(localStorage.getItem("syn_user")||"{}");
         localStorage.setItem("syn_user",JSON.stringify({...stored,fcmToken:token}));
         if(auth.currentUser?.uid&&db){
-          setDoc(doc(db,"users",auth.currentUser.uid),{fcmToken:token,lastSeen:serverTimestamp()},{merge:true})
-            .catch(e=>console.warn("Firestore token:",e));
+          durableWrite(`fcmtoken_${auth.currentUser.uid}`, "users", auth.currentUser.uid, {fcmToken:token,lastSeen:serverTimestamp()});
         }
         console.log("✅ FCM token saved:",token.slice(0,20)+"...");
       }
@@ -4947,12 +5074,23 @@ export default function App() {
         // Already logged in — skip boot screen, go straight to app
         const sp=ls.get("syn_plan","");
         setScreen(sp?"checkin":"confess");
+        // Retry any Firestore writes that failed/got stuck in a previous session
+        // (closed app mid-sync, was offline, auth wasn't ready yet, etc.)
+        flushSyncQueue();
       } else {
         setAuthed(false);
       }
       setAuthLoading(false);
     });
     return unsub;
+  },[]);
+
+  // Retry queued writes whenever the device regains connectivity — covers
+  // the common case of a checkin/confess happening on patchy mobile data.
+  useEffect(()=>{
+    const onOnline=()=>flushSyncQueue();
+    window.addEventListener("online",onOnline);
+    return ()=>window.removeEventListener("online",onOnline);
   },[]);
 
   // Play ambient on first any interaction — covers already-logged-in users
@@ -5024,13 +5162,13 @@ export default function App() {
     try{
       const reply=await callAI([{role:"user",content:text}],getConfessPrompt());
       setPlan(reply);setSP(reply);ls.set("syn_plan",reply);
-      // Save to Firestore
+      // Save to Firestore — durable: queued + retried, never silently lost
       try{
         const uid=auth.currentUser?.uid;
         const u=JSON.parse(ls.get("syn_user","{}"));
         const confessData=JSON.parse(ls.get("syn_confess","{}"));
         if(uid){
-          await setDoc(doc(db,"users",uid),{
+          await durableWrite(`user_${uid}`, "users", uid, {
             uid, name:u.name||"", email:u.email||"",
             photoURL:u.photoURL||auth.currentUser?.photoURL||"",
             archetype:archData?.title||"",
@@ -5040,7 +5178,7 @@ export default function App() {
             gender:u.gender||"",
             onboardedAt:serverTimestamp(),
             lastSeen:serverTimestamp(),
-          },{merge:true});
+          });
         }
       }catch(fe){console.warn("Firestore write failed:",fe);}
     }catch(e){
@@ -5063,38 +5201,12 @@ export default function App() {
     const today=new Date().toDateString();
     let rawReply="[STATUS:MID]\n\nYou showed up. That matters. Keep going.";
     try{
-      // Read archetype from storage
-      let archetypeCtx = "";
-      try {
-        const arch = JSON.parse(ls.get("syn_archetype","null"));
-        if(arch) archetypeCtx = `\n\nUser's chosen archetype: ${arch.title} (${arch.sub}) — weave this into your response naturally.`;
-      } catch{}
-      // Build recurring trigger pattern summary from last 14 days — lets the AI notice
-      // patterns itself (e.g. "you slip mostly late at night when bored") without the
-      // user having to articulate it.
-      let patternCtx = "";
-      try {
-        const log = JSON.parse(ls.get("syn_trigger_log","[]"));
-        const recent = log.slice(-14);
-        const triggerCounts = {}; const timeCounts = {};
-        recent.forEach(entry=>{
-          (entry.addictions||[]).forEach(a=>{
-            (a.triggers||[]).forEach(t=>{ triggerCounts[t]=(triggerCounts[t]||0)+1; });
-            if(a.timeOfDay) timeCounts[a.timeOfDay]=(timeCounts[a.timeOfDay]||0)+1;
-          });
-        });
-        const topTriggers=Object.entries(triggerCounts).sort((a,b)=>b[1]-a[1]).slice(0,3).filter(([,c])=>c>=2);
-        const topTimes=Object.entries(timeCounts).sort((a,b)=>b[1]-a[1]).slice(0,2).filter(([,c])=>c>=2);
-        if(topTriggers.length||topTimes.length){
-          const trigNames={bored:"boredom",stressed:"stress",lonely:"loneliness",alone_room:"being alone in their room",phone_bed:"phone in bed",after_argument:"arguments",tired:"tiredness/late nights",social_media:"social media exposure",friends_around:"certain friends",failure:"feeling like a failure",free_time:"too much free time",habit_cue:"autopilot/habit"};
-          const timeNames={morning:"mornings",afternoon:"afternoons",evening:"evenings",late_night:"late nights"};
-          const trigStr=topTriggers.map(([id])=>trigNames[id]||id).join(", ");
-          const timeStr=topTimes.map(([id])=>timeNames[id]||id).join(", ");
-          patternCtx=`\n\nPATTERN DATA (last 14 days, for your awareness only — mention naturally if relevant, don't force it every time): Recurring triggers: ${trigStr||"none significant"}. Recurring slip times: ${timeStr||"none significant"}.`;
-        }
-      } catch{}
+      // Archetype + recurring trigger pattern context — shared with the other
+      // two coach entry points (Checkin.sendChat, Chat.send) so the AI has
+      // identical "memory" everywhere, not just here.
+      const coachCtx = getCoachContext();
       rawReply=await callAI([
-        {role:"user",content:savedPlan + archetypeCtx + patternCtx},
+        {role:"user",content:savedPlan + coachCtx},
         {role:"assistant",content:"Your mission begins now. Show up every day."},
         {role:"user",content:`Day ${streak+1} check-in: ${msg}`}
       ],getCheckinPrompt());
@@ -5128,23 +5240,27 @@ export default function App() {
       }
     }
 
-    // Firestore — save checkin + update user lastSeen/streak
+    // Firestore — save checkin + update user lastSeen/streak. Durable: queued
+    // to localStorage first, retried with backoff, and re-attempted on next
+    // app open if it fails now — so a network blip never silently drops
+    // a day's progress from the admin dashboard / cross-device sync.
     try{
       const uid=auth.currentUser?.uid;
       if(uid){
         const checkinId=`${uid}_${today.replace(/\s/g,"_")}`;
-        await setDoc(doc(db,"checkins",checkinId),{
+        const finalStreak = status==="SLIP"?0:streak+1;
+        durableWrite(`checkin_${checkinId}`, "checkins", checkinId, {
           uid, date:today,
           status:status.toLowerCase(),
-          streak: status==="SLIP"?0:streak+1,
+          streak: finalStreak,
           msg: msg.slice(0,500),
           timestamp:serverTimestamp(),
         });
-        await setDoc(doc(db,"users",uid),{
+        durableWrite(`userstreak_${uid}`, "users", uid, {
           lastCheckin:today,
           lastSeen:serverTimestamp(),
-          currentStreak:status==="SLIP"?0:streak+1,
-        },{merge:true});
+          currentStreak:finalStreak,
+        });
       }
     }catch(fe){console.warn("Firestore checkin write failed:",fe);}
 
