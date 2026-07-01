@@ -1,4 +1,4 @@
-import { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo } from "react";
+import { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo, Component } from "react";
 import { auth, googleProvider, db, storage, messaging, requestNotificationPermission, onMessage, VAPID_KEY } from "./firebase";
 import {
   signInWithEmailAndPassword, createUserWithEmailAndPassword,
@@ -920,7 +920,7 @@ function CustomCursor() {
 
 /* ─── GLOBAL CSS ─────────────────────────────────────────────────────────── */
 const G=`
-@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;800;900&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;800;900&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500&family=Space+Mono:wght@400;700&family=Space+Grotesk:wght@500;600;700&display=swap');
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
 svg{background:transparent!important;overflow:visible;}
 
@@ -5086,7 +5086,7 @@ function EmergencyOverlay({savedPlan,streak,onClose,onCoach}){
 }
 
 /* ─── ROOT ───────────────────────────────────────────────────────────────── */
-export default function App() {
+function AppRoot() {
   const [screen,setScreen]  =useState("boot");
   const [authed,setAuthed]  =useState(false);
   const [authLoading,setAuthLoading]=useState(true);
@@ -5593,5 +5593,82 @@ export default function App() {
         </div>
       )}
     </div>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   ERROR BOUNDARY — catches render crashes anywhere in the app
+   React error boundaries MUST be class components — there is no hook
+   equivalent for componentDidCatch/getDerivedStateFromError as of React 19.
+
+   Without this, an uncaught error thrown during render ANYWHERE in this
+   ~5,500-line single-file app (a bad API response shape, an unexpected
+   null, a third-party lib edge case, etc.) unmounts the entire React tree
+   and the user sees a blank white screen with zero explanation and no way
+   back in short of manually clearing site data. This catches that, shows
+   a real "something broke" screen with a reload button, and logs the
+   actual error to the console (and localStorage, so it survives the
+   reload if you ask the user to check it) so it's debuggable afterward.
+
+   This does NOT touch or risk any user data — streak/history/plan are
+   already persisted independently via localStorage + Firestore on every
+   write, so a render crash after that point never loses saved progress.
+──────────────────────────────────────────────────────────────────────────── */
+class ErrorBoundary extends Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error, info) {
+    console.error("SYNAPSE crashed:", error, info?.componentStack);
+    // Keep a small trail of the last few crashes in localStorage so a
+    // report from a user ("app broke, white screen") is actually
+    // debuggable afterward instead of a total mystery.
+    try {
+      const log = JSON.parse(localStorage.getItem("syn_crash_log") || "[]");
+      log.push({ msg: error?.message || String(error), stack: (error?.stack || "").slice(0, 800), ts: Date.now() });
+      localStorage.setItem("syn_crash_log", JSON.stringify(log.slice(-10)));
+    } catch {}
+  }
+
+  handleReload = () => {
+    this.setState({ hasError: false, error: null });
+    window.location.reload();
+  };
+
+  render() {
+    if (!this.state.hasError) return this.props.children;
+    return (
+      <div style={{ position:"fixed", inset:0, background:"#07040a", display:"flex", flexDirection:"column",
+        alignItems:"center", justifyContent:"center", padding:"32px", textAlign:"center",
+        fontFamily:"'Inter',sans-serif", zIndex:99999 }}>
+        <div style={{ fontSize:40, marginBottom:20, filter:"drop-shadow(0 0 20px rgba(255,140,0,0.4))" }}>⚡</div>
+        <div style={{ fontFamily:"'Orbitron',sans-serif", fontSize:18, fontWeight:800, color:"#fff",
+          letterSpacing:.5, marginBottom:12 }}>Something broke</div>
+        <div style={{ fontSize:13, color:"rgba(255,255,255,0.5)", lineHeight:1.7, maxWidth:380, marginBottom:28 }}>
+          SYNAPSE hit an unexpected error. Your streak and progress are saved — reloading should fix this.
+          If it keeps happening, email <span style={{color:"#ffb347"}}>synapserewire@gmail.com</span>.
+        </div>
+        <button onClick={this.handleReload} style={{ background:"linear-gradient(135deg,#ff9500,#ff5000)",
+          border:"none", color:"#fff", padding:"14px 36px", borderRadius:999, fontFamily:"'Inter',sans-serif",
+          fontSize:13, fontWeight:700, letterSpacing:.3, cursor:"pointer",
+          boxShadow:"0 0 40px rgba(255,140,0,0.35)" }}>
+          Reload SYNAPSE
+        </button>
+      </div>
+    );
+  }
+}
+
+export default function App() {
+  return (
+    <ErrorBoundary>
+      <AppRoot />
+    </ErrorBoundary>
   );
 }
