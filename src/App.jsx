@@ -7,7 +7,7 @@ import {
 } from "firebase/auth";
 import { ref as sRef, uploadBytes, getDownloadURL } from "firebase/storage";
 import {
-  collection, doc, setDoc, getDoc, getDocs,
+  collection, doc, setDoc, getDoc, getDocs, addDoc,
   orderBy, query, serverTimestamp, limit
 } from "firebase/firestore";
 import {
@@ -1367,7 +1367,9 @@ function AdminDashboard({theme,onClose}){
   const [tab,setTab]=useState("overview");
   const [range,setRange]=useState("7d");
   const [selectedUser,setSelectedUser]=useState(null);
+  const [userSearch,setUserSearch]=useState("");
   const [dbError,setDbError]=useState(false);
+  const [lastFetchError,setLastFetchError]=useState("");
   const [lastUpdated,setLastUpdated]=useState(cached?.ts?new Date(cached.ts):null);
 
   const bg    = isL?"#f6f4e8":"#09070f";
@@ -1382,12 +1384,24 @@ function AdminDashboard({theme,onClose}){
     if(isRefresh) setRefreshing(true);
     else if(!cached) setLoading(true);
     setDbError(false);
+    setLastFetchError("");
     try{
       if(!db) throw new Error("db undefined");
-      const [uSnap,cSnap,fSnap]=await Promise.all([
+      // Bug fix: these getDocs() calls previously had no timeout. If any one
+      // of them hung (flaky connection, Firestore rules rejecting silently,
+      // cold connection on first load), Promise.all never resolved OR
+      // rejected — meaning the finally{} block below never ran either, so
+      // the loading/refreshing spinner stayed on forever AND no fresh data
+      // ever arrived, with no error surfaced. Racing against a timeout
+      // guarantees this always settles one way or the other within 10s.
+      const fetchPromise=Promise.all([
         getDocs(collection(db,"users")),
-        getDocs(query(collection(db,"checkins"),orderBy("timestamp","desc"),limit(500))),
-        getDocs(query(collection(db,"feedbacks"),orderBy("timestamp","desc"),limit(200))),
+        getDocs(query(collection(db,"checkins"),orderBy("timestamp","desc"),limit(5000))),
+        getDocs(query(collection(db,"feedbacks"),orderBy("timestamp","desc"),limit(2000))),
+      ]);
+      const [uSnap,cSnap,fSnap]=await Promise.race([
+        fetchPromise,
+        new Promise((_,reject)=>setTimeout(()=>reject(new Error("admin-fetch-timeout")),10000)),
       ]);
       const uData=uSnap.docs.map(d=>({id:d.id,...d.data()}));
       const cData=cSnap.docs.map(d=>({id:d.id,...d.data()}));
@@ -1400,6 +1414,7 @@ function AdminDashboard({theme,onClose}){
     }catch(e){
       console.warn("Firestore fetch failed:",e.message);
       setDbError(true);
+      setLastFetchError(`${e.code||"error"}: ${e.message||"unknown"}`);
       if(!cached){
         // localStorage fallback
         try{
@@ -1507,7 +1522,8 @@ function AdminDashboard({theme,onClose}){
         <div style={{background:"rgba(251,191,36,0.08)",border:"none",borderBottom:"1px solid rgba(251,191,36,0.2)",padding:"10px 20px",display:"flex",alignItems:"center",gap:10}}>
           <AlertTriangle size={14} color={amber}/>
           <div style={{fontSize:11,color:amber,lineHeight:1.5}}>
-            <strong>Firestore offline</strong> — showing local data only. Update <code style={{background:"rgba(251,191,36,0.1)",padding:"1px 5px",borderRadius:4}}>src/firebase.js</code> with db export to see all users.
+            <strong>Couldn't load live data — showing local fallback.</strong> Most likely cause: your Firestore Security Rules don't grant this account read access to the users/checkins/feedbacks collections. Check the browser console for the exact error (permission-denied vs network vs timeout).
+            {lastFetchError&&<div style={{marginTop:4,fontFamily:"'JetBrains Mono',monospace",fontSize:10,opacity:0.75,wordBreak:"break-all"}}>{lastFetchError}</div>}
           </div>
         </div>
       )}
@@ -1527,6 +1543,11 @@ function AdminDashboard({theme,onClose}){
         ))}
         <span style={{marginLeft:"auto",fontSize:10,color:txt2}}>{filteredCI.length} check-ins in range</span>
       </div>
+      {checkins.length>=5000&&(
+        <div style={{padding:"6px 20px",fontSize:10,color:amber,background:"rgba(251,191,36,0.06)"}}>
+          ⚠️ Showing most recent 5,000 check-ins only — older records aren't included in "All Time" stats. Consider pagination if you need full historical data beyond this.
+        </div>
+      )}
 
       {loading?(
         <div style={{display:"flex",alignItems:"center",justifyContent:"center",minHeight:300,flexDirection:"column",gap:12}}>
@@ -1597,8 +1618,17 @@ function AdminDashboard({theme,onClose}){
           {/* ══ USERS TAB ══ */}
           {tab==="users"&&(
             <div style={{display:"flex",flexDirection:"column",gap:10}}>
+              {/* Search — becomes essential once you're past a handful of users */}
+              <input value={userSearch} onChange={e=>setUserSearch(e.target.value)} placeholder="Search by name or email..."
+                style={{width:"100%",padding:"10px 14px",borderRadius:12,background:card,border:`1px solid ${bdr}`,color:txt,fontSize:12,outline:"none",boxSizing:"border-box"}}/>
               {users.length===0&&<div style={{textAlign:"center",color:txt2,padding:40,fontSize:13}}>No users yet.</div>}
-              {users.sort((a,b)=>(b.lastSeen?.seconds||0)-(a.lastSeen?.seconds||0)).map(u=>{
+              {[...users]
+                .filter(u=>{
+                  if(!userSearch.trim()) return true;
+                  const q=userSearch.trim().toLowerCase();
+                  return (u.name||"").toLowerCase().includes(q) || (u.email||"").toLowerCase().includes(q);
+                })
+                .sort((a,b)=>(b.lastSeen?.seconds||0)-(a.lastSeen?.seconds||0)).map(u=>{
                 const initials=(u.name||u.email||"?").split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase();
                 const lastSeen=u.lastSeen?.toDate?.();
                 const minsAgo=lastSeen?Math.floor((Date.now()-lastSeen)/60000):null;
@@ -2623,13 +2653,13 @@ function TCModal({isL,onAccept,onClose}){
         <div style={{padding:"20px 28px",overflowY:"auto",flex:1,fontSize:12,color:isL?"rgba(26,18,9,0.62)":"rgba(255,255,255,0.55)",lineHeight:1.9}}>
           {[
             {h:"1. Definitions",b:`"Service" means all websites, applications, software, AI systems, content, and features provided by Synapse. "AI Content" means any content generated through AI systems. "User Content" means all information, data, and submissions provided by a User.`},
-            {h:"2. Eligibility",b:"Users must be at least 18 years of age or possess legally valid parental/guardian consent. Synapse reserves the right to refuse registration, suspend access, or terminate accounts at its sole discretion."},
+            {h:"2. Eligibility",b:"The Service is not directed at, and is not intended to be used by, any individual under the age of thirteen (13) years. Users register on the basis of self-attested age information; a parent or guardian who believes a child has registered without appropriate consent should contact synapserewire@gmail.com. Synapse reserves the right to refuse registration, suspend access, or terminate accounts at its sole discretion."},
             {h:"3. Account Registration",b:"Users agree to provide accurate, complete, and current information. Users are solely responsible for maintaining account confidentiality and assume full responsibility for all activities conducted through their account."},
             {h:"4. Description of Service",b:"Synapse provides AI-powered productivity, habit-building, behavioral support, educational guidance, goal management, accountability tools, and related features. Service functionality may change without prior notice."},
             {h:"5. NO MEDICAL OR CLINICAL SERVICES",b:"THE SERVICE DOES NOT PROVIDE MEDICAL CARE. Synapse is not a healthcare provider. Information provided is for informational, educational, and self-development purposes only. Users should seek qualified professional assistance for medical, psychological, or mental health concerns."},
-            {h:"6. CRISIS AND EMERGENCY DISCLAIMER",b:"THE SERVICE IS NOT DESIGNED FOR EMERGENCY RESPONSE OR CRISIS INTERVENTION. Users experiencing thoughts of self-harm, suicide, violence, or immediate danger should immediately contact local emergency services. Synapse has no duty to monitor or respond to emergency situations."},
+            {h:"6. CRISIS AND EMERGENCY DISCLAIMER",b:"Synapse uses automated pattern-matching and an AI classifier to scan certain messages (check-ins and AI coach chats) for language suggesting self-harm or suicidal risk, and displays crisis-support resources (including KIRAN in India and 988 in the United States) when detected. THIS DETECTION IS AUTOMATED, IMPERFECT, AND NOT GUARANTEED TO CATCH EVERY INSTANCE — it must never be relied upon as a substitute for real emergency services. THE SERVICE IS NOT DESIGNED FOR EMERGENCY RESPONSE and does not monitor users in real time or dispatch emergency responders. Users experiencing thoughts of self-harm, suicide, violence, or immediate danger should immediately contact local emergency services or a crisis hotline directly."},
             {h:"7. Artificial Intelligence Disclosure",b:"AI-generated outputs may contain inaccuracies, omissions, biases, or hallucinations. Users acknowledge that AI-generated content should not be relied upon as the sole basis for important decisions. Synapse does not guarantee accuracy or fitness of AI outputs."},
-            {h:"8. User Content",b:"Users retain ownership of User Content. Users grant Synapse a worldwide, non-exclusive, royalty-free license to host, process, analyze, and use User Content solely for operation and improvement of the Service."},
+            {h:"8. User Content",b:"Users retain ownership of User Content. Users grant Synapse a worldwide, non-exclusive, royalty-free license to host, process, analyze, and use User Content solely for operation and improvement of the Service. Confession, check-in, mood, and trigger-tracking content is not used to train AI models unless a user separately opts in, and is deleted from active systems within a defined period after account deletion, as detailed in the full Privacy Policy."},
             {h:"9. Prohibited Conduct",b:"Users shall not: violate applicable laws; attempt unauthorized access; reverse engineer the Service; interfere with platform security; distribute malware; scrape or harvest data; impersonate another person; or use the Service for unlawful activity."},
             {h:"10. Intellectual Property",b:"All Service components, software, designs, interfaces, trademarks, AI systems, and algorithms remain the exclusive property of Synapse. Users receive only a limited, revocable, non-transferable license to access the Service."},
             {h:"11. Fees, Subscriptions & Billing",b:"Certain features may require payment. Fees may be modified at any time. Except where required by law, payments are non-refundable. Failure to pay may result in suspension or termination."},
@@ -2637,11 +2667,11 @@ function TCModal({isL,onAccept,onClose}){
             {h:"13. Privacy",b:"Collection and processing of personal information is governed by the Privacy Policy. Users consent to processing, storage, and transfer of information necessary to provide the Service."},
             {h:"14. Termination",b:"Synapse may suspend or terminate access at any time. Upon termination, licenses cease immediately. Liability limitations, indemnification, arbitration provisions, and IP protections survive termination."},
             {h:"15. DISCLAIMER OF WARRANTIES",b:"TO THE MAXIMUM EXTENT PERMITTED BY LAW, THE SERVICE IS PROVIDED ON AN \"AS IS\" AND \"AS AVAILABLE\" BASIS. SYNAPSE EXPRESSLY DISCLAIMS ALL WARRANTIES, INCLUDING MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT."},
-            {h:"16. LIMITATION OF LIABILITY",b:"TO THE MAXIMUM EXTENT PERMITTED BY LAW, SYNAPSE SHALL NOT BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, OR CONSEQUENTIAL DAMAGES. AGGREGATE LIABILITY SHALL NOT EXCEED USD $100 OR THE TOTAL AMOUNT PAID BY THE USER IN THE PRECEDING 12 MONTHS."},
+            {h:"16. LIMITATION OF LIABILITY",b:"TO THE MAXIMUM EXTENT PERMITTED BY LAW, SYNAPSE SHALL NOT BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, OR CONSEQUENTIAL DAMAGES. AGGREGATE LIABILITY SHALL NOT EXCEED USD $100 OR THE TOTAL AMOUNT PAID BY THE USER IN THE PRECEDING 12 MONTHS. Nothing in this clause limits liability for Synapse's gross negligence, willful misconduct, or fraud, or any liability that cannot lawfully be excluded under applicable law."},
             {h:"17. Indemnification",b:"Users agree to defend, indemnify, and hold harmless Synapse from any claims, losses, liabilities, and legal fees arising from use of the Service, violation of these Terms, or infringement of third-party rights."},
             {h:"18. Force Majeure",b:"Synapse shall not be liable for delays or failures caused by circumstances beyond reasonable control, including natural disasters, internet failures, cyberattacks, governmental actions, or other force majeure events."},
             {h:"19. Dispute Resolution & Arbitration",b:"Any dispute arising from these Terms shall be resolved through binding arbitration. Users waive rights to jury trials and class action participation where legally permissible. Arbitration shall be conducted confidentially."},
-            {h:"20. Governing Law",b:"These Terms shall be governed by and construed in accordance with the laws of India. Any matter not subject to arbitration shall fall within the exclusive jurisdiction of competent courts in India."},
+            {h:"20. Governing Law",b:"These Terms are governed by the laws of India for Indian users and by applicable United States federal and state law for United States users, as further detailed in the full Terms and Conditions. Any matter not subject to arbitration shall fall within the exclusive jurisdiction of competent courts as specified therein."},
             {h:"21. Data Protection Compliance",b:"Synapse intends to comply with applicable privacy laws including the Digital Personal Data Protection Act, 2023; IT Act, 2000; IT Rules, 2021; GDPR where applicable; and CCPA/CPRA where applicable."},
             {h:"22–28. Additional Provisions",b:"Synapse reserves the right to modify these Terms at any time. Continued use constitutes acceptance. Electronic acceptance (checkboxes, account creation) constitutes a valid electronic signature. Beta features are provided on an \"as available\" basis without warranties. No guarantee of uninterrupted service availability. User feedback grants Synapse a perpetual, royalty-free right to use and incorporate such feedback."},
             {h:"29–37. Final Provisions",b:"Synapse may assign rights under these Terms without restriction. These Terms constitute the complete agreement between the parties. Export control compliance is the User's responsibility. Headings are for convenience only. Any rights not expressly granted are reserved exclusively by Synapse."},
@@ -3407,6 +3437,20 @@ function Confess({onSubmit,loading}) {
     setArchetype(id);
     if(proceed) setStep(1);
   };
+
+  // Fix: clicking "Next" at the bottom of a long step previously carried the
+  // scroll position straight into the next step, so the new step rendered
+  // already scrolled to wherever the old one left off (often mid/bottom of
+  // the page) instead of starting at the top. Force scroll-to-top on every
+  // step change, same pattern used by the top-level goTo() screen navigator.
+  useEffect(()=>{
+    document.documentElement.style.scrollBehavior="auto";
+    document.body.style.scrollBehavior="auto";
+    window.scrollTo(0,0);
+    document.documentElement.scrollTop=0;
+    document.body.scrollTop=0;
+    if(document.scrollingElement) document.scrollingElement.scrollTop=0;
+  },[step]);
 
   const handleSubmitWithArchetype=(prompt)=>{
     const arch = ARCHETYPES.find(a=>a.id===archetype);
@@ -4884,8 +4928,7 @@ function FeedbackSheet({theme,onClose}){
     const user=JSON.parse(localStorage.getItem("syn_user")||"{}");
     try{
       if(db){
-        const {collection:col,addDoc,serverTimestamp:sts}=await import("firebase/firestore");
-        await addDoc(col(db,"feedbacks"),{
+        const feedbackDoc=addDoc(collection(db,"feedbacks"),{
           uid:user.uid||"anonymous",
           name:user.name||"",
           email:user.email||"",
@@ -4895,8 +4938,18 @@ function FeedbackSheet({theme,onClose}){
           recommend,
           streak:parseInt(localStorage.getItem("syn_streak")||0),
           archetype:JSON.parse(localStorage.getItem("syn_archetype")||"{}").title||"",
-          timestamp:sts(),
+          timestamp:serverTimestamp(),
         });
+        // Bug fix: addDoc() had no timeout — if the write ever hung (flaky
+        // connection, misconfigured db), neither the try nor catch branch
+        // would ever resolve, and the button stayed on "Sending..." forever
+        // with no way out. Race it against a timeout so submission always
+        // completes from the user's perspective within a few seconds,
+        // regardless of what Firestore does in the background.
+        await Promise.race([
+          feedbackDoc,
+          new Promise((_,reject)=>setTimeout(()=>reject(new Error("feedback-write-timeout")),6000)),
+        ]);
       }else{
         // Fallback — save to localStorage if Firestore unavailable
         const saved=JSON.parse(localStorage.getItem("syn_feedbacks")||"[]");
@@ -5225,6 +5278,8 @@ function AppRoot() {
         // Already logged in — skip boot screen, go straight to app
         const sp=ls.get("syn_plan","");
         setScreen(sp?"checkin":"confess");
+        window.scrollTo(0,0);
+        if(document.scrollingElement) document.scrollingElement.scrollTop=0;
         // Retry any Firestore writes that failed/got stuck in a previous session
         // (closed app mid-sync, was offline, auth wasn't ready yet, etc.)
         flushSyncQueue();
