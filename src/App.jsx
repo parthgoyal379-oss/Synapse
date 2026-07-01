@@ -1393,16 +1393,34 @@ function AdminDashboard({theme,onClose}){
       // rejected — meaning the finally{} block below never ran either, so
       // the loading/refreshing spinner stayed on forever AND no fresh data
       // ever arrived, with no error surfaced. Racing against a timeout
-      // guarantees this always settles one way or the other within 10s.
-      const fetchPromise=Promise.all([
-        getDocs(collection(db,"users")),
-        getDocs(query(collection(db,"checkins"),orderBy("timestamp","desc"),limit(5000))),
-        getDocs(query(collection(db,"feedbacks"),orderBy("timestamp","desc"),limit(2000))),
-      ]);
-      const [uSnap,cSnap,fSnap]=await Promise.race([
-        fetchPromise,
-        new Promise((_,reject)=>setTimeout(()=>reject(new Error("admin-fetch-timeout")),10000)),
-      ]);
+      // guarantees this always settles one way or the other.
+      // Bug fix 2: a single 10s timeout was too aggressive for a cold
+      // Firestore connection (first load of the session), causing this to
+      // fall back to local-only data even when the account had valid read
+      // access. Bumped to 15s, with one retry at 25s if the first attempt
+      // times out specifically (not on other errors like permission-denied).
+      const attemptFetch=(timeoutMs)=>{
+        const fetchPromise=Promise.all([
+          getDocs(collection(db,"users")),
+          getDocs(query(collection(db,"checkins"),orderBy("timestamp","desc"),limit(5000))),
+          getDocs(query(collection(db,"feedbacks"),orderBy("timestamp","desc"),limit(2000))),
+        ]);
+        return Promise.race([
+          fetchPromise,
+          new Promise((_,reject)=>setTimeout(()=>reject(new Error("admin-fetch-timeout")),timeoutMs)),
+        ]);
+      };
+      let uSnap,cSnap,fSnap;
+      try{
+        [uSnap,cSnap,fSnap]=await attemptFetch(15000);
+      }catch(firstErr){
+        if(firstErr.message==="admin-fetch-timeout"){
+          console.warn("Admin fetch timed out once, retrying with longer timeout...");
+          [uSnap,cSnap,fSnap]=await attemptFetch(25000);
+        } else {
+          throw firstErr;
+        }
+      }
       const uData=uSnap.docs.map(d=>({id:d.id,...d.data()}));
       const cData=cSnap.docs.map(d=>({id:d.id,...d.data()}));
       const fData=fSnap.docs.map(d=>({id:d.id,...d.data()}));
@@ -4926,44 +4944,55 @@ function FeedbackSheet({theme,onClose}){
     if(!rating) return;
     setSubmitting(true);
     const user=JSON.parse(localStorage.getItem("syn_user")||"{}");
+    const feedbackData={
+      uid:user.uid||"anonymous",
+      name:user.name||"",
+      email:user.email||"",
+      rating,
+      best,
+      improve,
+      recommend,
+      streak:parseInt(localStorage.getItem("syn_streak")||0),
+      archetype:JSON.parse(localStorage.getItem("syn_archetype")||"{}").title||"",
+    };
+
+    // Bug fix: this used to fire-and-forget an addDoc() and, on any failure
+    // (timeout, permission error, offline), just console.warn and silently
+    // move on — the feedback vanished with zero trace, while the UI still
+    // told the user "sent". That's why submitted feedback wasn't showing up
+    // in the admin dashboard. Fixed by:
+    //   1. ALWAYS saving a local copy first, unconditionally — so even in
+    //      the worst case (Firestore is down, rules reject it) the feedback
+    //      still exists somewhere and isn't lost the moment the tab closes.
+    //   2. Using the same durableWrite() queue-and-retry system the rest of
+    //      the app uses for checkins/profile — if the write fails now, it's
+    //      automatically retried on next app load or reconnect via
+    //      flushSyncQueue(), instead of being a one-shot attempt.
+    try{
+      const saved=JSON.parse(localStorage.getItem("syn_feedbacks")||"[]");
+      saved.push({...feedbackData,date:new Date().toISOString()});
+      localStorage.setItem("syn_feedbacks",JSON.stringify(saved.slice(-50)));
+    }catch(le){ console.warn("Local feedback save failed:",le); }
+
     try{
       if(db){
-        const feedbackDoc=addDoc(collection(db,"feedbacks"),{
-          uid:user.uid||"anonymous",
-          name:user.name||"",
-          email:user.email||"",
-          rating,
-          best,
-          improve,
-          recommend,
-          streak:parseInt(localStorage.getItem("syn_streak")||0),
-          archetype:JSON.parse(localStorage.getItem("syn_archetype")||"{}").title||"",
+        const feedbackId=`fb_${user.uid||"anon"}_${Date.now()}`;
+        const ok=await durableWrite(`feedback_${feedbackId}`, "feedbacks", feedbackId, {
+          ...feedbackData,
           timestamp:serverTimestamp(),
         });
-        // Bug fix: addDoc() had no timeout — if the write ever hung (flaky
-        // connection, misconfigured db), neither the try nor catch branch
-        // would ever resolve, and the button stayed on "Sending..." forever
-        // with no way out. Race it against a timeout so submission always
-        // completes from the user's perspective within a few seconds,
-        // regardless of what Firestore does in the background.
-        await Promise.race([
-          feedbackDoc,
-          new Promise((_,reject)=>setTimeout(()=>reject(new Error("feedback-write-timeout")),6000)),
-        ]);
-      }else{
-        // Fallback — save to localStorage if Firestore unavailable
-        const saved=JSON.parse(localStorage.getItem("syn_feedbacks")||"[]");
-        saved.push({rating,best,improve,recommend,date:new Date().toISOString()});
-        localStorage.setItem("syn_feedbacks",JSON.stringify(saved));
+        if(!ok) console.warn("Feedback queued for retry — will sync automatically.");
       }
     }catch(e){
       console.warn("Feedback save:",e);
-      // Still show success — don't punish user for infra issues
+      // Local copy above already guarantees it isn't lost, and durableWrite
+      // has already queued it for automatic retry — nothing more to do here.
     }
     setSubmitting(false);
     setSubmitted(true);
     setTimeout(onClose,2500);
   };
+
 
   const inp={
     width:"100%",background:isL?"rgba(255,255,255,0.7)":"rgba(255,255,255,0.05)",
