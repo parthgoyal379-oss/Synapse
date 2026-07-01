@@ -1165,6 +1165,10 @@ input[type=range]{-webkit-appearance:none;appearance:none;background:transparent
   /* Force all Orbitron giant headings to scale down */
   [style*="font-size:clamp"]{font-size:clamp(28px,8vw,48px);}
 
+  /* ── Confess-flow glitch headlines (WHO ARE.../WHAT ARE.../TELL THE...) ── */
+  /* inline style min was too small on phones (28px @ ~7vw); bump it up so it reads as a proper headline */
+  .glitch-hl{font-size:clamp(38px,11vw,64px)!important;}
+
   /* ── Boot page ── */
   .boot-inner{padding:110px 5vw 60px !important;}
 
@@ -2121,7 +2125,7 @@ function Nav({screen,goTo,savedPlan,onReset,theme,onThemeToggle,user}) {
               </div>
             )}
           </div>
-          <button className="nav-pill danger" onClick={onReset} style={{flexShrink:0}}>Reset</button>
+          <a className="nav-pill" href={`mailto:synapserewire@gmail.com?subject=${encodeURIComponent("Report an Issue")}&body=${encodeURIComponent("Please describe the issue you encountered:\n\n\nSteps to reproduce:\n\n\nDevice/Browser:\n\n\nAdditional details:\n")}`} style={{flexShrink:0,textDecoration:"none",display:"inline-flex",alignItems:"center"}}>Report an Issue</a>
         </div>
       </div>
       {/* Row 2 — Screen tabs */}
@@ -3055,10 +3059,10 @@ function ArchetypeStep({ onSelect, selected }) {
 
       {/* Headline */}
       <div style={{position:"relative",lineHeight:.9,marginBottom:8,width:"100%"}}>
-        <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(28px,7vw,88px)",fontWeight:900,letterSpacing:-3,background:"var(--gradient-text)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",animation:"glitch1 9s ease-in-out infinite",lineHeight:.9}}>WHO ARE</div>
-        <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(28px,7vw,88px)",fontWeight:900,letterSpacing:-3,color:"rgba(255,80,0,.35)",animation:"glitch2 9s ease-in-out infinite",position:"absolute",top:0,left:0,lineHeight:.9}}>WHO ARE</div>
+        <div className="glitch-hl" style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(28px,7vw,88px)",fontWeight:900,letterSpacing:-3,background:"var(--gradient-text)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",animation:"glitch1 9s ease-in-out infinite",lineHeight:.9}}>WHO ARE</div>
+        <div className="glitch-hl" style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(28px,7vw,88px)",fontWeight:900,letterSpacing:-3,color:"rgba(255,80,0,.35)",animation:"glitch2 9s ease-in-out infinite",position:"absolute",top:0,left:0,lineHeight:.9}}>WHO ARE</div>
       </div>
-      <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(28px,7vw,88px)",fontWeight:900,letterSpacing:-3,background:"var(--gradient-text)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",lineHeight:.9,marginBottom:20}}>YOU BECOMING?</div>
+      <div className="glitch-hl" style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(28px,7vw,88px)",fontWeight:900,letterSpacing:-3,background:"var(--gradient-text)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",lineHeight:.9,marginBottom:20}}>YOU BECOMING?</div>
 
       <p style={{fontSize:15,color:"var(--text3)",fontWeight:300,lineHeight:1.75,maxWidth:500,marginBottom:52,textAlign:"center",margin:"0 auto 52px auto"}}>
         Choose the archetype that resonates with the version of yourself you're fighting to become.{" "}
@@ -3182,10 +3186,10 @@ function ConfessStep1({selected, onToggle, onNext}) {
         <span style={{fontSize:10,fontWeight:600,letterSpacing:2.5,color:"rgba(255,180,80,.65)",textTransform:"uppercase"}}>Step 02 of 05 — Select Your Poisons</span>
       </div>
       <div style={{position:"relative",lineHeight:.9,marginBottom:8}}>
-        <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(28px,7.5vw,96px)",fontWeight:900,letterSpacing:-3,background:"var(--gradient-text)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",animation:"glitch1 8s ease-in-out infinite",lineHeight:.9}}>WHAT ARE</div>
-        <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(28px,7.5vw,96px)",fontWeight:900,letterSpacing:-3,color:"rgba(255,80,0,.4)",animation:"glitch2 8s ease-in-out infinite",position:"absolute",top:0,left:0,lineHeight:.9}}>WHAT ARE</div>
+        <div className="glitch-hl" style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(28px,7.5vw,96px)",fontWeight:900,letterSpacing:-3,background:"var(--gradient-text)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",animation:"glitch1 8s ease-in-out infinite",lineHeight:.9}}>WHAT ARE</div>
+        <div className="glitch-hl" style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(28px,7.5vw,96px)",fontWeight:900,letterSpacing:-3,color:"rgba(255,80,0,.4)",animation:"glitch2 8s ease-in-out infinite",position:"absolute",top:0,left:0,lineHeight:.9}}>WHAT ARE</div>
       </div>
-      <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(28px,7.5vw,96px)",fontWeight:900,letterSpacing:-3,background:"var(--gradient-text)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",lineHeight:.9,marginBottom:24}}>YOUR POISONS?</div>
+      <div className="glitch-hl" style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(28px,7.5vw,96px)",fontWeight:900,letterSpacing:-3,background:"var(--gradient-text)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",lineHeight:.9,marginBottom:24}}>YOUR POISONS?</div>
       <p style={{fontSize:15,color:"var(--text3)",fontWeight:300,lineHeight:1.75,maxWidth:520,marginBottom:48,marginTop:8,textAlign:"center",marginLeft:"auto",marginRight:"auto"}}>
         Be honest. Select everything that has a grip on you —{" "}
         <span style={{color:"rgba(255,180,80,.6)",fontWeight:400}}>even if it feels embarrassing.</span>
@@ -3240,8 +3244,8 @@ function ConfessStep2({selected, hours, onHoursChange, onNext, onBack}) {
         <span style={{fontSize:10,fontWeight:600,letterSpacing:2.5,color:"rgba(255,180,80,.65)",textTransform:"uppercase"}}>Step 03 of 05 — Measure the Damage</span>
       </div>
       <div style={{textAlign:"center",marginBottom:28}}>
-        <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(26px,7vw,84px)",fontWeight:900,letterSpacing:-3,background:"var(--gradient-text)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",lineHeight:.9,overflow:"visible",width:"100%"}}>HOW MUCH</div>
-        <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(26px,7vw,84px)",fontWeight:900,letterSpacing:-3,background:"var(--gradient-text)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",lineHeight:.9,overflow:"visible",width:"100%",marginTop:8}}>& HOW OFTEN?</div>
+        <div className="glitch-hl" style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(26px,7vw,84px)",fontWeight:900,letterSpacing:-3,background:"var(--gradient-text)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",lineHeight:.9,overflow:"visible",width:"100%"}}>HOW MUCH</div>
+        <div className="glitch-hl" style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(26px,7vw,84px)",fontWeight:900,letterSpacing:-3,background:"var(--gradient-text)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",lineHeight:.9,overflow:"visible",width:"100%",marginTop:8}}>& HOW OFTEN?</div>
         <p style={{fontSize:14,color:"var(--text3)",fontWeight:300,lineHeight:1.9,maxWidth:480,marginBottom:0,textAlign:"center",margin:"20px auto 0"}}>Screen addictions are measured in hours per day. Urge-based addictions are measured in times per week. Be brutally honest.</p>
       </div>
       <div style={{display:"flex",flexDirection:"column",gap:18,marginBottom:40}}>
@@ -3331,8 +3335,8 @@ function ConfessStep3({selected, hours, onNext, onBack}) {
         <div style={{width:6,height:6,borderRadius:"50%",background:"#ff4444",boxShadow:"0 0 10px #ff4444",animation:"pulseRing 1.4s ease-out infinite"}}/>
         <span style={{fontSize:10,fontWeight:600,letterSpacing:2.5,color:"rgba(255,120,100,.7)",textTransform:"uppercase"}}>Step 04 of 05 — The Real Cost</span>
       </div>
-      <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(26px,7vw,84px)",fontWeight:900,letterSpacing:-3,background:"linear-gradient(160deg,#ff4444 0%,#ff8844 60%,rgba(255,180,80,.7) 100%)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",lineHeight:.9,marginBottom:8}}>WHAT YOU</div>
-      <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(26px,7vw,84px)",fontWeight:900,letterSpacing:-3,background:"linear-gradient(160deg,#ff4444 0%,#ff8844 60%,rgba(255,180,80,.7) 100%)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",lineHeight:.9,marginBottom:36}}>ARE LOSING.</div>
+      <div className="glitch-hl" style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(26px,7vw,84px)",fontWeight:900,letterSpacing:-3,background:"linear-gradient(160deg,#ff4444 0%,#ff8844 60%,rgba(255,180,80,.7) 100%)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",lineHeight:.9,marginBottom:8}}>WHAT YOU</div>
+      <div className="glitch-hl" style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(26px,7vw,84px)",fontWeight:900,letterSpacing:-3,background:"linear-gradient(160deg,#ff4444 0%,#ff8844 60%,rgba(255,180,80,.7) 100%)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",lineHeight:.9,marginBottom:36}}>ARE LOSING.</div>
       <div style={{marginBottom:40,height:52,display:"flex",alignItems:"center"}}>
         <div style={{display:"flex",alignItems:"center",gap:12,opacity:tagVis?1:0,transform:tagVis?"translateY(0)":"translateY(10px)",transition:"all .4s cubic-bezier(.16,1,.3,1)"}}>
           <div style={{width:4,height:4,borderRadius:"50%",background:"#ff4444",flexShrink:0,boxShadow:"0 0 8px #ff4444"}}/>
@@ -3397,10 +3401,10 @@ function ConfessStep4({selected, hours, onSubmit, loading, onBack}) {
         <span style={{fontSize:10,fontWeight:600,letterSpacing:2.5,color:"rgba(255,180,80,.65)",textTransform:"uppercase"}}>Step 05 of 05 — Final Confession</span>
       </div>
       <div style={{position:"relative",lineHeight:.9,marginBottom:8}}>
-        <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(28px,7.5vw,96px)",fontWeight:900,letterSpacing:-3,background:"var(--gradient-text)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",animation:"glitch1 7s ease-in-out infinite"}}>TELL THE</div>
-        <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(28px,7.5vw,96px)",fontWeight:900,letterSpacing:-3,color:"rgba(255,80,0,.4)",animation:"glitch2 7s ease-in-out infinite",position:"absolute",top:0,left:0}}>TELL THE</div>
+        <div className="glitch-hl" style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(28px,7.5vw,96px)",fontWeight:900,letterSpacing:-3,background:"var(--gradient-text)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",animation:"glitch1 7s ease-in-out infinite"}}>TELL THE</div>
+        <div className="glitch-hl" style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(28px,7.5vw,96px)",fontWeight:900,letterSpacing:-3,color:"rgba(255,80,0,.4)",animation:"glitch2 7s ease-in-out infinite",position:"absolute",top:0,left:0}}>TELL THE</div>
       </div>
-      <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(28px,7.5vw,96px)",fontWeight:900,letterSpacing:-3,background:"var(--gradient-text)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",lineHeight:.9,marginBottom:20}}>TRUTH.</div>
+      <div className="glitch-hl" style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(28px,7.5vw,96px)",fontWeight:900,letterSpacing:-3,background:"var(--gradient-text)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",lineHeight:.9,marginBottom:20}}>TRUTH.</div>
       <p style={{fontSize:14,color:"var(--text4)",fontWeight:300,lineHeight:1.9,maxWidth:480,marginBottom:36}}>Anything extra SYNAPSE should know? How long, what you've tried, your biggest struggle? <span style={{color:"rgba(255,180,80,.45)"}}>Optional — your plan generates either way.</span></p>
       <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:28}}>
         {selectedAddictions.map(a=>{ const rgb=a.color.replace('#','').match(/.{2}/g).map(x=>parseInt(x,16)).join(','); const v=hours[a.id]||0; const unitStr=FREQ_ADDICTIONS.has(a.id)?`${v}x/d`:`${v}h/d`; return(<div key={a.id} style={{display:"flex",alignItems:"center",gap:6,background:`rgba(${rgb},.1)`,border:`1px solid rgba(${rgb},.28)`,borderRadius:999,padding:"5px 12px",fontSize:10,color:`rgba(${rgb},1)`}}><span>{a.emoji}</span><span>{a.label}</span><span style={{opacity:.4}}>·</span><span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:9}}>{unitStr}</span></div>); })}
@@ -3886,7 +3890,7 @@ function Plan({plan,loading,onBegin,onRetry}) {
       <div className="hero-pad" style={{padding:"clamp(60px,8vw,80px) clamp(20px,8vw,100px) clamp(40px,5vw,64px)",borderBottom:"1px solid rgba(255,140,0,0.07)",position:"relative",zIndex:1}}>
         <div style={{position:"absolute",inset:0,background:"radial-gradient(ellipse at 30% 60%, rgba(255,100,0,0.06) 0%, transparent 60%)",pointerEvents:"none"}}/>
         <div className="tag s1" style={{marginBottom:24}}><span className="d"/>Recovery Protocol</div>
-        <h2 className="s2" style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(32px,8vw,104px)",fontWeight:800,lineHeight:.88,letterSpacing:-3,background:"var(--gradient-text)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent"}}>YOUR<br/>MISSION.</h2>
+        <h2 className="s2 glitch-hl" style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(32px,8vw,104px)",fontWeight:800,lineHeight:.88,letterSpacing:-3,background:"var(--gradient-text)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent"}}>YOUR<br/>MISSION.</h2>
       </div>
       <div className="content-pad" style={{maxWidth:820,margin:"0 auto",padding:"clamp(40px,6vw,72px) clamp(16px,8vw,100px)",position:"relative",zIndex:1}}>
         <div className="tag s1" style={{marginBottom:32}}><span className="d"/>Synapse Recovery Plan</div>
@@ -4438,7 +4442,7 @@ function History({history}) {
       <div style={{padding:"clamp(60px,8vw,80px) clamp(20px,8vw,100px) clamp(40px,5vw,64px)",borderBottom:"1px solid rgba(255,140,0,0.07)",position:"relative",zIndex:1}}>
         <div style={{position:"absolute",inset:0,background:"radial-gradient(ellipse at 80% 40%, rgba(255,100,0,0.06) 0%, transparent 60%)",pointerEvents:"none"}}/>
         <div className="tag s1" style={{marginBottom:24}}><span className="d"/>Mission Log</div>
-        <h2 className="s2" style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(32px,8vw,104px)",fontWeight:800,lineHeight:.88,letterSpacing:-3,background:"var(--gradient-text)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent"}}>YOUR<br/>RECORD.</h2>
+        <h2 className="s2 glitch-hl" style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(32px,8vw,104px)",fontWeight:800,lineHeight:.88,letterSpacing:-3,background:"var(--gradient-text)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent"}}>YOUR<br/>RECORD.</h2>
       </div>
       <div style={{maxWidth:820,margin:"0 auto",padding:"clamp(40px,6vw,72px) clamp(16px,8vw,100px)",position:"relative",zIndex:1}}>
         <div className="tag s1" style={{marginBottom:40}}><span className="d"/>{history.length} entries logged</div>
@@ -4531,7 +4535,7 @@ function Report({history,savedPlan,streak,planHistory}) {
       <div style={{padding:"clamp(60px,8vw,80px) clamp(20px,8vw,100px) clamp(40px,5vw,64px)",borderBottom:"1px solid rgba(255,140,0,0.07)",position:"relative",zIndex:1}}>
         <div style={{position:"absolute",inset:0,background:"radial-gradient(ellipse at 60% 40%, rgba(255,100,0,0.07) 0%, transparent 60%)",pointerEvents:"none"}}/>
         <div className="tag s1" style={{marginBottom:24}}><span className="d"/>Neural Report</div>
-        <h2 className="s2" style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(32px,8vw,104px)",fontWeight:800,lineHeight:.88,letterSpacing:-3,background:"var(--gradient-text)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent"}}>YOUR<br/>REWIRING.</h2>
+        <h2 className="s2 glitch-hl" style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(32px,8vw,104px)",fontWeight:800,lineHeight:.88,letterSpacing:-3,background:"var(--gradient-text)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent"}}>YOUR<br/>REWIRING.</h2>
       </div>
       <div style={{maxWidth:820,margin:"0 auto",padding:"clamp(40px,6vw,72px) clamp(16px,8vw,100px)",position:"relative",zIndex:1}}>
 
@@ -4817,7 +4821,7 @@ function Chat({streak,savedPlan}){
           <div style={{width:6,height:6,borderRadius:"50%",background:"#ff8c00",boxShadow:"0 0 10px #ff8c00",animation:"pulse 1.5s ease-in-out infinite"}}/>
           <span style={{fontSize:10,fontWeight:600,letterSpacing:2.5,color:"rgba(255,180,80,.65)",textTransform:"uppercase"}}>SYNAPSE Coach — Live</span>
         </div>
-        <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(24px,5.5vw,52px)",fontWeight:900,letterSpacing:-2,background:"linear-gradient(135deg,#fff,rgba(255,180,80,.7))",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",lineHeight:.95,marginBottom:14}}>TALK TO<br/>SYNAPSE</div>
+        <div className="glitch-hl" style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(24px,5.5vw,52px)",fontWeight:900,letterSpacing:-2,background:"linear-gradient(135deg,#fff,rgba(255,180,80,.7))",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",lineHeight:.95,marginBottom:14}}>TALK TO<br/>SYNAPSE</div>
         <p style={{fontSize:13,color:"var(--text4)",lineHeight:1.8,maxWidth:"100%",margin:"0 0 24px 0"}}>Ask anything about your recovery — urges, relapses, streaks, cravings, your battle plan. I stay on topic.</p>
 
         {/* Mode selector */}
@@ -4888,7 +4892,7 @@ function BattlePlanPreview({plan,loading,onAuth,onBack}){
           <div style={{width:6,height:6,borderRadius:"50%",background:"#ff8c00",boxShadow:"0 0 10px #ff8c00",animation:"pulse 1.5s ease-in-out infinite"}}/>
           <span style={{fontSize:10,fontWeight:600,letterSpacing:2.5,color:"rgba(255,180,80,.65)",textTransform:"uppercase"}}>Your Battle Plan — Preview</span>
         </div>
-        <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(28px,6vw,64px)",fontWeight:900,letterSpacing:-2,background:"linear-gradient(135deg,#fff,rgba(255,180,80,.7))",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",lineHeight:.92,marginBottom:16}}>YOUR PLAN<br/>IS READY.</div>
+        <div className="glitch-hl" style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(28px,6vw,64px)",fontWeight:900,letterSpacing:-2,background:"linear-gradient(135deg,#fff,rgba(255,180,80,.7))",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",lineHeight:.92,marginBottom:16}}>YOUR PLAN<br/>IS READY.</div>
         <p style={{fontSize:14,color:"var(--text3)",lineHeight:1.8,maxWidth:480}}>SYNAPSE has built your personalized recovery protocol. Create an account to lock it in and begin Day 1.</p>
       </div>
 
@@ -5538,7 +5542,7 @@ function AppRoot() {
      from the exact check-in timestamp — so a user who checks in at 11pm
      one day and 1am the next still counts as "checked in two days running".
   ──────────────────────────────────────────────────────────────────────── */
-  const thisMonthKey=()=>new Date().toISOString().slice(0,7); // "2026-07"
+  const thisMonthKey=()=>{const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`;}; // local calendar month, e.g. "2026-07" — was previously computed via toISOString() (UTC), which for positive-offset timezones (e.g. IST) reports the *previous* month for the first several hours of a new local month, occasionally denying a freshly-available lifeline right after a month rollover.
 
   const breakStreak=(missed)=>{
     const today=new Date().toDateString();
@@ -5573,15 +5577,28 @@ function AppRoot() {
 
   const useLifeline=()=>{
     const month=thisMonthKey();
+    const today=new Date().toDateString();
     ls.set("syn_lifeline_month",month);
     setLifelineMonth(month);
     setShowLifelinePrompt(false);
-    // Streak is forgiven — we deliberately don't touch streak or lastCI here.
-    // Today's check-in (when the user does it) proceeds normally through
-    // handleCheckin and increments the streak as usual.
+    // Forgive the gap: advance lastCI to today, same as a real check-in would.
+    // BUGFIX: this used to be left untouched ("we deliberately don't touch
+    // streak or lastCI here"), which meant the missed-day gap was still
+    // sitting there unresolved. If the user closed the tab without checking
+    // in right away and reopened the app later — even later the *same* day —
+    // the mount effect above would run again, see the same stale gap, find
+    // the lifeline already marked as used this month, and call breakStreak()
+    // anyway. That's the exact "lifeline doesn't protect the streak" bug:
+    // the streak silently reset on the very next reload after being "saved".
+    // Advancing lastCI here closes the gap immediately so gapDays is 0/1 on
+    // any later mount, and the streak count itself is untouched (still
+    // forgiven, not incremented) — today's real check-in still increments
+    // it normally through handleCheckin, exactly as before.
+    setLastCI(today);
+    ls.set("syn_last", today);
     const uid=auth.currentUser?.uid;
     if(uid){
-      durableWrite(`lifeline_${uid}_${month}`, "users", uid, {lastLifelineUsed:month, lastSeen:serverTimestamp()});
+      durableWrite(`lifeline_${uid}_${month}`, "users", uid, {lastLifelineUsed:month, lastCheckin:today, lastSeen:serverTimestamp()});
     }
   };
 
@@ -5589,6 +5606,7 @@ function AppRoot() {
     setShowLifelinePrompt(false);
     breakStreak(missedDays);
   };
+
 
   const handleReset=()=>{
     if(!confirm("Reset all progress? This cannot be undone."))return;
