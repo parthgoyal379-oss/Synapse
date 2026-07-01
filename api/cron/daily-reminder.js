@@ -29,16 +29,16 @@
 // here so future-you doesn't get confused; not fixed because building real
 // per-user timezone tracking is a separate, bigger feature.
 
-import admin from "firebase-admin";
-
+import { getApps, initializeApp, cert } from "firebase-admin/app";
+import { getFirestore, FieldValue } from "firebase-admin/firestore";
+import { getMessaging } from "firebase-admin/messaging";
 function getAdminApp() {
-  if (admin.apps.length) return admin.app();
-  return admin.initializeApp({
-    credential: admin.credential.cert({
+  if (getApps().length) return getApps()[0];
+
+  return initializeApp({
+    credential: cert({
       projectId: process.env.FIREBASE_PROJECT_ID,
       clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-      // Vercel env vars store literal "\n" as two characters — convert back
-      // to real newlines or the private key won't parse.
       privateKey: (process.env.FIREBASE_PRIVATE_KEY || "").replace(/\\n/g, "\n"),
     }),
   });
@@ -67,8 +67,8 @@ export default async function handler(req, res) {
 
   try {
     const app = getAdminApp();
-    const db = admin.firestore(app);
-    const messaging = admin.messaging(app);
+const db = getFirestore(app);
+const messaging = getMessaging(app);
 
     const today = todayISTDateString();
 
@@ -139,7 +139,7 @@ export default async function handler(req, res) {
     if (tokensToRemove.length) {
       const writeBatch = db.batch();
       tokensToRemove.forEach(uid => {
-        writeBatch.update(db.collection("users").doc(uid), { fcmToken: admin.firestore.FieldValue.delete() });
+        writeBatch.update(db.collection("users").doc(uid), { fcmToken: FieldValue.delete() });
       });
       await writeBatch.commit();
     }
