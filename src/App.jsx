@@ -1206,8 +1206,12 @@ input[type=range]{-webkit-appearance:none;appearance:none;background:transparent
   [style*="font-size:clamp"]{font-size:clamp(28px,8vw,48px);}
 
   /* ── Confess-flow glitch headlines (WHO ARE.../WHAT ARE.../TELL THE...) ── */
-  /* inline style min was too small on phones (28px @ ~7vw); bump it up so it reads as a proper headline */
-  .glitch-hl{font-size:clamp(38px,11vw,64px)!important;}
+  /* Previous mobile size (38-64px) with the desktop -3px letter-spacing
+     still applied made these read cramped/glitchy instead of bold — the
+     -3px spacing was tuned for the much larger desktop sizes (84-104px)
+     and is too tight once the font shrinks down for phones. Bumped the
+     size up and loosened the tracking specifically on mobile. */
+  .glitch-hl{font-size:clamp(44px,13vw,76px)!important;letter-spacing:-1.5px!important;}
 
   /* ── Boot page ── */
   .boot-inner{padding:110px 5vw 60px !important;}
