@@ -3,7 +3,7 @@ import { auth, googleProvider, db, storage, messaging, requestNotificationPermis
 import {
   signInWithEmailAndPassword, createUserWithEmailAndPassword,
   signInWithPopup, signOut, onAuthStateChanged, updateProfile,
-  sendPasswordResetEmail
+  sendPasswordResetEmail, sendEmailVerification
 } from "firebase/auth";
 import { ref as sRef, uploadBytes, getDownloadURL } from "firebase/storage";
 import {
@@ -67,22 +67,39 @@ async function callAI(userMessages, systemPrompt, opts={}) {
   return data.choices?.[0]?.message?.content || "Keep going. You showed up today — that's the mission.";
 }
 
-const SYSTEM_SAFETY_CLASSIFIER = `You are a mental health safety classifier. Analyze the user message for indirect or subtle signs of suicidal ideation, self-harm intent, or severe hopelessness — including phrases like "everyone would be better off without me", "I don't see the point anymore", "I can't do this anymore", "I just want it to stop", "nobody would miss me", or similar indirect language. Respond with ONLY valid JSON: {"risk": true} or {"risk": false}. No explanation. No other text.`;
+const SYSTEM_SAFETY_CLASSIFIER = `You are a mental health safety classifier. Analyze the user message for indirect or subtle signs of suicidal ideation, self-harm intent, or severe hopelessness — including phrases like "everyone would be better off without me", "I don't see the point anymore", "I can't do this anymore", "I just want it to stop", "nobody would miss me", or similar indirect language. Respond with ONLY compact JSON, no whitespace, no markdown, no explanation: {"risk":true} or {"risk":false}`;
 
 async function checkSafetyRisk(text) {
-  // Fail closed — if anything goes wrong, treat as risk
+  // Fail closed — if the API call itself errors (network/auth/rate-limit),
+  // treat as risk. But a truncated/malformed JSON response from the model
+  // is NOT the same as "the check failed" — it used to be treated as one
+  // (JSON.parse throwing was caught by the same fail-closed branch as a
+  // real network error), which meant any time the model's output got cut
+  // off mid-JSON, ALL subsequent messages — including harmless ones like
+  // "hi" — got flagged as crisis. We now try a lenient regex extraction
+  // first, and only fail closed if we truly can't tell either way.
+  let raw;
   try {
-    const raw = await callAI(
+    raw = await callAI(
       [{ role: "user", content: text }],
       SYSTEM_SAFETY_CLASSIFIER,
-      { temperature: 0, max_tokens: 20 }
+      { temperature: 0, max_tokens: 30 }
     );
-    const clean = raw.replace(/```json|```/g,"").trim();
+  } catch(e) {
+    console.warn("Safety classifier request failed (failing closed):", e.message);
+    return true; // real API/network failure — fail closed
+  }
+  const clean = raw.replace(/```json|```/g,"").trim();
+  try {
     const parsed = JSON.parse(clean);
     return parsed.risk === true;
   } catch(e) {
-    console.warn("Safety classifier error (failing closed):", e.message);
-    return true; // fail closed
+    // Malformed/truncated JSON — don't fail closed. Try to read the intent
+    // out of the raw text directly before giving up.
+    const m = clean.match(/"?risk"?\s*:\s*(true|false)/i);
+    if(m) return m[1].toLowerCase() === "true";
+    console.warn("Safety classifier returned unparseable output, treating as no-risk:", clean);
+    return false;
   }
 }
 
@@ -2820,6 +2837,12 @@ function Auth({ onAuth, context="" }) {
       if(mode === "signup") {
         cred = await createUserWithEmailAndPassword(auth, email.trim(), password);
         await updateProfile(cred.user, { displayName: name.trim() });
+        // Fire-and-forget — never block signup on this. Firebase's own
+        // rate limiting protects the endpoint from abuse (e.g. spamming
+        // verification emails to someone else's inbox via repeated signup
+        // attempts on an already-taken address, which createUser would
+        // reject before we even get here).
+        sendEmailVerification(cred.user).catch(e=>console.warn("Verification email failed:",e));
       } else {
         cred = await signInWithEmailAndPassword(auth, email.trim(), password);
       }
@@ -4244,8 +4267,8 @@ function Checkin({streak,savedPlan,lastCheckin,onCheckin,onGoChat}) {
             <div style={{width:7,height:7,borderRadius:"50%",background:lv.color,boxShadow:`0 0 12px ${lv.color}`,transition:"all .8s"}}/>
             <span style={{fontSize:11,letterSpacing:2,color:document.documentElement.classList.contains("light")?lv.color.replace("0.","0.9"):lv.color,textTransform:"uppercase",fontWeight:700,transition:"color .8s"}}>Level {lv.level} — {lv.title}</span>
           </div>
-          <div style={{maxWidth:480}}>
-            <div style={{display:"flex",justifyContent:"space-between",fontSize:10,color:document.documentElement.classList.contains("light")?"rgba(26,26,26,0.45)":"var(--text4)",letterSpacing:1,textTransform:"uppercase",marginBottom:10,fontWeight:500}}><span>{lv.title}</span><span>{nx?`${streak} / ${nx.minDays} days`:"MAX LEVEL REACHED"}</span></div>
+          <div style={{maxWidth:480,margin:"0 auto"}}>
+            <div style={{display:"flex",justifyContent:"center",gap:14,fontSize:10,color:document.documentElement.classList.contains("light")?"rgba(26,26,26,0.45)":"var(--text4)",letterSpacing:1,textTransform:"uppercase",marginBottom:10,fontWeight:500}}><span>{lv.title}</span><span>{nx?`${streak} / ${nx.minDays} days`:"MAX LEVEL REACHED"}</span></div>
             <div style={{height:4,background:document.documentElement.classList.contains("light")?"rgba(0,0,0,0.08)":"rgba(255,255,255,0.05)",borderRadius:2,overflow:"hidden"}}><div style={{height:"100%",borderRadius:2,background:`linear-gradient(90deg,${lv.color}cc,${lv.color})`,boxShadow:`0 0 14px ${lv.color}80`,width:`${xp}%`,transition:"width 1.6s cubic-bezier(.16,1,.3,1) .3s"}}/></div>
           </div>
         </div>

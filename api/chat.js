@@ -129,7 +129,7 @@ export default async function handler(req, res) {
 
   // Detect safety classifier call: temp==0, max_tokens<=20
   const isSafetyCall =
-    body.temperature === 0 && body.max_tokens <= 20;
+    body.temperature === 0 && body.max_tokens <= 30;
 
   if (isSafetyCall) {
     // Safety calls keep the old lenient per-IP tier, untouched by the
