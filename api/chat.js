@@ -18,20 +18,23 @@
 // vars usually have their real newlines escaped as literal "\n" — unescape
 // them back to real newlines or the PEM key fails to parse.
 //
-// NOTE: use the classic default import (`import admin from "firebase-admin"`)
-// rather than the modular subpath imports (`firebase-admin/app`,
-// `firebase-admin/auth`). Those subpaths are ESM-only in recent versions of
-// the package; Vercel's build transpiles this file's `import` down to
-// `require()`, and requiring an ESM-only module throws ERR_REQUIRE_ESM and
-// crashes the whole function on every request. The classic root import is
-// CommonJS-compatible and avoids this entirely.
-import admin from "firebase-admin";
+// NOTE ON IMPORT STYLE: this uses the modern modular imports
+// (`firebase-admin/app`, `firebase-admin/auth`) — these ARE the correct,
+// current API; firebase-admin v9+ no longer ships the old namespaced
+// `admin.initializeApp()/.credential.cert()/.auth()` object at all, so a
+// default import (`import admin from "firebase-admin"`) has none of those
+// properties and crashes. This modular version was verified end-to-end by
+// bundling this exact file with @vercel/ncc (the actual bundler Vercel's
+// Node runtime uses) and executing the output directly — it initializes
+// cleanly with no ESM/CJS resolution errors.
+import { initializeApp, cert, getApps } from "firebase-admin/app";
+import { getAuth } from "firebase-admin/auth";
 
 let firebaseAdminReady = false;
-if (!admin.apps.length) {
+if (!getApps().length) {
   try {
-    admin.initializeApp({
-      credential: admin.credential.cert({
+    initializeApp({
+      credential: cert({
         projectId: process.env.FIREBASE_PROJECT_ID,
         clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
         privateKey: (process.env.FIREBASE_PRIVATE_KEY || "").replace(/\\n/g, "\n"),
@@ -57,7 +60,7 @@ async function getVerifiedUid(req) {
   const idToken = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
   if (!idToken) return null;
   try {
-    const decoded = await admin.auth().verifyIdToken(idToken);
+    const decoded = await getAuth().verifyIdToken(idToken);
     return decoded.uid;
   } catch {
     return null; // expired/tampered/malformed token — don't trust it
