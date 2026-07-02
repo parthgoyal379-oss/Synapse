@@ -39,12 +39,24 @@ async function getVerifiedUid(req) {
   }
 }
 
-// ── Safety-classifier limiter (unchanged) ───────────────────────────────────
-// Internal calls the app fires automatically (temp==0, max_tokens<=20) to
-// screen every message for crisis language before it ever reaches the coach
-// model. These are NOT "chatbot messages" from the user's point of view, so
-// they don't count against the Free Plan chat limits below — they get their
-// own generous per-IP allowance so they never block a real conversation.
+// ── Safety-classifier limiter ────────────────────────────────────────────────
+// Internal calls the app fires automatically to screen every message for
+// crisis language before it ever reaches the coach model. These are NOT
+// "chatbot messages" from the user's point of view, so they don't count
+// against the Free Plan chat limits below — they get their own generous
+// per-IP allowance so they never block a real conversation.
+//
+// SECURITY FIX: `isSafetyCall` used to be decided purely from client-supplied
+// `temperature`/`max_tokens` fields. Anyone could set temperature:0 and
+// max_tokens:30 on a request carrying a real conversation and get routed
+// into the lenient 60/min safety tier instead of the 7/min Free Plan tier —
+// an easy rate-limit bypass. Now, whenever a request claims to be a safety
+// call, the server ignores whatever `messages`/system-prompt the client sent
+// and rebuilds the Groq request itself from a fixed, server-owned system
+// prompt plus only the extracted user text — so spoofing the tier gains an
+// attacker nothing but the real classifier's own (tiny, fixed-shape) output.
+const SAFETY_SYSTEM_PROMPT = `You are a mental health safety classifier. Analyze the user message for indirect or subtle signs of suicidal ideation, self-harm intent, or severe hopelessness — including phrases like "everyone would be better off without me", "I don't see the point anymore", "I can't do this anymore", "I just want it to stop", "nobody would miss me", or similar indirect language. Respond with ONLY compact JSON, no whitespace, no markdown, no explanation: {"risk":true} or {"risk":false}`;
+
 const WINDOW_MS       = 60 * 1000;
 const MAX_REQ_SAFETY  = 60;
 const ipMap           = new Map(); // { key: { count, resetAt } }
@@ -127,7 +139,11 @@ export default async function handler(req, res) {
   // Verify identity server-side — never trust a client-supplied uid.
   const verifiedUid = await getVerifiedUid(req);
 
-  // Detect safety classifier call: temp==0, max_tokens<=20
+  // Tier is still *signaled* by temp==0 && max_tokens<=30, but that signal
+  // is no longer trusted for content — see SECURITY FIX above. If it's
+  // wrong, the worst case is a real chat message gets the safety tier's
+  // rate limit, but the actual model call below is always rebuilt from
+  // scratch for that branch, so there's nothing to gain by lying about it.
   const isSafetyCall =
     body.temperature === 0 && body.max_tokens <= 30;
 
@@ -139,8 +155,47 @@ export default async function handler(req, res) {
         error: { message: "Safety check rate limited — try again shortly." },
       });
     }
-  } else {
-    // Real chatbot messages — Free Plan limits apply here.
+
+    // Pull out only the raw text the client wants classified — a single
+    // user-role message's string content. Everything else the client sent
+    // (fake system prompts, extra messages, a different model, etc.) is
+    // discarded. The Groq request is rebuilt entirely server-side so
+    // claiming "I'm a safety call" never buys an attacker a real chat
+    // completion, only ever the classifier's own tiny fixed-shape output.
+    const userText = Array.isArray(body.messages)
+      ? body.messages.find(m => m?.role === "user")?.content
+      : null;
+
+    if (typeof userText !== "string" || !userText.trim()) {
+      return res.status(400).json({ error: "Invalid request body." });
+    }
+
+    try {
+      const groqRes = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${process.env.GROQ_KEY}`,
+        },
+        body: JSON.stringify({
+          model: "llama-3.3-70b-versatile",
+          temperature: 0,
+          max_tokens: 30,
+          messages: [
+            { role: "system", content: SAFETY_SYSTEM_PROMPT },
+            { role: "user", content: userText.slice(0, 4000) }, // cap input size too
+          ],
+        }),
+      });
+      const data = await groqRes.json();
+      return res.status(groqRes.status).json(data);
+    } catch (err) {
+      return res.status(500).json({ error: "Proxy error", details: err.message });
+    }
+  }
+
+  // ── Real chatbot messages from here on — Free Plan limits apply. ──────────
+  {
     // Keyed by the *verified* uid when signed in; anonymous requests fall
     // back to IP. A spoofed body.uid can no longer affect this.
     const userKey = verifiedUid ? `uid:${verifiedUid}` : `ip:${ip}`;
