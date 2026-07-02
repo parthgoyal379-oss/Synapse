@@ -17,14 +17,21 @@
 // FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY. Private keys stored in env
 // vars usually have their real newlines escaped as literal "\n" — unescape
 // them back to real newlines or the PEM key fails to parse.
-import { initializeApp, cert, getApps } from "firebase-admin/app";
-import { getAuth } from "firebase-admin/auth";
+//
+// NOTE: use the classic default import (`import admin from "firebase-admin"`)
+// rather than the modular subpath imports (`firebase-admin/app`,
+// `firebase-admin/auth`). Those subpaths are ESM-only in recent versions of
+// the package; Vercel's build transpiles this file's `import` down to
+// `require()`, and requiring an ESM-only module throws ERR_REQUIRE_ESM and
+// crashes the whole function on every request. The classic root import is
+// CommonJS-compatible and avoids this entirely.
+import admin from "firebase-admin";
 
 let firebaseAdminReady = false;
-if (!getApps().length) {
+if (!admin.apps.length) {
   try {
-    initializeApp({
-      credential: cert({
+    admin.initializeApp({
+      credential: admin.credential.cert({
         projectId: process.env.FIREBASE_PROJECT_ID,
         clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
         privateKey: (process.env.FIREBASE_PRIVATE_KEY || "").replace(/\\n/g, "\n"),
@@ -50,7 +57,7 @@ async function getVerifiedUid(req) {
   const idToken = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
   if (!idToken) return null;
   try {
-    const decoded = await getAuth().verifyIdToken(idToken);
+    const decoded = await admin.auth().verifyIdToken(idToken);
     return decoded.uid;
   } catch {
     return null; // expired/tampered/malformed token — don't trust it
