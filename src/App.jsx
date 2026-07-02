@@ -20,6 +20,15 @@ import {
   Activity, LogOut, Settings, User, Mail
 } from "lucide-react";
 
+/* Escapes free-text user input before it's interpolated into a raw HTML
+   string (document.write PDF export windows). Prevents self-XSS if a
+   display name contains HTML/script characters. */
+function escapeHtml(str) {
+  return String(str ?? "").replace(/[&<>"']/g, (c) => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
+  }[c]));
+}
+
 /* ─── GROQ API HELPER ─────────────────────────────────────────────────────
    Calls go through /api/chat (Vercel serverless function).
    GROQ_KEY lives in Vercel env variables — never in the frontend bundle.
@@ -2899,8 +2908,17 @@ function Auth({ onAuth, context="" }) {
     if(!email.trim()){ setError("Enter your email above first."); return; }
     try {
       await sendPasswordResetEmail(auth, email.trim());
-      setResetSent(true); setError("");
-    } catch(e) { setError(getErrorMsg(e.code)); }
+    } catch(e) {
+      // Deliberately swallow auth/user-not-found (and invalid-email) so the
+      // response is identical whether or not the email is registered.
+      // This prevents email enumeration via the forgot-password flow.
+      if (e.code !== "auth/user-not-found" && e.code !== "auth/invalid-email") {
+        setError(getErrorMsg(e.code));
+        return;
+      }
+    }
+    // Always show the same neutral success state, regardless of outcome.
+    setResetSent(true); setError("");
   };
 
   const inputStyle = (field) => ({
@@ -3914,7 +3932,7 @@ function Plan({plan,loading,onBegin,onRetry}) {
   </div>
 </div>
 <div class="meta">
-  <div class="meta-item"><div class="meta-label">Soldier</div><div class="meta-value">${user.name||"Anonymous"}</div></div>
+  <div class="meta-item"><div class="meta-label">Soldier</div><div class="meta-value">${escapeHtml(user.name||"Anonymous")}</div></div>
   <div class="meta-item"><div class="meta-label">Streak</div><div class="meta-value">Day ${streak}</div></div>
   <div class="meta-item"><div class="meta-label">Issued</div><div class="meta-value">${date}</div></div>
   <div class="meta-item"><div class="meta-label">Archetype</div><div class="arch-badge">${archSymbol} ${archName}</div></div>
@@ -4425,6 +4443,7 @@ function Checkin({streak,savedPlan,lastCheckin,onCheckin,onGoChat}) {
                     ls.set("syn_user",JSON.stringify({...user,name:soldierName}));
                   }
                 }
+                soldierName=escapeHtml(soldierName); // sanitize before HTML interpolation below
                 const arch=JSON.parse(ls.get("syn_archetype","null"));
                 const streakVal=parseInt(ls.get("syn_streak","0"))||0;
                 const date=new Date().toLocaleDateString("en-IN",{day:"numeric",month:"long",year:"numeric"});
