@@ -24,10 +24,28 @@ import {
    Calls go through /api/chat (Vercel serverless function).
    GROQ_KEY lives in Vercel env variables — never in the frontend bundle.
 ──────────────────────────────────────────────────────────────────────────── */
+/* Thrown when the backend returns the Free Plan rate-limit response, so the
+   UI can show the premium upgrade prompt instead of a generic error. */
+class RateLimitError extends Error {
+  constructor(message, limitType) {
+    super(message);
+    this.isRateLimit = true;
+    this.limitType = limitType; // "minute" | "day"
+  }
+}
+
 async function callAI(userMessages, systemPrompt, opts={}) {
+  // Send a short-lived Firebase ID token so the server can verify identity
+  // itself (see api/chat.js) instead of trusting a client-claimed uid.
+  // getIdToken() returns the cached token and silently refreshes it if
+  // needed — cheap to call on every request.
+  const idToken = auth.currentUser ? await auth.currentUser.getIdToken() : null;
   const res = await fetch("/api/chat", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      ...(idToken ? { "Authorization": `Bearer ${idToken}` } : {}),
+    },
     body: JSON.stringify({
       model: "llama-3.3-70b-versatile",
       max_tokens: opts.max_tokens ?? 1024,
@@ -39,7 +57,12 @@ async function callAI(userMessages, systemPrompt, opts={}) {
     }),
   });
   const data = await res.json();
-  if (res.status === 429) throw new Error("Too many requests — wait a minute and try again.");
+  if (res.status === 429) {
+    if (data.error?.code === "PLAN_LIMIT_REACHED") {
+      throw new RateLimitError(data.error.message, data.error.limitType);
+    }
+    throw new Error(data.error?.message || "Too many requests — wait a minute and try again.");
+  }
   if (data.error) throw new Error(data.error.message);
   return data.choices?.[0]?.message?.content || "Keep going. You showed up today — that's the mission.";
 }
@@ -4195,7 +4218,10 @@ function Checkin({streak,savedPlan,lastCheckin,onCheckin,onGoChat}) {
       const aiText=r.startsWith("[OFF_TOPIC]")?"That's outside my scope — I only coach on recovery topics. What's on your mind about your mission?":r;
       setChatMsgs(m=>[...m,{role:"ai",text:aiText}]);
       appendChatHistory({role:"user",text:txt},{role:"ai",text:aiText});
-    }catch(e){ setChatMsgs(m=>[...m,{role:"ai",text:"Connection issue — try again."}]); }
+    }catch(e){
+      if(e.isRateLimit){ setChatMsgs(m=>[...m,{role:"ai",upgradePrompt:true,text:e.message}]); }
+      else { setChatMsgs(m=>[...m,{role:"ai",text:"Connection issue — try again."}]); }
+    }
     setChatLoading(false);
   };
 
@@ -4741,6 +4767,24 @@ const OFF_TOPIC_MSG="That's outside what I can help with here. Ask me about your
 
 function ChatBubble({msg,idx}){
   const isUser=msg.role==="user";
+
+  if(msg.upgradePrompt){
+    return(
+      <div style={{display:"flex",justifyContent:"flex-start",marginBottom:16,animation:`fadeUp .4s cubic-bezier(.16,1,.3,1) both`,animationDelay:`${idx*0.04}s`}}>
+        <div style={{width:28,height:28,borderRadius:"50%",background:"rgba(255,140,0,.15)",border:"1px solid rgba(255,180,80,.4)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,marginRight:10,marginTop:2}}><span style={{fontSize:12}}>⚡</span></div>
+        <div style={{maxWidth:"84%",padding:"18px 20px",borderRadius:"16px 16px 16px 4px",background:"linear-gradient(135deg,rgba(255,140,0,.1),rgba(255,80,0,.05))",border:"1px solid rgba(255,140,0,.3)"}}>
+          <div style={{fontSize:13,lineHeight:1.75,color:"rgba(255,255,255,.8)",fontWeight:400,marginBottom:14}}>{msg.text}</div>
+          <a href="" onClick={e=>e.preventDefault() /* TODO: point at the real pricing/subscription URL once it exists */}
+            style={{display:"inline-flex",alignItems:"center",gap:8,background:"linear-gradient(135deg,#ff9500,#ff5000)",color:"#fff",fontSize:12,fontWeight:700,letterSpacing:.5,padding:"11px 22px",borderRadius:10,textDecoration:"none",boxShadow:"0 0 20px rgba(255,140,0,.35)",transition:"transform .2s"}}
+            onMouseEnter={e=>e.currentTarget.style.transform="scale(1.03)"}
+            onMouseLeave={e=>e.currentTarget.style.transform="scale(1)"}>
+            Upgrade Plan →
+          </a>
+        </div>
+      </div>
+    );
+  }
+
   return(
     <div style={{display:"flex",justifyContent:isUser?"flex-end":"flex-start",marginBottom:16,animation:`fadeUp .4s cubic-bezier(.16,1,.3,1) both`,animationDelay:`${idx*0.04}s`}}>
       {!isUser&&<div style={{width:28,height:28,borderRadius:"50%",background:msg.crisis?"rgba(70,150,255,.12)":"rgba(255,140,0,.12)",border:`1px solid ${msg.crisis?"rgba(100,180,255,.3)":"rgba(255,140,0,.25)"}`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,marginRight:10,marginTop:2}}><span style={{fontSize:12}}>{msg.crisis?"🤝":"⚡"}</span></div>}
@@ -4807,7 +4851,11 @@ function Chat({streak,savedPlan}){
         setMsgs(m=>{ const next=[...m,{role:"ai",text:reply}]; saveChatHistory(next); return next; });
       }
     }catch(e){
-      setMsgs(m=>{ const next=[...m,{role:"ai",text:"Connection error. Stay strong — try again."}]; saveChatHistory(next); return next; });
+      if(e.isRateLimit){
+        setMsgs(m=>{ const next=[...m,{role:"ai",upgradePrompt:true,text:e.message}]; saveChatHistory(next); return next; });
+      } else {
+        setMsgs(m=>{ const next=[...m,{role:"ai",text:"Connection error. Stay strong — try again."}]; saveChatHistory(next); return next; });
+      }
     }
     setLoading(false);
   };
