@@ -12,22 +12,40 @@
 // uid used for rate limiting always comes from the *verified* token, never
 // from anything the client claims in the body.
 //
-// Requires the `firebase-admin` package and a service account key set as the
-// FIREBASE_SERVICE_ACCOUNT env var (JSON string) in Vercel project settings —
-// see setup notes below the handler.
+// Requires the `firebase-admin` package and three env vars already set in
+// Vercel (matching what the cron function uses): FIREBASE_PROJECT_ID,
+// FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY. Private keys stored in env
+// vars usually have their real newlines escaped as literal "\n" — unescape
+// them back to real newlines or the PEM key fails to parse.
 import { initializeApp, cert, getApps } from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
 
+let firebaseAdminReady = false;
 if (!getApps().length) {
-  initializeApp({
-    credential: cert(JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT)),
-  });
+  try {
+    initializeApp({
+      credential: cert({
+        projectId: process.env.FIREBASE_PROJECT_ID,
+        clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+        privateKey: (process.env.FIREBASE_PRIVATE_KEY || "").replace(/\\n/g, "\n"),
+      }),
+    });
+    firebaseAdminReady = true;
+  } catch (e) {
+    // Don't take down the whole endpoint if the key is missing/malformed —
+    // fall back to IP-based rate limiting (same as an anonymous user) and
+    // log loudly so it's visible in Vercel function logs.
+    console.error("Firebase Admin init failed — falling back to IP-based rate limiting:", e.message);
+  }
+} else {
+  firebaseAdminReady = true;
 }
 
 // Returns a verified uid, or null if there's no token / it's invalid or expired.
 // Never throws — an invalid token just means "treat as anonymous", same as
 // before, so signed-out users can still hit the safety-classifier tier.
 async function getVerifiedUid(req) {
+  if (!firebaseAdminReady) return null;
   const authHeader = req.headers["authorization"] || "";
   const idToken = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
   if (!idToken) return null;
