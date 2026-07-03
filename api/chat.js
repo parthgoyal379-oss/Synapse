@@ -12,58 +12,47 @@
 // uid used for rate limiting always comes from the *verified* token, never
 // from anything the client claims in the body.
 //
-// Requires the `firebase-admin` package and three env vars already set in
-// Vercel (matching what the cron function uses): FIREBASE_PROJECT_ID,
-// FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY. Private keys stored in env
-// vars usually have their real newlines escaped as literal "\n" — unescape
-// them back to real newlines or the PEM key fails to parse.
+// Requires no extra package — verifies the Firebase ID token via Google's
+// Identity Toolkit REST API instead of the `firebase-admin` SDK.
 //
-// NOTE ON IMPORT STYLE: this uses the modern modular imports
-// (`firebase-admin/app`, `firebase-admin/auth`) — these ARE the correct,
-// current API; firebase-admin v9+ no longer ships the old namespaced
-// `admin.initializeApp()/.credential.cert()/.auth()` object at all, so a
-// default import (`import admin from "firebase-admin"`) has none of those
-// properties and crashes. This modular version was verified end-to-end by
-// bundling this exact file with @vercel/ncc (the actual bundler Vercel's
-// Node runtime uses) and executing the output directly — it initializes
-// cleanly with no ESM/CJS resolution errors.
-import { initializeApp, cert, getApps } from "firebase-admin/app";
-import { getAuth } from "firebase-admin/auth";
-
-let firebaseAdminReady = false;
-if (!getApps().length) {
-  try {
-    initializeApp({
-      credential: cert({
-        projectId: process.env.FIREBASE_PROJECT_ID,
-        clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-        privateKey: (process.env.FIREBASE_PRIVATE_KEY || "").replace(/\\n/g, "\n"),
-      }),
-    });
-    firebaseAdminReady = true;
-  } catch (e) {
-    // Don't take down the whole endpoint if the key is missing/malformed —
-    // fall back to IP-based rate limiting (same as an anonymous user) and
-    // log loudly so it's visible in Vercel function logs.
-    console.error("Firebase Admin init failed — falling back to IP-based rate limiting:", e.message);
-  }
-} else {
-  firebaseAdminReady = true;
-}
+// WHY: `firebase-admin`'s modular imports (`firebase-admin/app`,
+// `firebase-admin/auth`) kept crashing on Vercel's actual build with
+// ERR_REQUIRE_ESM, even though the exact same code, bundled locally with
+// @vercel/ncc (the real bundler Vercel uses) and executed directly,
+// worked fine every time — something about Vercel's live build pipeline
+// differs in a way that wasn't reproducible locally. Rather than keep
+// guessing at firebase-admin's bundling, this drops the SDK for this one
+// call and hits the REST endpoint directly with plain fetch(), which has
+// zero bundling surface area and can't hit this class of error at all.
+//
+// Uses the same public Firebase Web API key already set as
+// VITE_FIREBASE_API_KEY (safe to reuse server-side — it's a public,
+// non-secret key by design; Firebase's security model relies on
+// server-side Security Rules, not on this key being hidden).
+const FIREBASE_WEB_API_KEY = process.env.VITE_FIREBASE_API_KEY;
 
 // Returns a verified uid, or null if there's no token / it's invalid or expired.
 // Never throws — an invalid token just means "treat as anonymous", same as
 // before, so signed-out users can still hit the safety-classifier tier.
 async function getVerifiedUid(req) {
-  if (!firebaseAdminReady) return null;
+  if (!FIREBASE_WEB_API_KEY) return null;
   const authHeader = req.headers["authorization"] || "";
   const idToken = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
   if (!idToken) return null;
   try {
-    const decoded = await getAuth().verifyIdToken(idToken);
-    return decoded.uid;
+    const r = await fetch(
+      `https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${FIREBASE_WEB_API_KEY}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ idToken }),
+      }
+    );
+    if (!r.ok) return null; // expired/tampered/malformed token — don't trust it
+    const data = await r.json();
+    return data?.users?.[0]?.localId || null;
   } catch {
-    return null; // expired/tampered/malformed token — don't trust it
+    return null; // network error or unexpected response shape
   }
 }
 
