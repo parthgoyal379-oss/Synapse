@@ -56,7 +56,7 @@ async function callAI(userMessages, systemPrompt, opts={}) {
       ...(idToken ? { "Authorization": `Bearer ${idToken}` } : {}),
     },
     body: JSON.stringify({
-      model: "llama-3.3-70b-versatile",
+      model: "openai/gpt-oss-120b",
       max_tokens: opts.max_tokens ?? 1024,
       temperature: opts.temperature ?? 0.85,
       messages: [
@@ -968,8 +968,15 @@ function CustomCursor() {
 }
 
 /* ─── GLOBAL CSS ─────────────────────────────────────────────────────────── */
+/* Font loading (Orbitron/Inter/JetBrains Mono/Space Mono/Space Grotesk) moved
+   to index.html <head> as <link> tags — see setup note. A `@import` here used
+   to be a major LCP hit: this whole <style> only reaches the DOM after the
+   JS bundle has downloaded, parsed, and React has committed its first
+   render, so the browser couldn't even discover the font request until then.
+   Putting <link rel="preconnect"> + <link rel="stylesheet"> in the HTML
+   <head> lets the browser start fetching fonts immediately, in parallel
+   with the JS bundle, instead of after it. */
 const G=`
-@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;800;900&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500&family=Space+Mono:wght@400;700&family=Space+Grotesk:wght@500;600;700&display=swap');
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
 svg{background:transparent!important;overflow:visible;}
 
