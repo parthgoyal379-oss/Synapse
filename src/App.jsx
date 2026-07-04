@@ -5070,10 +5070,16 @@ function FeedbackSheet({theme,onClose}){
     if(!rating) return;
     setSubmitting(true);
     const user=JSON.parse(localStorage.getItem("syn_user")||"{}");
+    // CRITICAL: uid must come from auth.currentUser, not localStorage.
+    // Firestore rule is: request.resource.data.uid == request.auth.uid
+    // If we use localStorage uid (which could be stale/wrong/undefined),
+    // the write gets rejected silently. auth.currentUser.uid is always
+    // the verified uid that Firestore checks against.
+    const authUid = auth.currentUser?.uid || user.uid || "anonymous";
     const feedbackData={
-      uid:user.uid||"anonymous",
+      uid: authUid,
       name:user.name||"",
-      email:user.email||"",
+      email:user.email||auth.currentUser?.email||"",
       rating,
       best,
       improve,
