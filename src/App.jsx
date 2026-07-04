@@ -627,7 +627,14 @@ async function _attemptWrite(item) {
   for (let i = 0; i < delays.length; i++) {
     if (delays[i]) await _wait(delays[i]);
     try {
-      await setDoc(doc(db, item.collectionName, item.docId), item.data, { merge: true });
+      // Race each Firestore write against a 5s timeout — without this,
+      // a slow/unresponsive connection causes setDoc to hang indefinitely,
+      // which freezes any UI that awaits durableWrite (e.g. feedback "Sending..."
+      // spinner would never resolve until the browser killed the request itself).
+      await Promise.race([
+        setDoc(doc(db, item.collectionName, item.docId), item.data, { merge: true }),
+        new Promise((_, reject) => setTimeout(() => reject(new Error("write timeout")), 5000)),
+      ]);
       return true;
     } catch (e) {
       if (i === delays.length - 1) console.warn(`Sync queue write failed (${item.key}) after ${delays.length} attempts:`, e.message);
@@ -726,8 +733,21 @@ function SynapseBackground({ intensity="normal" }) {
       clusters.forEach(cl=>{ cl.cx+=cl.vx; cl.cy+=cl.vy; if(cl.cx<.03||cl.cx>.97)cl.vx*=-1; if(cl.cy<.03||cl.cy>.97)cl.vy*=-1; const bcx=cl.cx*W+Math.sin(time*.85+cl.phase)*20; const bcy=cl.cy*H+Math.cos(time*.6+cl.phase)*14; const sc=cl.scale, pulse=.62+.38*Math.sin(time*1.35+cl.phase), op=cl.op; for(let i=1;i<=4;i++){ const na=cl.nodes[0],nb=cl.nodes[i]; const x1=bcx+na.dx*sc,y1=bcy+na.dy*sc,x2=bcx+nb.dx*sc,y2=bcy+nb.dy*sc; const g=ctx.createLinearGradient(x1,y1,x2,y2); g.addColorStop(0,`rgba(255,155,0,${op*.16*pulse})`); g.addColorStop(.5,`rgba(255,205,75,${op*.26*pulse})`); g.addColorStop(1,`rgba(255,95,0,${op*.16*pulse})`); ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.strokeStyle=g;ctx.lineWidth=1.1;ctx.stroke(); } for(let i=1;i<=4;i++){ const na=cl.nodes[i],nb=cl.nodes[i%4+1]; ctx.beginPath();ctx.moveTo(bcx+na.dx*sc,bcy+na.dy*sc);ctx.lineTo(bcx+nb.dx*sc,bcy+nb.dy*sc); ctx.strokeStyle=`rgba(255,135,0,${op*.08*pulse})`;ctx.lineWidth=.65;ctx.stroke(); } for(let i=5;i<=8;i++){ const na=cl.nodes[i%4+1],nb=cl.nodes[i]; ctx.beginPath();ctx.moveTo(bcx+na.dx*sc,bcy+na.dy*sc);ctx.lineTo(bcx+nb.dx*sc,bcy+nb.dy*sc); ctx.strokeStyle=`rgba(255,135,0,${op*.05*pulse})`;ctx.lineWidth=.45;ctx.stroke(); } for(let i=5;i<=8;i++){ const na=cl.nodes[i],nb=cl.nodes[i%4+5]; ctx.beginPath();ctx.moveTo(bcx+na.dx*sc,bcy+na.dy*sc);ctx.lineTo(bcx+nb.dx*sc,bcy+nb.dy*sc); ctx.strokeStyle=`rgba(255,135,0,${op*.04*pulse})`;ctx.lineWidth=.4;ctx.stroke(); } cl.nodes.forEach((n,ni)=>{ const nx=bcx+n.dx*sc,ny=bcy+n.dy*sc; const np=.8+.2*Math.sin(time*2+ni*.9+cl.phase); const nr=n.r*sc*np; if(n.tier===0){ const og=ctx.createRadialGradient(nx,ny,0,nx,ny,nr*5); og.addColorStop(0,`rgba(255,145,0,${op*.2*pulse})`);og.addColorStop(1,"rgba(0,0,0,0)"); ctx.beginPath();ctx.arc(nx,ny,nr*5,0,Math.PI*2);ctx.fillStyle=og;ctx.fill(); const cg=ctx.createRadialGradient(nx-nr*.3,ny-nr*.3,0,nx,ny,nr); cg.addColorStop(0,`rgba(255,225,115,${op*.58*pulse})`); cg.addColorStop(.5,`rgba(255,135,0,${op*.38*pulse})`); cg.addColorStop(1,`rgba(195,55,0,${op*.18*pulse})`); ctx.beginPath();ctx.arc(nx,ny,nr,0,Math.PI*2);ctx.fillStyle=cg;ctx.fill(); } else { ctx.beginPath();ctx.arc(nx,ny,nr,0,Math.PI*2); ctx.fillStyle=`rgba(255,155,38,${op*.22*pulse})`;ctx.fill(); } }); });
       for(let i=bursts.length-1;i>=0;i--){ const b=bursts[i]; b.trail.push({x:b.x,y:b.y}); if(b.trail.length>9)b.trail.shift(); b.x+=b.vx; b.y+=b.vy; b.vx*=.97; b.vy*=.97; b.life-=b.decay; if(b.life<=0){bursts.splice(i,1);continue;} for(let t=0;t<b.trail.length-1;t++){ const t0=b.trail[t],t1=b.trail[t+1]; const ta=(t/b.trail.length)*b.life*.28; ctx.beginPath();ctx.moveTo(t0.x,t0.y);ctx.lineTo(t1.x,t1.y); ctx.strokeStyle=`rgba(255,195,75,${ta})`; ctx.lineWidth=(t/b.trail.length)*b.r*.75;ctx.stroke(); } const grd=ctx.createRadialGradient(b.x,b.y,0,b.x,b.y,b.r*3); grd.addColorStop(0,`rgba(255,225,115,${b.life*.65})`); grd.addColorStop(.4,`rgba(255,135,0,${b.life*.28})`); grd.addColorStop(1,"rgba(255,75,0,0)"); ctx.beginPath();ctx.arc(b.x,b.y,b.r*3,0,Math.PI*2);ctx.fillStyle=grd;ctx.fill(); ctx.beginPath();ctx.arc(b.x,b.y,b.r*b.life,0,Math.PI*2); ctx.fillStyle=`rgba(255,215,95,${b.life*.88})`;ctx.fill(); }
     };
-    raf=requestAnimationFrame(draw);
-    return()=>{ cancelAnimationFrame(raf); window.removeEventListener("resize",resize); window.removeEventListener("mousemove",onMouse); document.removeEventListener("visibilitychange",onVis); };
+    // Defer animation start until browser is idle so the 3D canvas computation
+    // doesn't compete with LCP element paint on the main thread. Without this,
+    // requestAnimationFrame fires immediately on mount and the 75-110 node
+    // 3D projection + edge computation blocks the browser from finishing its
+    // first meaningful paint — which was the main driver of LCP 6-7s.
+    // requestIdleCallback fires after the browser has finished its pending work;
+    // setTimeout(300) is the fallback for Safari which lacks rIC.
+    let startTimeout;
+    const startAnimation = () => { raf = requestAnimationFrame(draw); };
+    if (typeof requestIdleCallback !== "undefined") {
+      requestIdleCallback(startAnimation, { timeout: 300 });
+    } else {
+      startTimeout = setTimeout(startAnimation, 300);
+    }
+    return()=>{ cancelAnimationFrame(raf); clearTimeout(startTimeout); window.removeEventListener("resize",resize); window.removeEventListener("mousemove",onMouse); document.removeEventListener("visibilitychange",onVis); };
   },[intensity]);
   return <canvas ref={canvasRef} style={{position:"fixed",inset:0,width:"100%",height:"100%",pointerEvents:"none",zIndex:0,opacity:intensity==="heavy"?.72:.52}}/>;
 }
@@ -5079,19 +5099,21 @@ function FeedbackSheet({theme,onClose}){
       localStorage.setItem("syn_feedbacks",JSON.stringify(saved.slice(-50)));
     }catch(le){ console.warn("Local feedback save failed:",le); }
 
+    // Local copy saved above. Now kick off Firestore write in the background —
+    // don't await it. The user already has their local copy, and durableWrite's
+    // retry queue will sync it automatically if this attempt fails. Awaiting it
+    // was what caused the "Sending..." spinner to hang for several seconds
+    // (durableWrite retries 3x with delays = up to ~18s with the new timeouts).
     try{
       if(db){
         const feedbackId=`fb_${user.uid||"anon"}_${Date.now()}`;
-        const ok=await durableWrite(`feedback_${feedbackId}`, "feedbacks", feedbackId, {
+        durableWrite(`feedback_${feedbackId}`, "feedbacks", feedbackId, {
           ...feedbackData,
           timestamp:serverTimestamp(),
-        });
-        if(!ok) console.warn("Feedback queued for retry — will sync automatically.");
+        }).catch(e=>console.warn("Feedback sync failed, queued for retry:", e));
       }
     }catch(e){
       console.warn("Feedback save:",e);
-      // Local copy above already guarantees it isn't lost, and durableWrite
-      // has already queued it for automatic retry — nothing more to do here.
     }
     setSubmitting(false);
     setSubmitted(true);
