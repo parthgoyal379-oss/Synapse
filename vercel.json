@@ -1,20 +1,5 @@
 {
-  "redirects": [
-    {
-      "source": "/(.*)",
-      "has": [{ "type": "host", "value": "www.synapserewire.site" }],
-      "destination": "https://synapserewire.site/$1",
-      "permanent": true
-    }
-  ],
   "headers": [
-    {
-      "source": "/manifest.json",
-      "headers": [
-        { "key": "Access-Control-Allow-Origin", "value": "*" },
-        { "key": "Content-Type", "value": "application/manifest+json" }
-      ]
-    },
     {
       "source": "/(.*)",
       "headers": [
@@ -58,6 +43,13 @@
           "key": "Cross-Origin-Resource-Policy",
           "value": "same-site"
         }
+      ]
+    },
+    {
+      "source": "/manifest.json",
+      "headers": [
+        { "key": "Access-Control-Allow-Origin", "value": "*" },
+        { "key": "Content-Type", "value": "application/manifest+json" }
       ]
     },
     {
