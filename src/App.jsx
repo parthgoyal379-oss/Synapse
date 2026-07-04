@@ -4442,7 +4442,7 @@ function Checkin({streak,savedPlan,lastCheckin,onCheckin,onGoChat}) {
                   <button key={m.id} onClick={()=>setMood(m.id)}
                     style={{padding:"14px 16px",borderRadius:12,border:`1px solid ${mood===m.id?"rgba(255,140,0,0.5)":"var(--border)"}`,background:mood===m.id?"var(--accent3)":"var(--surface2)",textAlign:"left",transition:"all .2s"}}>
                     <div style={{fontSize:15,marginBottom:4}}>{m.label}</div>
-                    <div style={{fontSize:10,color:"var(--text4)"}}>{m.desc}</div>
+                    <div style={{fontSize:11,color:"var(--text2)"}}>{m.desc}</div>
                   </button>
                 ))}
               </div>
