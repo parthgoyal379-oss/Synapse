@@ -2502,12 +2502,13 @@ function Boot({ onBegin, onLogin, hasPlan, theme, onThemeToggle }) {
           {/* SYNAPSE wordmark */}
           <div style={{position:"relative",width:"100%",textAlign:"center",overflow:"visible",padding:"18px 0"}}>            <span style={{
               fontFamily:"'Orbitron',sans-serif",fontWeight:900,
-              fontSize:"clamp(44px,12vw,196px)",letterSpacing:"-0.03em",lineHeight:.9,
+              fontSize:"clamp(44px,12vw,196px)",letterSpacing:"-0.03em",lineHeight:1,
               fontFeatureSettings:'"kern" 1,"liga" 0',
               background:"linear-gradient(165deg,#fff8e7 0%,#fff8e7 18%,#f5a000 52%,#ff5500 100%)",
               WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",backgroundClip:"text",
               filter:"drop-shadow(0 0 50px rgba(245,160,0,.4))",
               userSelect:"none",display:"block",width:"100%",
+              padding:"0.05em 0",
               opacity:wmOn?1:0,transform:wmOn?"translateY(0) scale(1)":"translateY(-26px) scale(1.03)",
               transition:"opacity .7s,transform .7s cubic-bezier(.1,0,0,1)",
               position:"relative",
@@ -2529,7 +2530,7 @@ function Boot({ onBegin, onLogin, hasPlan, theme, onThemeToggle }) {
           <div style={{width:"100%",height:1,background:"#cc7a00",marginTop:18,clipPath:wmOn?"inset(0 0% 0 0)":"inset(0 100% 0 0)",transition:"clip-path 1s cubic-bezier(.4,0,.1,1) .2s"}}/>
 
           {/* Meta */}
-          <div style={{fontFamily:"'Space Mono',monospace",fontWeight:400,fontSize:8,letterSpacing:"0.28em",color:"#6a5820",marginTop:28,display:"flex",gap:12,justifyContent:"center",alignItems:"center",flexWrap:"wrap",opacity:hmetaOn?1:0,transition:"opacity .6s"}}>
+          <div style={{fontFamily:"'Space Mono',monospace",fontWeight:400,fontSize:"clamp(9px,0.75vw,13px)",letterSpacing:"0.28em",color:"#6a5820",marginTop:28,display:"flex",gap:12,justifyContent:"center",alignItems:"center",flexWrap:"wrap",opacity:hmetaOn?1:0,transition:"opacity .6s"}}>
             <span>AI RECOVERY SYSTEM</span>
             <span style={{color:"#3a2800"}}>·</span>
             <span>VERSION 2.4.1</span>
