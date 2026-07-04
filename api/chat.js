@@ -195,7 +195,8 @@ export default async function handler(req, res) {
           "Authorization": `Bearer ${process.env.GROQ_KEY}`,
         },
         body: JSON.stringify({
-          model: "llama-3.3-70b-versatile",
+          model: "openai/gpt-oss-120b",
+          reasoning_effort: "low", // fast structured JSON classification, not deep reasoning
           temperature: 0,
           max_tokens: 30,
           messages: [
@@ -239,7 +240,13 @@ export default async function handler(req, res) {
   }
 
   // uid is our own bookkeeping field — Groq doesn't know about it.
+  // include_reasoning:false stops GPT-OSS from sending its reasoning trace
+  // in the response — saves bandwidth + cost since SYNAPSE only needs the
+  // final message content, not the internal chain-of-thought.
   const { uid, ...groqBody } = body;
+  if (groqBody.model?.startsWith("openai/gpt-oss")) {
+    groqBody.include_reasoning = false;
+  }
 
   try {
     const groqRes = await fetch("https://api.groq.com/openai/v1/chat/completions", {
