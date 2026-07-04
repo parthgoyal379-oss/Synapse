@@ -375,7 +375,21 @@ const appendChatHistory=(...newMsgs)=>{
 };
 const getConfessPrompt=()=>({operator:SYSTEM_CONFESS_OPERATOR,commander:SYSTEM_CONFESS_COMMANDER,warlord:SYSTEM_CONFESS_WARLORD}[ls.get("syn_mode","commander")]||SYSTEM_CONFESS_COMMANDER);
 const getCheckinPrompt=()=>({operator:SYSTEM_CHECKIN_OPERATOR,commander:SYSTEM_CHECKIN_COMMANDER,warlord:SYSTEM_CHECKIN_WARLORD}[ls.get("syn_mode","commander")]||SYSTEM_CHECKIN_COMMANDER);
-const withTone=(prompt)=>prompt; // Emergency/Chat still use single prompt + this is now a passthrough for those
+
+// Language mirroring — appended to every system prompt so the AI matches
+// the user's language naturally: English → English, Hindi → Hindi,
+// Hinglish → Hinglish, etc. No translation, no switching mid-response.
+const LANGUAGE_INSTRUCTION=`
+
+LANGUAGE RULE (highest priority — always follow this):
+Detect the language of the user's most recent message and reply entirely in that same language and style. Mirror it exactly:
+- If they write in English → reply in English.
+- If they write in Hindi (Devanagari script) → reply in Hindi.
+- If they write in Hinglish (Hindi words in Roman script mixed with English) → reply in Hinglish the same way.
+- If they write in any other language → reply in that language.
+Never switch languages mid-response. Never translate what they said. Just reply naturally in the same language they used.`;
+
+const withTone=(prompt)=>prompt+LANGUAGE_INSTRUCTION;
 
 /* ─── SHARED COACH CONTEXT (archetype + addictions + recent trend + pattern) ─
    Single source of truth for "what does the AI know about this person beyond
@@ -5529,7 +5543,7 @@ function AppRoot() {
     if(archData) ls.set("syn_archetype",JSON.stringify(archData));
     setPL(true);setPlan("");goTo("plan");
     try{
-      const reply=await callAI([{role:"user",content:text}],getConfessPrompt());
+      const reply=await callAI([{role:"user",content:text}],withTone(getConfessPrompt()));
       setPlan(reply);setSP(reply);ls.set("syn_plan",reply);
       // Save to Firestore — durable: queued + retried, never silently lost
       try{
@@ -5585,7 +5599,7 @@ function AppRoot() {
         {role:"user",content:savedPlan + coachCtx + verdictInstruction},
         {role:"assistant",content:"Your mission begins now. Show up every day."},
         {role:"user",content:`Day ${streak+1} check-in: ${msg}`}
-      ],getCheckinPrompt());
+      ],withTone(getCheckinPrompt()));
     }catch{}
 
     // The deterministic verdict (from the user's own structured answers) is
