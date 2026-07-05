@@ -97,8 +97,14 @@ const messaging = getMessaging(app);
     // fired in this header, so we can tell them apart and use a more
     // urgent "last chance" message for the later one, instead of sending
     // identical copy twice in one evening.
-    const triggeredSchedule = req.headers["x-vercel-cron-schedule"] || "";
-    const isLateNight = triggeredSchedule.trim() === "0 17 * * *"; // 10:30 PM IST
+    const triggeredSchedule = (req.headers["x-vercel-cron-schedule"] || "").trim();
+    // Prefer the exact cron expression Vercel fired with. If that header isn't
+    // present (not guaranteed on every plan/runtime), fall back to the current
+    // UTC hour so the two daily runs still get distinct copy instead of sending
+    // the 8 PM message twice: 17:00 UTC = 10:30 PM IST = the "last call" run.
+    const isLateNight = triggeredSchedule
+      ? triggeredSchedule === "0 17 * * *"
+      : new Date().getUTCHours() === 17;
     const notifCopy = isLateNight
       ? { title: "Last call — streak resets at midnight", body: "A few hours left. Don't let a good streak end on a day you forgot." }
       : { title: "Did you check in today?", body: "Your streak is waiting. Takes 30 seconds — don't let today slip." };

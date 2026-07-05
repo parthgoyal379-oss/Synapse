@@ -49,22 +49,38 @@ async function callAI(userMessages, systemPrompt, opts={}) {
   // getIdToken() returns the cached token and silently refreshes it if
   // needed — cheap to call on every request.
   const idToken = auth.currentUser ? await auth.currentUser.getIdToken() : null;
-  const res = await fetch("/api/chat", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      ...(idToken ? { "Authorization": `Bearer ${idToken}` } : {}),
-    },
-    body: JSON.stringify({
-      model: "openai/gpt-oss-120b",
-      max_tokens: opts.max_tokens ?? 1024,
-      temperature: opts.temperature ?? 0.85,
-      messages: [
-        { role: "system", content: systemPrompt },
-        ...userMessages,
-      ],
-    }),
-  });
+  // Abort the request if the serverless function doesn't respond in time.
+  // Without this, a slow/dead connection leaves fetch pending forever, which
+  // hangs any UI awaiting it (check-in "reading your day..." spinner, chat
+  // send button) with no way to recover short of a reload.
+  const controller = new AbortController();
+  const timeoutMs = opts.timeoutMs ?? 30000;
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  let res;
+  try {
+    res = await fetch("/api/chat", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(idToken ? { "Authorization": `Bearer ${idToken}` } : {}),
+      },
+      body: JSON.stringify({
+        model: "openai/gpt-oss-120b",
+        max_tokens: opts.max_tokens ?? 1024,
+        temperature: opts.temperature ?? 0.85,
+        messages: [
+          { role: "system", content: systemPrompt },
+          ...userMessages,
+        ],
+      }),
+      signal: controller.signal,
+    });
+  } catch (e) {
+    if (e.name === "AbortError") throw new Error("Request timed out — check your connection and try again.");
+    throw e;
+  } finally {
+    clearTimeout(timer);
+  }
   const data = await res.json();
   if (res.status === 429) {
     if (data.error?.code === "PLAN_LIMIT_REACHED") {
@@ -79,14 +95,19 @@ async function callAI(userMessages, systemPrompt, opts={}) {
 const SYSTEM_SAFETY_CLASSIFIER = `You are a mental health safety classifier. Analyze the user message for indirect or subtle signs of suicidal ideation, self-harm intent, or severe hopelessness — including phrases like "everyone would be better off without me", "I don't see the point anymore", "I can't do this anymore", "I just want it to stop", "nobody would miss me", or similar indirect language. Respond with ONLY compact JSON, no whitespace, no markdown, no explanation: {"risk":true} or {"risk":false}`;
 
 async function checkSafetyRisk(text) {
-  // Fail closed — if the API call itself errors (network/auth/rate-limit),
-  // treat as risk. But a truncated/malformed JSON response from the model
-  // is NOT the same as "the check failed" — it used to be treated as one
-  // (JSON.parse throwing was caught by the same fail-closed branch as a
-  // real network error), which meant any time the model's output got cut
-  // off mid-JSON, ALL subsequent messages — including harmless ones like
-  // "hi" — got flagged as crisis. We now try a lenient regex extraction
-  // first, and only fail closed if we truly can't tell either way.
+  // The HARD safety floor is the regex `detectCrisis` check, which always runs
+  // BEFORE this (in every caller) and catches explicit self-harm language with
+  // zero network dependency. This AI pass is only a *secondary* net for subtle,
+  // indirect phrasing.
+  //
+  // It must NOT block the app when the API itself is unreachable. Previously any
+  // network error / timeout / rate-limit here "failed closed" (returned true),
+  // which fired the full crisis screen on innocuous messages like "hi" during
+  // any outage AND — on check-in — silently discarded the user's day (the
+  // handler returns CRISIS before the streak logic). So on a transport/API
+  // failure we now fail OPEN (treat as no-risk); the explicit-language regex
+  // floor still stands, and we only trust the model's verdict when we actually
+  // get a response back from it.
   let raw;
   try {
     raw = await callAI(
@@ -95,8 +116,8 @@ async function checkSafetyRisk(text) {
       { temperature: 0, max_tokens: 30 }
     );
   } catch(e) {
-    console.warn("Safety classifier request failed (failing closed):", e.message);
-    return true; // real API/network failure — fail closed
+    console.warn("Safety classifier request failed (failing open — regex floor still applies):", e.message);
+    return false; // infra failure, not a real risk signal — don't block the app
   }
   const clean = raw.replace(/```json|```/g,"").trim();
   try {
@@ -1128,7 +1149,6 @@ input{background:transparent;}
 @keyframes termCursor{0%,49%{opacity:1;}50%,100%{opacity:0;}}
 @keyframes pulseRing{0%{transform:scale(1);opacity:.6;}100%{transform:scale(2.4);opacity:0;}}
 @keyframes tagGlow{0%,100%{box-shadow:0 0 0 rgba(255,120,0,0);}50%{box-shadow:0 0 18px rgba(255,120,0,.25);}}
-@keyframes slideUp{from{transform:translateY(100%);}to{transform:translateY(0);}}
 @keyframes fadeIn{from{opacity:0;}to{opacity:1;}}
 @keyframes blink{0%,49%{opacity:1;}50%,100%{opacity:0;}}
 @keyframes pulse{0%,100%{box-shadow:0 0 8px #ff3333;}50%{box-shadow:0 0 20px #ff3333,0 0 40px #ff333388;}}
@@ -3597,7 +3617,12 @@ function Confess({onSubmit,loading}) {
           isFreq:FREQ_ADDICTIONS.has(id),
           value:hours[id]||0
         };
-      })
+      }),
+      // Per-addiction baseline usage as an id->value map. handleConfess and the
+      // admin dashboard both read confessData.hours for the `hoursPerDay` field;
+      // without this key it was always {} (the per-addiction value lived only
+      // inside addictions[].value), so the dashboard's hours column stayed blank.
+      hours: Object.fromEntries(selected.map(id=>[id, hours[id]||0])),
     };
     ls.set("syn_confess", JSON.stringify(confessData));
     const enriched = arch ? `User Archetype: ${arch.title} (${arch.sub})\n\n${prompt}` : prompt;
@@ -4492,7 +4517,8 @@ function Checkin({streak,savedPlan,lastCheckin,onCheckin,onGoChat}) {
                 const archName=arch?.title||"WARRIOR"; const archSymbol=arch?.symbol||"⚡";
                 const formatted=savedPlan.replace(/\*\*(.+?)\*\*/g,"<strong>$1</strong>").split("\n").map(line=>line.startsWith("**")&&line.endsWith("**")?`<h3>${line.replace(/\*\*/g,"")}</h3>`:line.trim()==="---"?`<hr/>`:!line.trim()?`<div style="height:4px"></div>`:`<p>${line}</p>`).join("");
                 const w=window.open("","_blank","width=900,height=800");
-                w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"/><title>SYNAPSE — Battle Plan</title><style>@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Inter:wght@300;400;500;600;700&display=swap');*{margin:0;padding:0;box-sizing:border-box;word-wrap:break-word;overflow-wrap:break-word;}@page{margin:0.5in 0.6in;size:A4 portrait;}html,body{background:#fff;color:#111;font-family:'Inter',sans-serif;font-size:10px;line-height:1.35;}body{width:100%;padding:0;}.header{display:flex;align-items:center;justify-content:space-between;padding:0 0 8px;border-bottom:1.5px solid #f0f0f0;margin-bottom:6px;}.brand{display:flex;align-items:center;gap:7px;}.brand-logo{width:22px;height:22px;border-radius:5px;background:linear-gradient(135deg,#ff9500,#ff5000);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;font-family:'Orbitron',sans-serif;color:#fff;flex-shrink:0;}.brand-name{font-family:'Orbitron',sans-serif;font-size:11px;font-weight:900;letter-spacing:2px;color:#ff6000;line-height:1;}.brand-tagline{font-size:6.5px;color:#bbb;letter-spacing:2px;text-transform:uppercase;margin-top:1px;}.doc-title{font-family:'Orbitron',sans-serif;font-size:15px;font-weight:900;color:#111;letter-spacing:-0.5px;line-height:1;text-align:right;}.doc-subtitle{font-size:6.5px;color:#e06000;letter-spacing:1.5px;text-transform:uppercase;font-weight:600;margin-top:2px;text-align:right;}.meta{display:flex;gap:16px;padding:5px 0;border-bottom:1px solid #f5f5f5;margin-bottom:8px;align-items:center;flex-wrap:wrap;}.meta-label{font-size:6px;color:#ccc;letter-spacing:1.5px;text-transform:uppercase;font-weight:600;}.meta-value{font-size:10px;color:#111;font-weight:600;margin-top:1px;}.arch-badge{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:999px;border:1px solid #ffb347;background:#fff8f0;font-family:'Orbitron',sans-serif;font-size:7.5px;font-weight:700;color:#b35000;letter-spacing:0.5px;}.section-label{font-size:6.5px;color:#e06000;letter-spacing:2.5px;text-transform:uppercase;font-weight:700;margin-bottom:6px;}.card{border:1px solid #f0f0f0;border-left:2.5px solid #ff6000;border-radius:4px;padding:8px 12px;}.plan-text{font-size:9.5px;line-height:1.55;color:#222;}.plan-text p{margin-bottom:0;}.plan-text h3{font-size:7.5px;font-weight:700;color:#c05000;letter-spacing:1.5px;text-transform:uppercase;margin:8px 0 3px;padding-top:6px;border-top:1px solid #f5f5f5;}.plan-text h3:first-child{margin-top:0;padding-top:0;border-top:none;}.plan-text hr{border:none;border-top:1px solid #f5f5f5;margin:5px 0;}.plan-text strong{color:#b35000;font-weight:700;}.plan-text div[style]{height:3px!important;}.footer{display:flex;justify-content:space-between;padding:5px 0 0;border-top:1px solid #f5f5f5;margin-top:6px;font-size:6.5px;color:#ccc;}.watermark{position:fixed;bottom:-10px;right:-5px;font-family:'Orbitron',sans-serif;font-size:100px;font-weight:900;color:rgba(255,100,0,.03);pointer-events:none;line-height:1;}.print-btn{position:fixed;top:10px;right:10px;background:linear-gradient(135deg,#ff9500,#ff5000);border:none;color:#fff;padding:7px 18px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;z-index:999;}@media print{.print-btn{display:none!important;}}@media screen{body{max-width:680px;margin:0 auto;padding:20px;background:#f8f8f8;}.page{background:#fff;padding:0.35in 0.45in;box-shadow:0 2px 20px rgba(0,0,0,.1);border-radius:4px;}}</style></head><body><button class="print-btn" onclick="window.print()"><Download size={14} style={{display:"inline",marginRight:4}}/>Save as PDF</button><div class="watermark">S</div><div class="page"><div class="header"><div class="brand"><div class="brand-logo">S</div><div><div class="brand-name">SYNAPSE</div><div class="brand-tagline">Dopamine Recovery Protocol</div></div></div><div style="text-align:right"><div class="doc-title">BATTLE PLAN</div><div class="doc-subtitle">Personalized Recovery Protocol — Classified</div></div></div><div class="meta"><div><div class="meta-label">Soldier</div><div class="meta-value">${soldierName}</div></div><div><div class="meta-label">Streak</div><div class="meta-value">Day ${streakVal}</div></div><div><div class="meta-label">Issued</div><div class="meta-value">${date}</div></div><div><div class="meta-label">Archetype</div><div class="arch-badge">${archSymbol} ${archName}</div></div></div><div class="content"><div class="section-label">Mission Briefing</div><div class="card"><div class="plan-text">${formatted}</div></div></div><div class="footer"><div>Generated by SYNAPSE • synapserewire@gmail.com</div><div>synapserewire.site • ${date}</div></div></div></body></html>`);
+                if(!w){ alert("Please allow pop-ups for this site to download your Battle Plan PDF."); return; }
+                w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"/><title>SYNAPSE — Battle Plan</title><style>@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Inter:wght@300;400;500;600;700&display=swap');*{margin:0;padding:0;box-sizing:border-box;word-wrap:break-word;overflow-wrap:break-word;}@page{margin:0.5in 0.6in;size:A4 portrait;}html,body{background:#fff;color:#111;font-family:'Inter',sans-serif;font-size:10px;line-height:1.35;}body{width:100%;padding:0;}.header{display:flex;align-items:center;justify-content:space-between;padding:0 0 8px;border-bottom:1.5px solid #f0f0f0;margin-bottom:6px;}.brand{display:flex;align-items:center;gap:7px;}.brand-logo{width:22px;height:22px;border-radius:5px;background:linear-gradient(135deg,#ff9500,#ff5000);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;font-family:'Orbitron',sans-serif;color:#fff;flex-shrink:0;}.brand-name{font-family:'Orbitron',sans-serif;font-size:11px;font-weight:900;letter-spacing:2px;color:#ff6000;line-height:1;}.brand-tagline{font-size:6.5px;color:#bbb;letter-spacing:2px;text-transform:uppercase;margin-top:1px;}.doc-title{font-family:'Orbitron',sans-serif;font-size:15px;font-weight:900;color:#111;letter-spacing:-0.5px;line-height:1;text-align:right;}.doc-subtitle{font-size:6.5px;color:#e06000;letter-spacing:1.5px;text-transform:uppercase;font-weight:600;margin-top:2px;text-align:right;}.meta{display:flex;gap:16px;padding:5px 0;border-bottom:1px solid #f5f5f5;margin-bottom:8px;align-items:center;flex-wrap:wrap;}.meta-label{font-size:6px;color:#ccc;letter-spacing:1.5px;text-transform:uppercase;font-weight:600;}.meta-value{font-size:10px;color:#111;font-weight:600;margin-top:1px;}.arch-badge{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:999px;border:1px solid #ffb347;background:#fff8f0;font-family:'Orbitron',sans-serif;font-size:7.5px;font-weight:700;color:#b35000;letter-spacing:0.5px;}.section-label{font-size:6.5px;color:#e06000;letter-spacing:2.5px;text-transform:uppercase;font-weight:700;margin-bottom:6px;}.card{border:1px solid #f0f0f0;border-left:2.5px solid #ff6000;border-radius:4px;padding:8px 12px;}.plan-text{font-size:9.5px;line-height:1.55;color:#222;}.plan-text p{margin-bottom:0;}.plan-text h3{font-size:7.5px;font-weight:700;color:#c05000;letter-spacing:1.5px;text-transform:uppercase;margin:8px 0 3px;padding-top:6px;border-top:1px solid #f5f5f5;}.plan-text h3:first-child{margin-top:0;padding-top:0;border-top:none;}.plan-text hr{border:none;border-top:1px solid #f5f5f5;margin:5px 0;}.plan-text strong{color:#b35000;font-weight:700;}.plan-text div[style]{height:3px!important;}.footer{display:flex;justify-content:space-between;padding:5px 0 0;border-top:1px solid #f5f5f5;margin-top:6px;font-size:6.5px;color:#ccc;}.watermark{position:fixed;bottom:-10px;right:-5px;font-family:'Orbitron',sans-serif;font-size:100px;font-weight:900;color:rgba(255,100,0,.03);pointer-events:none;line-height:1;}.print-btn{position:fixed;top:10px;right:10px;background:linear-gradient(135deg,#ff9500,#ff5000);border:none;color:#fff;padding:7px 18px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;z-index:999;}@media print{.print-btn{display:none!important;}}@media screen{body{max-width:680px;margin:0 auto;padding:20px;background:#f8f8f8;}.page{background:#fff;padding:0.35in 0.45in;box-shadow:0 2px 20px rgba(0,0,0,.1);border-radius:4px;}}</style></head><body><button class="print-btn" onclick="window.print()"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:-2px;margin-right:5px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Save as PDF</button><div class="watermark">S</div><div class="page"><div class="header"><div class="brand"><div class="brand-logo">S</div><div><div class="brand-name">SYNAPSE</div><div class="brand-tagline">Dopamine Recovery Protocol</div></div></div><div style="text-align:right"><div class="doc-title">BATTLE PLAN</div><div class="doc-subtitle">Personalized Recovery Protocol — Classified</div></div></div><div class="meta"><div><div class="meta-label">Soldier</div><div class="meta-value">${soldierName}</div></div><div><div class="meta-label">Streak</div><div class="meta-value">Day ${streakVal}</div></div><div><div class="meta-label">Issued</div><div class="meta-value">${date}</div></div><div><div class="meta-label">Archetype</div><div class="arch-badge">${archSymbol} ${archName}</div></div></div><div class="content"><div class="section-label">Mission Briefing</div><div class="card"><div class="plan-text">${formatted}</div></div></div><div class="footer"><div>Generated by SYNAPSE • synapserewire@gmail.com</div><div>synapserewire.site • ${date}</div></div></div></body></html>`);
                 w.document.close();
               }} style={{flexShrink:0,background:"var(--accent3)",border:"1px solid var(--border)",color:"var(--accent2)",padding:"10px 14px",borderRadius:10,fontSize:11,fontWeight:600,cursor:"pointer",transition:"all .25s",whiteSpace:"nowrap"}}><Download size={14} style={{display:"inline",marginRight:4}}/>Plan</button>
             </div>}
@@ -5582,7 +5608,8 @@ function AppRoot() {
     const aiRisk = await checkSafetyRisk(msg);
     if(aiRisk) return {reply:CRISIS_RESPONSE, status:"CRISIS"};
     const today=new Date().toDateString();
-    let rawReply="[STATUS:MID]\n\nYou showed up. That matters. Keep going.";
+    let rawReply="";
+    let aiFailed=false;
     try{
       // Archetype + recurring trigger pattern context — shared with the other
       // two coach entry points (Checkin.sendChat, Chat.send) so the AI has
@@ -5600,7 +5627,13 @@ function AppRoot() {
         {role:"assistant",content:"Your mission begins now. Show up every day."},
         {role:"user",content:`Day ${streak+1} check-in: ${msg}`}
       ],withTone(getCheckinPrompt()));
-    }catch{}
+    }catch(e){
+      // The streak still updates correctly below (driven by forcedStatus, not
+      // by this reply), but we note the failure so the fallback message can
+      // match the real verdict instead of a fixed "you showed up" MID line.
+      aiFailed=true;
+      console.warn("Check-in coach reply failed:", e?.message||e);
+    }
 
     // The deterministic verdict (from the user's own structured answers) is
     // the actual source of truth — NOT something parsed/guessed from the
@@ -5609,6 +5642,18 @@ function AppRoot() {
     // was provided (defensive — current app always provides one).
     const statusMatch = rawReply.match(/\[STATUS:(WIN|SLIP|MID)\]/);
     const status = forcedStatus || (statusMatch ? statusMatch[1] : "MID");
+    // If the coach call failed or returned nothing, fall back to a message that
+    // MATCHES the real verdict. Previously the default was a fixed MID line
+    // ("You showed up...") that got shown even under a SLIP "STREAK RESET" or
+    // WIN banner — jarring and contradictory.
+    if(aiFailed || !rawReply.trim()){
+      const FALLBACK={
+        WIN:"Day locked in. Couldn't reach the coach network just now — but your win still counts. Show up again tomorrow.",
+        MID:"Logged. Couldn't reach the coach network just now, but showing up IS the fight. Back at it tomorrow.",
+        SLIP:"Logged — the streak resets, but the mission doesn't. Couldn't reach the coach network just now; get back up tomorrow.",
+      };
+      rawReply=`[STATUS:${status}]\n\n${FALLBACK[status]||FALLBACK.MID}`;
+    }
     // Remove the tag from displayed reply
     const reply = rawReply.replace(/\[STATUS:(WIN|SLIP|MID)\]\n?/, "").trim();
 
