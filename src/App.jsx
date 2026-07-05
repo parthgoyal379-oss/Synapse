@@ -1462,7 +1462,7 @@ function InstallPrompt({theme,onInstall,onDismiss}){
 }
 
 // ─── ADMIN DASHBOARD ────────────────────────────────────────────────────────
-const ADMIN_UIDS=["r2JKcDHrBOgGD1A14M9ugGQ6rzc2","bOFNjETZWjOU6nDBagxKSyB4szS2"]; // Parth + Lily
+const ADMIN_UIDS=["r2JKcDHrBOgGD1A14M9ugGQ6rzc2","U79EcPjqUeXsZOP80uXO0NqcNNp2"]; // Parth + Lily
 
 function AdminDashboard({theme,onClose}){
   const isL=theme==="light";
