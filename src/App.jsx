@@ -1612,7 +1612,13 @@ function AdminDashboard({theme,onClose}){
   // ── Addiction map ──
   const addictionMap=useMemo(()=>{
     const map={};
-    users.forEach(u=>(u.addictions||[]).forEach(a=>{map[a]=(map[a]||0)+1;}));
+    // Addictions are stored as objects ({id,label,emoji,...}); older/local data
+    // may still be plain strings. Normalize both to a display label so they
+    // don't all collapse into a single "[object Object]" bucket.
+    users.forEach(u=>(u.addictions||[]).forEach(a=>{
+      const key = typeof a==="string" ? a : (a?.label || a?.id || "Unknown");
+      map[key]=(map[key]||0)+1;
+    }));
     return Object.entries(map).sort((a,b)=>b[1]-a[1]);
   },[users]);
 
@@ -1795,7 +1801,13 @@ function AdminDashboard({theme,onClose}){
                     {selectedUser===u.id&&(
                       <div style={{marginTop:14,paddingTop:14,borderTop:`1px solid ${bdr}`}}>
                         <div style={{display:"flex",gap:8,marginBottom:10,flexWrap:"wrap"}}>
-                          {(u.addictions||[]).map(a=><span key={a} style={{padding:"3px 10px",borderRadius:999,background:card,border:`1px solid ${bdr}`,fontSize:10,color:txt2}}>{a}</span>)}
+                          {(u.addictions||[]).map((a,i)=>{
+                            // Addiction entries are objects ({id,label,...}); render the
+                            // label, never the raw object (that throws "Objects are not
+                            // valid as a React child" and crashes the whole dashboard).
+                            const label = typeof a==="string" ? a : (a?.label || a?.id || "Unknown");
+                            return <span key={i} style={{padding:"3px 10px",borderRadius:999,background:card,border:`1px solid ${bdr}`,fontSize:10,color:txt2}}>{a?.emoji?`${a.emoji} `:""}{label}</span>;
+                          })}
                           {(u.addictions||[]).length===0&&<span style={{fontSize:11,color:txt2}}>No addictions recorded</span>}
                         </div>
                         <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8,marginBottom:10}}>
