@@ -824,13 +824,17 @@ function getAmbient() {
   }
   return _ambientAudio;
 }
-// Call this from any user interaction to start music
-window.__synapsePlayAmbient = () => {
-  const a = getAmbient();
-  if (a.paused) a.play().catch(() => {});
-};
+// Background music disabled — kept as a no-op so existing callers stay safe.
+window.__synapsePlayAmbient = () => {};
 
 function AmbientAudio({ onReady }) {
+  // Background music removed — render nothing and expose a no-op play fn.
+  useEffect(() => { if (onReady) onReady(() => {}); }, []);
+  return null;
+}
+
+// eslint-disable-next-line no-unused-vars
+function _AmbientAudioLegacy({ onReady }) {
   const [playing, setPlaying] = useState(false);
   const [vol, setVol] = useState(false);
 
@@ -1518,10 +1522,18 @@ function AdminDashboard({theme,onClose}){
       // access. Bumped to 15s, with one retry at 25s if the first attempt
       // times out specifically (not on other errors like permission-denied).
       const attemptFetch=(timeoutMs)=>{
+        // Bug fix: previously these used orderBy("timestamp","desc"). In
+        // Firestore, an orderBy on a field SILENTLY EXCLUDES every document
+        // that is missing (or has null for) that field. So any checkin/feedback
+        // written before the timestamp field existed — or whose serverTimestamp()
+        // write hadn't fully resolved — never showed up in the admin dashboard
+        // ("data fetched but not all"). We now fetch the whole collection with
+        // no orderBy (so nothing is dropped) and sort client-side below, where
+        // a missing timestamp is handled gracefully instead of hiding the row.
         const fetchPromise=Promise.all([
           getDocs(collection(db,"users")),
-          getDocs(query(collection(db,"checkins"),orderBy("timestamp","desc"),limit(5000))),
-          getDocs(query(collection(db,"feedbacks"),orderBy("timestamp","desc"),limit(2000))),
+          getDocs(query(collection(db,"checkins"),limit(5000))),
+          getDocs(query(collection(db,"feedbacks"),limit(2000))),
         ]);
         return Promise.race([
           fetchPromise,
@@ -1539,9 +1551,13 @@ function AdminDashboard({theme,onClose}){
           throw firstErr;
         }
       }
+      // Sort newest-first client-side (replaces the orderBy we removed above).
+      // Docs missing a timestamp sort to the bottom instead of being dropped.
+      const _ts=(x)=>x?.timestamp?.toDate?.()?.getTime?.()||0;
+      const _sortDesc=(a,b)=>_ts(b)-_ts(a);
       const uData=uSnap.docs.map(d=>({id:d.id,...d.data()}));
-      const cData=cSnap.docs.map(d=>({id:d.id,...d.data()}));
-      const fData=fSnap.docs.map(d=>({id:d.id,...d.data()}));
+      const cData=cSnap.docs.map(d=>({id:d.id,...d.data()})).sort(_sortDesc);
+      const fData=fSnap.docs.map(d=>({id:d.id,...d.data()})).sort(_sortDesc);
       setUsers(uData); setCheckins(cData); setFeedbacks(fData);
       const ts=Date.now();
       setLastUpdated(new Date(ts));
@@ -2260,6 +2276,7 @@ function Nav({screen,goTo,savedPlan,onReset,theme,onThemeToggle,user}) {
           <button key={s} className={`nav-pill${screen===s?" active":""}`} onClick={()=>goTo(s)} style={{flexShrink:0}}>{l}</button>
         ))}
         <button className={`nav-pill${screen==="confess"?" active":""}`} onClick={()=>goTo("confess")} style={{flexShrink:0}}>Confess</button>
+        <button className={`nav-pill${screen==="about"?" active":""}`} onClick={()=>goTo("about")} style={{flexShrink:0}}>About</button>
       </div>
     </nav>
     {showProfile&&<ProfileSheet user={user} theme={theme} onThemeToggle={()=>{onThemeToggle();}} onClose={()=>setShowProfile(false)} onSignOut={handleSignOut} onPhotoUpdate={(url)=>{user.photoURL=url;}} onAdminOpen={()=>setShowAdmin(true)} onFeedback={()=>setShowFeedback(true)}/>}
@@ -2287,10 +2304,274 @@ function RotatingTaglines() {
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
+   ABOUT US — company / mission / founders page.
+   Reuses the exact visual language of the landing (Boot) screen:
+   Orbitron 900 amber→orange gradient headings, Space Grotesk 700 sub-heads,
+   Space Mono terminal labels, Inter body, green-dot amber status chips,
+   amber-bordered badge, and the #ff5500 orange-red CTA.
+══════════════════════════════════════════════════════════════════════════ */
+function About({ onBegin, onBack }){
+  // ── Shared style tokens (match landing page palette exactly) ──
+  const GRAD = "linear-gradient(165deg,#fff8e7 0%,#fff8e7 12%,#f5a000 55%,#ff5500 100%)";
+  const gradText = {
+    fontFamily:"'Orbitron',sans-serif", fontWeight:900,
+    background:GRAD, WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent",
+    backgroundClip:"text", letterSpacing:"-0.02em", lineHeight:1.05, margin:0,
+  };
+  const kicker = {
+    fontFamily:"'Space Mono',monospace", fontWeight:400, fontSize:9,
+    letterSpacing:"0.44em", color:"#6a5820", textTransform:"uppercase", marginBottom:18,
+  };
+  const subHead = {
+    fontFamily:"'Space Grotesk',sans-serif", fontWeight:700,
+    fontSize:"clamp(15px,2.4vw,20px)", color:"#f5a000", letterSpacing:"0.01em",
+    margin:"0 0 14px",
+  };
+  const body = {
+    fontFamily:"'Inter',sans-serif", fontWeight:400, fontSize:"clamp(14px,1.5vw,16px)",
+    lineHeight:1.85, color:"#a89060", maxWidth:680, margin:0, letterSpacing:"0.01em",
+  };
+  const hl = { color:"#f5a000", fontWeight:500 }; // SEO keyword highlight
+  const card = {
+    background:"rgba(255,140,0,0.02)", border:"1px solid rgba(255,140,0,0.10)",
+    borderRadius:16, padding:"clamp(20px,3vw,30px)",
+  };
+  const sectionStyle = { position:"relative", zIndex:2, padding:"clamp(56px,9vh,96px) clamp(24px,6vw,90px)", maxWidth:960, margin:"0 auto", width:"100%", boxSizing:"border-box" };
+  const rule = { width:"100%", height:1, background:"#3a2800", margin:"clamp(18px,3vh,30px) 0" };
+
+  // Scroll-reveal (mirrors the landing page IntersectionObserver pattern)
+  const [seen,setSeen]=useState({});
+  useEffect(()=>{
+    const obs=new IntersectionObserver((entries)=>{
+      entries.forEach(e=>{ if(e.isIntersecting){ const id=e.target.getAttribute("data-asec"); setSeen(p=>p[id]?p:{...p,[id]:true}); } });
+    },{threshold:0.12});
+    document.querySelectorAll("[data-asec]").forEach(el=>obs.observe(el));
+    return ()=>obs.disconnect();
+  },[]);
+  const reveal=(id)=>({opacity:seen[id]?1:0,transform:seen[id]?"translateY(0)":"translateY(18px)",transition:"opacity .6s ease,transform .6s ease"});
+
+  const Chip=({label})=>(
+    <div style={{display:"flex",alignItems:"center",gap:12,fontFamily:"'Space Mono',monospace",fontWeight:700,fontSize:11,letterSpacing:"0.06em",color:"#c9a860",padding:"11px 0"}}>
+      <span style={{color:"#00ff88",textShadow:"0 0 10px #00ff88",fontSize:9,flexShrink:0}}>●</span>
+      <span>{label}</span>
+    </div>
+  );
+
+  const diffRows=[
+    ["Restricts behavior","Helps build better behavior"],
+    ["Generic advice","Personalized AI guidance"],
+    ["Static habit trackers","Adaptive accountability"],
+    ["Tracks progress","Guides and tracks progress"],
+    ["Depends on willpower","Builds sustainable lasting systems"],
+    ["Clinical, transactional interfaces","Immersive, engaging user experience"],
+    ["Generic dashboards","A purposeful experience that keeps users motivated"],
+    ["Reactive after relapse","Proactive, real-time interventions"],
+    ["One-size-fits-all plans","Personalized behavior-change journeys"],
+    ["Focus on blocking distractions","Focus on understanding and replacing habits"],
+    ["Tracks what happened","Helps shape what happens next"],
+    ["Data without context","Insights with actionable guidance"],
+  ];
+
+  return (
+    <div style={{background:"var(--bg)",minHeight:"100vh",width:"100%",position:"relative",overflowX:"hidden"}}>
+
+      {/* ── HERO ── */}
+      <section data-asec="hero" style={{...sectionStyle,minHeight:"88vh",display:"flex",flexDirection:"column",justifyContent:"center",textAlign:"center",alignItems:"center"}}>
+        {/* amber badge (DOPAMINE RESET PROTOCOL style) */}
+        <div style={{...reveal("hero"),display:"inline-flex",alignItems:"center",gap:8,padding:"7px 16px",borderRadius:999,border:"1px solid #ffb347",background:"rgba(255,140,0,0.05)",fontFamily:"'Orbitron',sans-serif",fontSize:9,fontWeight:700,color:"#ffb347",letterSpacing:"0.28em",marginBottom:30}}>
+          <span style={{color:"#00ff88",textShadow:"0 0 8px #00ff88",fontSize:8}}>●</span>ABOUT SYNAPSE
+        </div>
+        <h1 style={{...gradText,fontSize:"clamp(32px,6.5vw,68px)",maxWidth:900,...reveal("hero")}}>Break the habit today.<br/>Or stay in the loop tomorrow.</h1>
+        <p style={{...body,color:"#a89060",maxWidth:720,margin:"28px auto 0",textAlign:"center",...reveal("hero")}}>
+          Synapse is an <span style={hl}>AI-powered accountability</span> and habit-building platform that helps people overcome addictive habits—including doomscrolling, social media addiction, pornography, gaming, caffeine, junk food, and gambling—through <span style={hl}>personalized guidance</span>, <span style={hl}>real-time interventions</span>, and intelligent <span style={hl}>behavior change</span>.
+        </p>
+        <div style={{...kicker,marginTop:34,marginBottom:0,letterSpacing:"0.5em",color:"#f5a000",...reveal("hero")}}>RESET · REWIRE · RECONQUER</div>
+      </section>
+
+      {/* ── PROBLEM ── */}
+      <section data-asec="problem" style={{...sectionStyle,...reveal("problem")}}>
+        <div style={kicker}>THE PROBLEM</div>
+        <h2 style={{...gradText,fontSize:"clamp(26px,4.5vw,44px)"}}>Habits are built quietly.</h2>
+        <div style={rule}/>
+        <p style={{...body,marginBottom:18}}>Addictive habits rarely begin with a lack of ambition. They begin with small decisions repeated every day—one more scroll, one more game, one more excuse. Over time, those moments become patterns, and those patterns become habits that quietly shape our decisions, our attention, and ultimately, the lives we live.</p>
+        <p style={body}>Today, millions of people recognise the issue and want to change. Yet most simply don't have the right system to help them stay consistent when it matters most.</p>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(260px,1fr))",gap:20,marginTop:40}}>
+          <div style={card}>
+            <div style={subHead}>Why it exists</div>
+            {["Modern platforms are designed to capture attention and encourage repeated engagement.","Most habits are reinforced by recurring triggers, environments, and routines.","People often rely on motivation alone, even though motivation naturally fluctuates."].map((t,i)=><p key={i} style={{...body,fontSize:14,marginBottom:i<2?12:0,color:"#9a8558"}}>— {t}</p>)}
+          </div>
+          <div style={card}>
+            <div style={subHead}>Why current solutions fail</div>
+            {["Blockers remove access but rarely change behavior.","Generic habit trackers provide data without meaningful guidance.","Most solutions stop at tracking progress instead of helping users navigate moments of temptation."].map((t,i)=><p key={i} style={{...body,fontSize:14,marginBottom:i<2?12:0,color:"#9a8558"}}>— {t}</p>)}
+          </div>
+        </div>
+      </section>
+
+      {/* ── INSIGHT ── */}
+      <section data-asec="insight" style={{...sectionStyle,...reveal("insight")}}>
+        <div style={kicker}>THE INSIGHT</div>
+        <h2 style={{...gradText,fontSize:"clamp(26px,4.5vw,44px)"}}>It was never about willpower.</h2>
+        <div style={rule}/>
+        <p style={{...body,marginBottom:18}}>Breaking a habit isn't about having stronger willpower. It's about having the right support at the right moment. Real <span style={hl}>behavior change</span> happens when people understand their patterns, receive <span style={hl}>personalized guidance</span>, and build systems that make better choices easier over time.</p>
+        <div style={{...card,borderColor:"rgba(255,140,0,0.2)",background:"rgba(255,140,0,0.04)"}}>
+          <div style={subHead}>Gap in the Market</div>
+          <p style={body}>Most existing solutions focus on <span style={hl}>restricting</span> behavior. We believe lasting change comes from <span style={hl}>understanding</span> behavior, adapting to the individual, and creating accountability that evolves with them.</p>
+        </div>
+      </section>
+
+      {/* ── SOLUTION ── */}
+      <section data-asec="solution" style={{...sectionStyle,...reveal("solution")}}>
+        <div style={kicker}>THE SOLUTION</div>
+        <h2 style={{...gradText,fontSize:"clamp(26px,4.5vw,44px)"}}>Synapse adapts to you.</h2>
+        <div style={rule}/>
+        <p style={{...body,marginBottom:18}}>Whether someone is trying to quit doomscrolling, reduce screen time, stop gambling, overcome pornography addiction, or build healthier routines, Synapse adapts to their individual journey instead of offering one-size-fits-all advice.</p>
+        <p style={{...body,marginBottom:36}}>We built an <span style={hl}>AI-powered accountability</span> platform that helps people overcome addictive habits through personalized interventions, <span style={hl}>dopamine &amp; addiction recovery</span>, an AI coach, adaptive habit systems, and <span style={hl}>real-time guidance</span>. Rather than simply telling users what not to do, Synapse helps them understand why habits occur and supports them in building healthier ones.</p>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))",gap:18}}>
+          {[["01","Understand","Synapse learns your addictions, habits, goals, routines, and the situations that lead to unhealthy decisions."],["02","Guide","Using AI-powered accountability, Synapse delivers personalized support, practical interventions, and adaptive recommendations when they're needed most."],["03","Grow","As you progress, Synapse continuously adapts to your journey, helping you build stronger habits and lasting discipline over time."]].map(([n,h,t])=>(
+            <div key={n} style={card}>
+              <div style={{fontFamily:"'Orbitron',sans-serif",fontWeight:700,fontSize:26,color:"#f5a000",filter:"drop-shadow(0 0 12px rgba(245,160,0,.4))",marginBottom:12}}>{n}</div>
+              <div style={subHead}>{h}</div>
+              <p style={{...body,fontSize:14,color:"#9a8558"}}>{t}</p>
+            </div>
+          ))}
+        </div>
+        <div style={{marginTop:38}}>
+          <div style={subHead}>Impact</div>
+          <Chip label="Build sustainable discipline instead of relying on temporary motivation"/>
+          <Chip label="Replace unhealthy habits with healthier routines"/>
+          <Chip label="Regain control over attention, decisions, and daily life"/>
+        </div>
+      </section>
+
+      {/* ── MISSION + VISION ── */}
+      <section data-asec="mv" style={{...sectionStyle,...reveal("mv")}}>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(300px,1fr))",gap:28}}>
+          <div>
+            <div style={kicker}>MISSION</div>
+            <h2 style={{...gradText,fontSize:"clamp(22px,3.4vw,34px)",marginBottom:18}}>Why we exist</h2>
+            <p style={{...body,marginBottom:20}}>To empower people to overcome addictive habits by combining intelligent technology with <span style={hl}>personalized accountability</span>, making lasting <span style={hl}>behavior change</span> more accessible to everyone.</p>
+            {["AI-powered accountability","Behavior change through habit systems","Long-term discipline over short-term motivation"].map((t,i)=><Chip key={i} label={t}/>)}
+          </div>
+          <div>
+            <div style={kicker}>VISION</div>
+            <h2 style={{...gradText,fontSize:"clamp(22px,3.4vw,34px)",marginBottom:18}}>Where we're going</h2>
+            <p style={body}>We envision a future where overcoming addictive habits is no longer limited by willpower alone, but supported by intelligent systems that help people make better decisions every day. Our long-term goal is to build the world's most trusted <span style={hl}>AI platform for lasting behavior change</span>.</p>
+          </div>
+        </div>
+      </section>
+
+      {/* ── FOUNDERS ── */}
+      <section data-asec="founders" style={{...sectionStyle,...reveal("founders")}}>
+        <div style={kicker}>THE TEAM</div>
+        <h2 style={{...gradText,fontSize:"clamp(26px,4.5vw,44px)"}}>Founders</h2>
+        <div style={rule}/>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(300px,1fr))",gap:22}}>
+          {[
+            {ini:"PG",name:"Parth Goyal",role:"Co-Founder & CEO",focus:"Engineering, AI Systems, Technical Strategy, Product Development",contrib:"Built the first prototype of Synapse, leads the platform's technical architecture, engineering, and AI development."},
+            {ini:"ST",name:"Sandali Tiwari",role:"Co-Founder & COO",focus:"Product Management, Marketing, Operations, Growth",contrib:"Leads product strategy, user research, marketing, branding, partnerships, and company operations to ensure Synapse is built around real user needs."},
+          ].map(f=>(
+            <div key={f.ini} style={card}>
+              <div style={{display:"flex",alignItems:"center",gap:14,marginBottom:16}}>
+                <div style={{width:52,height:52,borderRadius:14,flexShrink:0,background:"linear-gradient(135deg,#ff9500,#ff5000)",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Orbitron',sans-serif",fontSize:15,fontWeight:900,color:"#fff",boxShadow:"0 4px 16px rgba(255,140,0,0.35)"}}>{f.ini}</div>
+                <div>
+                  <div style={{fontFamily:"'Orbitron',sans-serif",fontWeight:800,fontSize:16,color:"var(--text)",letterSpacing:0.3}}>{f.name}</div>
+                  <div style={{fontFamily:"'Space Mono',monospace",fontSize:10,letterSpacing:"0.1em",color:"#f5a000",marginTop:3,textTransform:"uppercase"}}>{f.role}</div>
+                </div>
+              </div>
+              <div style={{fontFamily:"'Space Mono',monospace",fontSize:10,letterSpacing:"0.04em",color:"#6a5820",textTransform:"uppercase",marginBottom:8}}>Focus</div>
+              <p style={{...body,fontSize:14,marginBottom:14,color:"#9a8558"}}>{f.focus}</p>
+              <div style={{fontFamily:"'Space Mono',monospace",fontSize:10,letterSpacing:"0.04em",color:"#6a5820",textTransform:"uppercase",marginBottom:8}}>Contribution</div>
+              <p style={{...body,fontSize:14,color:"#9a8558"}}>{f.contrib}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ── VALUES ── */}
+      <section data-asec="values" style={{...sectionStyle,...reveal("values")}}>
+        <div style={kicker}>WHAT WE STAND FOR</div>
+        <h2 style={{...gradText,fontSize:"clamp(26px,4.5vw,44px)"}}>Our values</h2>
+        <div style={rule}/>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(260px,1fr))",gap:18}}>
+          {[["Discipline over motivation","Sustainable systems outperform temporary inspiration."],["People before metrics","Every decision begins with understanding the people we serve."],["Continuous improvement","Small, consistent progress creates meaningful change."],["Build with purpose","Technology should empower people, not compete for their attention."]].map(([h,t])=>(
+            <div key={h} style={card}>
+              <div style={subHead}>{h}</div>
+              <p style={{...body,fontSize:14,color:"#9a8558"}}>{t}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ── DIFFERENTIATION TABLE ── */}
+      <section data-asec="diff" style={{...sectionStyle,...reveal("diff")}}>
+        <div style={kicker}>THE DIFFERENCE</div>
+        <h2 style={{...gradText,fontSize:"clamp(26px,4.5vw,44px)"}}>Traditional vs Synapse</h2>
+        <div style={rule}/>
+        <div style={{border:"1px solid rgba(255,140,0,0.14)",borderRadius:16,overflow:"hidden"}}>
+          {/* header row */}
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr"}}>
+            <div style={{padding:"14px clamp(14px,2.5vw,24px)",fontFamily:"'Space Grotesk',sans-serif",fontWeight:700,fontSize:"clamp(12px,1.6vw,15px)",color:"#8a7040",background:"rgba(255,255,255,0.015)",borderBottom:"1px solid rgba(255,140,0,0.14)"}}>Traditional Solutions</div>
+            <div style={{padding:"14px clamp(14px,2.5vw,24px)",fontFamily:"'Space Grotesk',sans-serif",fontWeight:700,fontSize:"clamp(12px,1.6vw,15px)",color:"#f5a000",background:"rgba(255,140,0,0.06)",borderBottom:"1px solid rgba(255,140,0,0.22)"}}>Synapse</div>
+          </div>
+          {diffRows.map(([a,b],i)=>(
+            <div key={i} style={{display:"grid",gridTemplateColumns:"1fr 1fr",borderTop:i?"1px solid rgba(255,140,0,0.07)":"none"}}>
+              <div style={{padding:"13px clamp(14px,2.5vw,24px)",fontFamily:"'Inter',sans-serif",fontSize:"clamp(12px,1.5vw,14px)",color:"#8a7040",lineHeight:1.55}}>{a}</div>
+              <div style={{padding:"13px clamp(14px,2.5vw,24px)",fontFamily:"'Inter',sans-serif",fontSize:"clamp(12px,1.5vw,14px)",fontWeight:500,color:"#d8b878",lineHeight:1.55,background:"rgba(255,140,0,0.025)"}}>{b}</div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ── HOW WE BUILD ── */}
+      <section data-asec="build" style={{...sectionStyle,...reveal("build")}}>
+        <div style={kicker}>HOW WE BUILD</div>
+        <h2 style={{...gradText,fontSize:"clamp(26px,4.5vw,44px)"}}>Built with users, not ahead of them.</h2>
+        <div style={rule}/>
+        <p style={{...body,marginBottom:28}}>We build alongside our users, not ahead of them. Every feature begins with a real problem, it's shaped through user feedback, and is refined through continuous iteration. Our goal isn't to maximize screen time—it's to help people spend less time fighting unhealthy habits and compulsive behaviours, and more time living intentionally.</p>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))",gap:18}}>
+          {["Build for real problems, not assumptions.","Listen first, iterate second.","Prioritize long-term impact over short-term engagement."].map((t,i)=>(
+            <div key={i} style={card}><p style={{...body,fontSize:14,color:"#9a8558"}}>{t}</p></div>
+          ))}
+        </div>
+      </section>
+
+      {/* ── JOURNEY ── */}
+      <section data-asec="journey" style={{...sectionStyle,...reveal("journey")}}>
+        <div style={kicker}>THE JOURNEY</div>
+        <h2 style={{...gradText,fontSize:"clamp(26px,4.5vw,44px)"}}>Where we've been</h2>
+        <div style={rule}/>
+        <div>
+          {["Identified the growing need for personalized accountability in behavior change.","Built the first version of Synapse to address addictive habits through AI-powered guidance.","Continuously improving the platform through user feedback and rapid iteration."].map((t,i)=>(
+            <div key={i} style={{display:"flex",gap:16,alignItems:"flex-start",padding:"14px 0",borderTop:i?"1px solid rgba(255,140,0,0.07)":"none"}}>
+              <div style={{fontFamily:"'Orbitron',sans-serif",fontWeight:700,fontSize:15,color:"#f5a000",flexShrink:0,minWidth:34}}>{`0${i+1}`}</div>
+              <p style={{...body,fontSize:15,margin:0}}>{t}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ── CLOSING + CTA ── */}
+      <section data-asec="cta" style={{...sectionStyle,textAlign:"center",minHeight:"70vh",display:"flex",flexDirection:"column",justifyContent:"center",alignItems:"center",...reveal("cta")}}>
+        <p style={{...body,maxWidth:640,textAlign:"center",margin:"0 auto 40px",fontSize:"clamp(16px,2vw,19px)",color:"#c9a860"}}>Every habit begins with a choice. Every meaningful change begins with the next one. Synapse is here to help you make it count.</p>
+        <div style={{...kicker,color:"#6a5820",marginBottom:22}}>READY TO TAKE BACK CONTROL?</div>
+        <h2 style={{...gradText,fontSize:"clamp(30px,5vw,52px)",marginBottom:8}}>Reset. Rewire. Reconquer.</h2>
+        <button onClick={onBegin} style={{marginTop:34,fontFamily:"'Orbitron',sans-serif",fontWeight:700,fontSize:11,letterSpacing:"0.45em",padding:"22px 56px",paddingLeft:"calc(56px + 0.45em)",background:"#ff5500",border:"1px solid #ff5500",color:"#fff",cursor:"pointer",boxShadow:"0 0 40px rgba(255,85,0,.35)",transition:"box-shadow .3s,transform .2s"}} onMouseEnter={e=>{e.currentTarget.style.boxShadow="0 0 60px rgba(255,85,0,.5)";e.currentTarget.style.transform="translateY(-2px)";}} onMouseLeave={e=>{e.currentTarget.style.boxShadow="0 0 40px rgba(255,85,0,.35)";e.currentTarget.style.transform="translateY(0)";}}>
+          BEGIN RESET ›
+        </button>
+        {onBack&&(
+          <button onClick={onBack} style={{marginTop:24,background:"transparent",border:"none",fontFamily:"'Space Mono',monospace",fontSize:10,letterSpacing:"0.2em",color:"#6a5820",textTransform:"uppercase",cursor:"pointer"}}>‹ Back</button>
+        )}
+      </section>
+
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
    SPLIT LAYOUT — Boot (branding left) + Auth (form right) simultaneously
    This is the first page the user sees. No separate screens.
 ══════════════════════════════════════════════════════════════════════════ */
-function Boot({ onBegin, onLogin, hasPlan, theme, onThemeToggle }) {
+function Boot({ onBegin, onLogin, hasPlan, theme, onThemeToggle, onAbout }) {
   const canvasRef=useRef(null);
   const curRef=useRef(null);
   const [bootDone,setBootDone]=useState(false);
@@ -2518,6 +2799,13 @@ function Boot({ onBegin, onLogin, hasPlan, theme, onThemeToggle }) {
 
       {/* Direct login entry — returning users with an account shouldn't have
           to go through the whole Confess → Plan flow just to sign in. */}
+      {onAbout&&(
+        <button onClick={onAbout} style={{position:"fixed",top:18,left:"clamp(14px,4vw,32px)",zIndex:7000,background:"rgba(245,160,0,0.08)",border:"1px solid rgba(245,160,0,0.3)",color:"#f5a000",padding:"9px 18px",borderRadius:999,fontFamily:"'Space Mono',monospace",fontSize:9,letterSpacing:"0.15em",textTransform:"uppercase",cursor:"pointer",backdropFilter:"blur(8px)",transition:"all .25s"}}
+          onMouseEnter={e=>{e.currentTarget.style.background="rgba(245,160,0,0.16)";e.currentTarget.style.borderColor="rgba(245,160,0,0.55)";}}
+          onMouseLeave={e=>{e.currentTarget.style.background="rgba(245,160,0,0.08)";e.currentTarget.style.borderColor="rgba(245,160,0,0.3)";}}>
+          About
+        </button>
+      )}
       <button onClick={onLogin} style={{position:"fixed",top:18,right:"clamp(14px,4vw,32px)",zIndex:7000,background:"rgba(245,160,0,0.08)",border:"1px solid rgba(245,160,0,0.3)",color:"#f5a000",padding:"9px 18px",borderRadius:999,fontFamily:"'Space Mono',monospace",fontSize:9,letterSpacing:"0.15em",textTransform:"uppercase",cursor:"pointer",backdropFilter:"blur(8px)",transition:"all .25s"}}
         onMouseEnter={e=>{e.currentTarget.style.background="rgba(245,160,0,0.16)";e.currentTarget.style.borderColor="rgba(245,160,0,0.55)";}}
         onMouseLeave={e=>{e.currentTarget.style.background="rgba(245,160,0,0.08)";e.currentTarget.style.borderColor="rgba(245,160,0,0.3)";}}>
@@ -5847,6 +6135,7 @@ function AppRoot() {
             {screen==="urge"    &&<UrgeTimer streak={streak} savedPlan={savedPlan}/>}
             {screen==="chat"    &&<Chat streak={streak} savedPlan={savedPlan}/>}
             {screen==="report"  &&<Report history={history} savedPlan={savedPlan} streak={streak} planHistory={planHistory}/>}
+            {screen==="about"   &&<About onBegin={()=>goTo(savedPlan?"checkin":"confess")} onBack={()=>goTo(savedPlan?"checkin":"boot")}/>}
           </div>
           {screen!=="boot"&&<div style={{position:"relative",zIndex:2,marginTop:80,overflow:"hidden",width:"100%",maxWidth:"100%"}}><Marquee/></div>}
           {/* Emergency floating button — only on checkin screen */}
@@ -5892,7 +6181,8 @@ function AppRoot() {
         <div style={{position:"relative",zIndex:2}}>
           {screen==="confess" && <Confess onSubmit={handleConfess} loading={planLoading}/>}
           {screen==="plan"    && <Plan plan={plan} loading={planLoading} onBegin={()=>setShowAuth(true)} onRetry={()=>goTo("confess")}/>}
-          {screen==="boot"    && <Boot onBegin={handleBegin} onLogin={()=>setShowAuth(true)} hasPlan={false} theme={theme} onThemeToggle={handleThemeToggle}/>}
+          {screen==="about"   && <About onBegin={handleBegin} onBack={()=>goTo("boot")}/>}
+          {screen==="boot"    && <Boot onBegin={handleBegin} onLogin={()=>setShowAuth(true)} hasPlan={false} theme={theme} onThemeToggle={handleThemeToggle} onAbout={()=>goTo("about")}/>}
         </div>
       )}
     </div>
