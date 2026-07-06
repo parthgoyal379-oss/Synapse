@@ -1316,9 +1316,34 @@ input[type=range]{-webkit-appearance:none;appearance:none;background:transparent
   .footer-wrap{padding:20px 5vw !important;flex-direction:column !important;gap:10px !important;}
 
   /* ── Emergency button — keep small on mobile ── */
-  button[style*="I'm Struggling"],button[style*="Struggling"]{
+  .sos-btn,button[style*="I'm Struggling"],button[style*="Struggling"]{
     padding:8px 14px !important;font-size:8px !important;letter-spacing:0.5px !important;gap:5px !important;
+    bottom:18px !important;right:14px !important;
   }
+
+  /* ══ MOBILE POLISH PASS (≤768px only — desktop untouched) ══ */
+
+  /* ── NAV: horizontal scroll with fade-edge gradients on the tabs row ── */
+  .nav-tabs-row{position:relative;-webkit-mask-image:linear-gradient(90deg,transparent 0,#000 14px,#000 calc(100% - 14px),transparent 100%);mask-image:linear-gradient(90deg,transparent 0,#000 14px,#000 calc(100% - 14px),transparent 100%);}
+  .nav-tabs-row .nav-pill{scroll-snap-align:start;}
+  /* Tap targets: keep pills tall enough to hit comfortably (~40px) */
+  nav .nav-pill{min-height:34px;display:inline-flex;align-items:center;}
+
+  /* ── ADMIN DASHBOARD ── */
+  .admin-header{padding:12px 16px !important;flex-wrap:wrap;gap:8px;}
+  .admin-header-sub{display:none !important;}      /* drop "Founders Dashboard — Confidential" subtitle */
+  .admin-updated{display:none !important;}          /* drop timestamp + loading text — refresh button conveys state */
+  .admin-header-actions{gap:6px !important;}
+  .admin-tabs{padding:0 12px !important;-webkit-mask-image:linear-gradient(90deg,transparent 0,#000 12px,#000 calc(100% - 12px),transparent 100%);mask-image:linear-gradient(90deg,transparent 0,#000 12px,#000 calc(100% - 12px),transparent 100%);}
+  .admin-tabs button{padding:12px 12px !important;min-height:44px;}
+  /* Stat cards: 2-up grid instead of a cramped 4-wide flex-wrap */
+  .admin-stat-row{display:grid !important;grid-template-columns:1fr 1fr !important;gap:8px !important;}
+  .admin-stat-card{min-width:0 !important;padding:14px 14px !important;}
+
+  /* ── ABOUT PAGE: tighten the tall section rhythm, consistent side padding ── */
+  section[data-asec]{padding-top:clamp(44px,10vw,64px) !important;padding-bottom:clamp(44px,10vw,64px) !important;padding-left:22px !important;padding-right:22px !important;}
+  section[data-asec="hero"]{min-height:78vh !important;}
+  section[data-asec="cta"]{min-height:58vh !important;}
 }
 
 @media(max-width:480px){
@@ -1337,10 +1362,21 @@ input[type=range]{-webkit-appearance:none;appearance:none;background:transparent
   /* ── Section tag pills ── */
   [style*="letterSpacing:2.5"]{font-size:8px !important;}
   [style*='letterSpacing:"2.5']{font-size:8px !important;}
+
+  /* ── ABOUT: single-column all multi-col grids at phone width ── */
+  section[data-asec] [style*="grid-template-columns"],
+  section[data-asec] [style*="gridTemplateColumns"]{grid-template-columns:1fr !important;}
+  /* Keep the Traditional-vs-Synapse comparison table 2-col (it's meant to compare side by side) */
+  section[data-asec="diff"] [style*="1fr 1fr"]{grid-template-columns:1fr 1fr !important;}
+
+  /* ── Admin body padding — reclaim edge space ── */
+  .admin-stat-row{gap:8px !important;}
 }
 
 @media(max-width:380px){
   nav .nav-pill{padding:4px 6px !important;font-size:7px !important;letter-spacing:0 !important;}
+  /* Stat cards stack to a single column on the narrowest phones */
+  .admin-stat-row{grid-template-columns:1fr !important;}
 }
 `;
 
@@ -1649,7 +1685,7 @@ function AdminDashboard({theme,onClose}){
   const maxAdd=addictionMap[0]?.[1]||1;
 
   const StatCard=({label,value,sub,color})=>(
-    <div style={{background:card,border:`1px solid ${bdr}`,borderRadius:14,padding:"16px 18px",flex:1,minWidth:0}}>
+    <div className="admin-stat-card" style={{background:card,border:`1px solid ${bdr}`,borderRadius:14,padding:"16px 18px",flex:1,minWidth:0}}>
       <div style={{fontSize:11,color:txt2,letterSpacing:1,textTransform:"uppercase",marginBottom:6}}>{label}</div>
       <div style={{fontSize:28,fontWeight:800,fontFamily:"'Orbitron',sans-serif",color:color||acc,lineHeight:1}}>{value}</div>
       {sub&&<div style={{fontSize:10,color:txt2,marginTop:4}}>{sub}</div>}
@@ -1660,17 +1696,17 @@ function AdminDashboard({theme,onClose}){
     <div style={{position:"fixed",inset:0,zIndex:1000,background:bg,overflowY:"auto",fontFamily:"'Inter',sans-serif"}}>
 
       {/* ── Header ── */}
-      <div style={{position:"sticky",top:0,background:isL?"rgba(246,244,232,0.95)":"rgba(9,7,15,0.95)",backdropFilter:"blur(20px)",borderBottom:`1px solid ${bdr}`,padding:"14px 20px",display:"flex",alignItems:"center",justifyContent:"space-between",zIndex:10}}>
+      <div className="admin-header" style={{position:"sticky",top:0,background:isL?"rgba(246,244,232,0.95)":"rgba(9,7,15,0.95)",backdropFilter:"blur(20px)",borderBottom:`1px solid ${bdr}`,padding:"14px 20px",display:"flex",alignItems:"center",justifyContent:"space-between",zIndex:10}}>
         <div>
           <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:13,fontWeight:800,color:acc,letterSpacing:2}}>⚡ SYNAPSE ADMIN</div>
-          <div style={{fontSize:10,color:txt2,marginTop:1,letterSpacing:.5}}>Founders Dashboard — Confidential</div>
+          <div className="admin-header-sub" style={{fontSize:10,color:txt2,marginTop:1,letterSpacing:.5}}>Founders Dashboard — Confidential</div>
         </div>
-        <div style={{display:"flex",gap:8,alignItems:"center"}}>
-          {lastUpdated&&<div style={{fontSize:10,color:txt2}}>Updated {lastUpdated.toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit"})}</div>}
+        <div className="admin-header-actions" style={{display:"flex",gap:8,alignItems:"center"}}>
+          {lastUpdated&&<div className="admin-updated" style={{fontSize:10,color:txt2}}>Updated {lastUpdated.toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit"})}</div>}
           <button onClick={()=>fetchData(true)} disabled={refreshing} style={{padding:"6px 12px",borderRadius:999,background:card,border:`1px solid ${bdr}`,color:refreshing?txt2:acc,fontSize:10,cursor:"pointer",display:"flex",alignItems:"center",gap:4}}>
             <RefreshCw size={11} style={{animation:refreshing?"spin 0.7s linear infinite":"none"}}/>{refreshing?"Syncing...":"Refresh"}
           </button>
-          <div style={{fontSize:10,color:txt2}}>{loading?"Loading...":""}</div>
+          <div className="admin-updated" style={{fontSize:10,color:txt2}}>{loading?"Loading...":""}</div>
           <button onClick={onClose} style={{width:32,height:32,borderRadius:"50%",background:card,border:`1px solid ${bdr}`,color:txt2,fontSize:18,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",lineHeight:1}}>×</button>
         </div>
       </div>
@@ -1687,7 +1723,7 @@ function AdminDashboard({theme,onClose}){
       )}
 
       {/* ── Tab bar ── */}
-      <div style={{display:"flex",gap:0,borderBottom:`1px solid ${bdr}`,padding:"0 20px",overflowX:"auto"}}>
+      <div className="admin-tabs" style={{display:"flex",gap:0,borderBottom:`1px solid ${bdr}`,padding:"0 20px",overflowX:"auto"}}>
         {[["overview","📊 Overview"],["users","👥 Users"],["checkins","📋 Check-ins"],["addictions","🧠 Addictions"],["feedbacks","💬 Feedback"]].map(([t,l])=>(
           <button key={t} onClick={()=>setTab(t)} style={{padding:"12px 16px",background:"none",border:"none",borderBottom:`2px solid ${tab===t?acc:"transparent"}`,color:tab===t?acc:txt2,fontSize:11,fontWeight:tab===t?700:400,cursor:"pointer",letterSpacing:.5,transition:"all .2s",whiteSpace:"nowrap",flexShrink:0}}>{l}</button>
         ))}
@@ -1718,7 +1754,7 @@ function AdminDashboard({theme,onClose}){
           {/* ══ OVERVIEW TAB ══ */}
           {tab==="overview"&&(<>
             {/* Stat cards */}
-            <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
+            <div className="admin-stat-row" style={{display:"flex",gap:10,flexWrap:"wrap"}}>
               <StatCard label="Total Users" value={totalUsers} sub="Registered accounts"/>
               <StatCard label="Active Today" value={activeToday} sub="Checked in today" color={green}/>
               <StatCard label="Avg Streak" value={`${avgStreak}d`} sub="Across all users" color={amber}/>
@@ -2271,7 +2307,7 @@ function Nav({screen,goTo,savedPlan,onReset,theme,onThemeToggle,user}) {
         </div>
       </div>
       {/* Row 2 — Screen tabs */}
-      <div style={{display:"flex",gap:6,alignItems:"center",padding:"0 clamp(12px,4vw,48px) 10px",overflowX:"auto",WebkitOverflowScrolling:"touch",scrollbarWidth:"none",msOverflowStyle:"none",whiteSpace:"nowrap"}}>
+      <div className="nav-tabs-row" style={{display:"flex",gap:6,alignItems:"center",padding:"0 clamp(12px,4vw,48px) 10px",overflowX:"auto",WebkitOverflowScrolling:"touch",scrollbarWidth:"none",msOverflowStyle:"none",whiteSpace:"nowrap"}}>
         {savedPlan&&[["checkin","Check-In"],["plan","My Plan"],["chat","Coach"],["report","Report"],["history","Log"],["urge","⚡ Urge"]].map(([s,l])=>(
           <button key={s} className={`nav-pill${screen===s?" active":""}`} onClick={()=>goTo(s)} style={{flexShrink:0}}>{l}</button>
         ))}
@@ -5776,8 +5812,27 @@ function AppRoot() {
   useEffect(()=>{
     const unsub=onAuthStateChanged(auth,user=>{
       if(user){
-        ls.set("syn_user",JSON.stringify({email:user.email,name:user.displayName||user.email?.split("@")[0],uid:user.uid}));
+        const displayName=user.displayName||user.email?.split("@")[0]||"";
+        ls.set("syn_user",JSON.stringify({email:user.email,name:displayName,uid:user.uid,photoURL:user.photoURL||""}));
         setAuthed(true);
+        // Identity write — guarantee name/email/photoURL exist on the users doc.
+        // Bug fix: previously the ONLY write that set these identity fields was
+        // inside handleConfess(), AFTER an awaited callAI() plan generation. So
+        // if that AI call failed, or the user checked in without ever finishing
+        // confess, the users/{uid} doc got created by handleCheckin() with ONLY
+        // streak fields — no name, no email. The admin dashboard reads u.name /
+        // u.email, so those users showed up as "Unknown" with a blank email
+        // ("data comes but not all"). The field keys read and written match; the
+        // identity write just never happened. Writing it here, on every auth-ready,
+        // decouples identity from the confess flow. merge:true so it never clobbers
+        // archetype/addictions/streak written elsewhere.
+        durableWrite(`identity_${user.uid}`, "users", user.uid, {
+          uid:user.uid,
+          name:displayName,
+          email:user.email||"",
+          photoURL:user.photoURL||"",
+          lastSeen:serverTimestamp(),
+        });
         // Already logged in — skip boot screen, go straight to app
         const sp=ls.get("syn_plan","");
         setScreen(sp?"checkin":"confess");
@@ -6140,7 +6195,7 @@ function AppRoot() {
           {screen!=="boot"&&<div style={{position:"relative",zIndex:2,marginTop:80,overflow:"hidden",width:"100%",maxWidth:"100%"}}><Marquee/></div>}
           {/* Emergency floating button — only on checkin screen */}
           {screen==="checkin"&&(
-            <button onClick={()=>setEmergency(true)} style={{position:"fixed",bottom:"clamp(20px,4vw,32px)",right:"clamp(12px,4vw,28px)",zIndex:800,background:"linear-gradient(135deg,#cc1111,#8b0000)",border:"1px solid rgba(255,80,80,0.4)",borderRadius:999,padding:"clamp(8px,1.5vw,13px) clamp(12px,2.5vw,22px)",color:"var(--text)",fontSize:"clamp(8px,1.8vw,11px)",fontWeight:700,letterSpacing:"clamp(0.5px,0.3vw,1.5px)",textTransform:"uppercase",boxShadow:"0 0 20px rgba(255,30,30,0.35),0 6px 20px rgba(0,0,0,0.5)",cursor:"pointer",display:"flex",alignItems:"center",gap:"clamp(5px,1vw,9px)",fontFamily:"'Orbitron',sans-serif"}}>
+            <button className="sos-btn" onClick={()=>setEmergency(true)} style={{position:"fixed",bottom:"clamp(20px,4vw,32px)",right:"clamp(12px,4vw,28px)",zIndex:800,background:"linear-gradient(135deg,#cc1111,#8b0000)",border:"1px solid rgba(255,80,80,0.4)",borderRadius:999,padding:"clamp(8px,1.5vw,13px) clamp(12px,2.5vw,22px)",color:"var(--text)",fontSize:"clamp(8px,1.8vw,11px)",fontWeight:700,letterSpacing:"clamp(0.5px,0.3vw,1.5px)",textTransform:"uppercase",boxShadow:"0 0 20px rgba(255,30,30,0.35),0 6px 20px rgba(0,0,0,0.5)",cursor:"pointer",display:"flex",alignItems:"center",gap:"clamp(5px,1vw,9px)",fontFamily:"'Orbitron',sans-serif"}}>
               <span style={{fontSize:"clamp(11px,2.5vw,15px)"}}>🆘</span>
               <span>I'm Struggling</span>
             </button>
