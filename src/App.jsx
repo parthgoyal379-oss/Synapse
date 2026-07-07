@@ -1271,8 +1271,10 @@ input[type=range]{-webkit-appearance:none;appearance:none;background:transparent
 .addiction-grid{box-sizing:border-box;}
 
 @media(max-width:768px){
-  /* ── Nav ── */
-  nav .nav-pill{padding:5px 10px !important;font-size:9px !important;letter-spacing:.3px !important;}
+  /* ── Nav ── (breathable pills — see MOBILE POLISH PASS below for the
+     scroll/fade treatment; padding intentionally roomy now that the tab row
+     scrolls horizontally instead of cramming to fit) */
+  nav .nav-pill{padding:9px 16px !important;font-size:10px !important;letter-spacing:.5px !important;}
   .nav-logo-text div:last-child{display:none !important;} /* hide "RESET · REWIRE · RISE" */
 
   /* ── Global heading scale ── */
@@ -1315,19 +1317,23 @@ input[type=range]{-webkit-appearance:none;appearance:none;background:transparent
   /* ── Footer ── */
   .footer-wrap{padding:20px 5vw !important;flex-direction:column !important;gap:10px !important;}
 
-  /* ── Emergency button — keep small on mobile ── */
+  /* ── Emergency SOS button — keep small AND lift it clear of the bottom
+     check-in reminder / marquee bar so it never overlaps them (was bottom:18px
+     which sat right on top of the "⏳ … left to check in" bar on load). ── */
   .sos-btn,button[style*="I'm Struggling"],button[style*="Struggling"]{
     padding:8px 14px !important;font-size:8px !important;letter-spacing:0.5px !important;gap:5px !important;
-    bottom:18px !important;right:14px !important;
+    bottom:88px !important;right:16px !important;
   }
 
   /* ══ MOBILE POLISH PASS (≤768px only — desktop untouched) ══ */
 
-  /* ── NAV: horizontal scroll with fade-edge gradients on the tabs row ── */
-  .nav-tabs-row{position:relative;-webkit-mask-image:linear-gradient(90deg,transparent 0,#000 14px,#000 calc(100% - 14px),transparent 100%);mask-image:linear-gradient(90deg,transparent 0,#000 14px,#000 calc(100% - 14px),transparent 100%);}
+  /* ── NAV: smooth horizontal scroll with wider fade-edge gradients on the
+     tabs row (pills overflow now that padding is roomier — the row scrolls
+     instead of shrinking the pills) ── */
+  .nav-tabs-row{position:relative;scroll-behavior:smooth;scroll-snap-type:x proximity;gap:9px !important;-webkit-mask-image:linear-gradient(90deg,transparent 0,#000 22px,#000 calc(100% - 22px),transparent 100%);mask-image:linear-gradient(90deg,transparent 0,#000 22px,#000 calc(100% - 22px),transparent 100%);}
   .nav-tabs-row .nav-pill{scroll-snap-align:start;}
   /* Tap targets: keep pills tall enough to hit comfortably (~40px) */
-  nav .nav-pill{min-height:34px;display:inline-flex;align-items:center;}
+  nav .nav-pill{min-height:38px;display:inline-flex;align-items:center;}
 
   /* ── ADMIN DASHBOARD ── */
   .admin-header{padding:12px 16px !important;flex-wrap:wrap;gap:8px;}
@@ -1344,14 +1350,46 @@ input[type=range]{-webkit-appearance:none;appearance:none;background:transparent
   section[data-asec]{padding-top:clamp(44px,10vw,64px) !important;padding-bottom:clamp(44px,10vw,64px) !important;padding-left:22px !important;padding-right:22px !important;}
   section[data-asec="hero"]{min-height:78vh !important;}
   section[data-asec="cta"]{min-height:58vh !important;}
+
+  /* ══ CHECK-IN SCREEN ONLY (ci-* classes are used exclusively in the Checkin
+        component's hero — no other screen carries them, so desktop and every
+        other screen are untouched) ══ */
+
+  /* 1 ─ Central streak number: amber/gold gradient + glow to match the brand
+        (was a flat white number that read as a plain rounded block on Day 0) */
+  .ci-num{
+    background:linear-gradient(135deg,#ffd24d 0%,#ff9500 48%,#ff5000 100%) !important;
+    -webkit-background-clip:text !important;background-clip:text !important;
+    -webkit-text-fill-color:transparent !important;color:transparent !important;
+    text-shadow:none !important;
+    filter:drop-shadow(0 0 22px rgba(255,140,0,.45)) drop-shadow(0 2px 6px rgba(255,80,0,.25)) !important;
+  }
+
+  /* 2 ─ Standardized vertical rhythm between the stacked hero elements so the
+        badge row → number → label → level → progress → signal card read as an
+        even sequence instead of the uneven 20/12/24/32 desktop spacing */
+  .ci-badgerow{margin-bottom:12px !important;}
+  .ci-num{margin-bottom:4px !important;}
+  .ci-daysclean{margin-bottom:14px !important;}
+  .ci-level{margin-bottom:18px !important;}
+  .ci-progress{margin-top:2px !important;}
+  /* tighten the gap between the hero and the Today's Signal card, and reserve
+     bottom room so the lifted SOS button never covers the trailing buttons */
+  .ci-body{padding-top:22px !important;padding-bottom:104px !important;}
+  .ci-quote{margin-bottom:18px !important;}
+
+  /* 3 ─ Check-in reminder bar: give the right edge breathing room (belt-and-
+        suspenders in case the raised SOS ever drifts near it) */
+  .ci-reminder{padding-right:16px !important;}
 }
 
 @media(max-width:480px){
   /* ── Single column grids ── */
   .addiction-grid{grid-template-columns:1fr !important;}
 
-  /* ── Nav pills — shorter ── */
-  nav .nav-pill{padding:4px 8px !important;font-size:8px !important;}
+  /* ── Nav pills — stay breathable; the row scrolls horizontally so pills
+     don't need to shrink to fit ── */
+  nav .nav-pill{padding:9px 15px !important;font-size:10px !important;}
 
   /* ── Body text — enforce readable sizes ── */
   p{font-size:13px !important;line-height:1.75 !important;}
@@ -1374,7 +1412,7 @@ input[type=range]{-webkit-appearance:none;appearance:none;background:transparent
 }
 
 @media(max-width:380px){
-  nav .nav-pill{padding:4px 6px !important;font-size:7px !important;letter-spacing:0 !important;}
+  nav .nav-pill{padding:8px 13px !important;font-size:9px !important;letter-spacing:.3px !important;}
   /* Stat cards stack to a single column on the narrowest phones */
   .admin-stat-row{grid-template-columns:1fr !important;}
 }
@@ -4682,27 +4720,27 @@ function Checkin({streak,savedPlan,lastCheckin,onCheckin,onGoChat}) {
         <div style={{position:"absolute",inset:0,background:document.documentElement.classList.contains("light")?`radial-gradient(ellipse at 65% 55%, rgba(${lv.hex},0.07) 0%, transparent 60%)`:`radial-gradient(ellipse at 65% 55%, rgba(${lv.hex},0.12) 0%, transparent 60%)`,pointerEvents:"none",transition:"background 1s"}}/>
         {[100,180,260].map((s,i)=><div key={i} style={{position:"absolute",top:"45%",right:"30%",width:s,height:s,borderRadius:"50%",border:`1px solid rgba(${lv.hex},0.2)`,animation:`ringOut ${3.5+i*.8}s ease-out ${i*.6}s infinite`,pointerEvents:"none"}}/>)}
         <div style={{opacity:entered?1:0,transform:entered?"translateY(0)":"translateY(24px)",transition:"all .9s cubic-bezier(.16,1,.3,1)",position:"relative",zIndex:2}}>
-          <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:20,flexWrap:"wrap"}}>
+          <div className="ci-badgerow" style={{display:"flex",alignItems:"center",gap:10,marginBottom:20,flexWrap:"wrap"}}>
             <div className="tag"><span className="d"/>Current Streak</div>
             {(()=>{ try{ const arch=JSON.parse(ls.get("syn_archetype","null")); if(!arch) return null; const ad=ARCHETYPES.find(a=>a.id===arch.id); return(<div style={{display:"inline-flex",alignItems:"center",gap:6,background:`rgba(${ad?.accentRgb||"255,140,0"},0.08)`,border:`1px solid rgba(${ad?.accentRgb||"255,140,0"},0.22)`,borderRadius:999,padding:"5px 14px"}}><span style={{fontSize:13}}>{arch.id==="sovereign"?"♛":arch.id==="arbiter"?"⚖":arch.id==="stoic"?"🌳":"▲"}</span><span style={{fontSize:10,letterSpacing:1.5,fontWeight:600,color:`rgba(${ad?.accentRgb||"255,180,80"},0.75)`,textTransform:"uppercase"}}>{arch.title}</span></div>); }catch{return null;} })()}
           </div>
-          <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(72px,16vw,200px)",fontWeight:800,lineHeight:.85,color:"var(--text)",marginBottom:12,textShadow:document.documentElement.classList.contains("light")?`0 2px 0 rgba(0,0,0,0.08),0 0 40px rgba(${lv.hex},0.1)`:`0 0 80px rgba(${lv.hex},0.25)`,transition:"text-shadow 1s"}}><AnimatedNumber target={streak}/></div>
-          <div style={{fontSize:11,letterSpacing:5,color:document.documentElement.classList.contains("light")?"rgba(26,26,26,0.6)":"var(--text3)",textTransform:"uppercase",marginBottom:24,fontWeight:600}}>Days Clean</div>
-          <div style={{display:"inline-flex",alignItems:"center",gap:9,background:`rgba(${lv.hex},0.09)`,border:`1px solid rgba(${lv.hex},0.3)`,borderRadius:999,padding:"9px 22px",marginBottom:32,transition:"all .8s"}}>
+          <div className="ci-num" style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(72px,16vw,200px)",fontWeight:800,lineHeight:.85,color:"var(--text)",marginBottom:12,textShadow:document.documentElement.classList.contains("light")?`0 2px 0 rgba(0,0,0,0.08),0 0 40px rgba(${lv.hex},0.1)`:`0 0 80px rgba(${lv.hex},0.25)`,transition:"text-shadow 1s"}}><AnimatedNumber target={streak}/></div>
+          <div className="ci-daysclean" style={{fontSize:11,letterSpacing:5,color:document.documentElement.classList.contains("light")?"rgba(26,26,26,0.6)":"var(--text3)",textTransform:"uppercase",marginBottom:24,fontWeight:600}}>Days Clean</div>
+          <div className="ci-level" style={{display:"inline-flex",alignItems:"center",gap:9,background:`rgba(${lv.hex},0.09)`,border:`1px solid rgba(${lv.hex},0.3)`,borderRadius:999,padding:"9px 22px",marginBottom:32,transition:"all .8s"}}>
             <div style={{width:7,height:7,borderRadius:"50%",background:lv.color,boxShadow:`0 0 12px ${lv.color}`,transition:"all .8s"}}/>
             <span style={{fontSize:11,letterSpacing:2,color:document.documentElement.classList.contains("light")?lv.color.replace("0.","0.9"):lv.color,textTransform:"uppercase",fontWeight:700,transition:"color .8s"}}>Level {lv.level} — {lv.title}</span>
           </div>
-          <div style={{maxWidth:480,margin:"0 auto"}}>
+          <div className="ci-progress" style={{maxWidth:480,margin:"0 auto"}}>
             <div style={{display:"flex",justifyContent:"center",gap:14,fontSize:10,color:document.documentElement.classList.contains("light")?"rgba(26,26,26,0.45)":"var(--text4)",letterSpacing:1,textTransform:"uppercase",marginBottom:10,fontWeight:500}}><span>{lv.title}</span><span>{nx?`${streak} / ${nx.minDays} days`:"MAX LEVEL REACHED"}</span></div>
             <div style={{height:4,background:document.documentElement.classList.contains("light")?"rgba(0,0,0,0.08)":"rgba(255,255,255,0.05)",borderRadius:2,overflow:"hidden"}}><div style={{height:"100%",borderRadius:2,background:`linear-gradient(90deg,${lv.color}cc,${lv.color})`,boxShadow:`0 0 14px ${lv.color}80`,width:`${xp}%`,transition:"width 1.6s cubic-bezier(.16,1,.3,1) .3s"}}/></div>
           </div>
         </div>
       </div>
 
-      <div style={{maxWidth:820,margin:"0 auto",padding:"clamp(32px,5vw,60px) clamp(16px,8vw,100px)",position:"relative",zIndex:1}}>
+      <div className="ci-body" style={{maxWidth:820,margin:"0 auto",padding:"clamp(32px,5vw,60px) clamp(16px,8vw,100px)",position:"relative",zIndex:1}}>
         {/* Daily Quote */}
         {(()=>{ const dq=getDailyQuote(); return(
-          <div style={{marginBottom:28,padding:"18px 24px",borderRadius:12,background:"var(--accent3)",border:"1px solid var(--border)",position:"relative",overflow:"hidden"}}>
+          <div className="ci-quote" style={{marginBottom:28,padding:"18px 24px",borderRadius:12,background:"var(--accent3)",border:"1px solid var(--border)",position:"relative",overflow:"hidden"}}>
             <div style={{position:"absolute",top:0,left:0,width:3,height:"100%",background:"linear-gradient(180deg,rgba(255,140,0,0.6),rgba(255,80,0,0.2))",borderRadius:"3px 0 0 3px"}}/>
             <div style={{fontSize:9,letterSpacing:2.5,color:"var(--accent)",textTransform:"uppercase",fontWeight:600,marginBottom:8,paddingLeft:4}}>⚡ Today's Signal</div>
             <div style={{fontSize:13,lineHeight:1.75,color:"var(--text2)",fontWeight:300,fontStyle:"italic",paddingLeft:4,marginBottom:6}}>"{dq.q}"</div>
@@ -4715,7 +4753,7 @@ function Checkin({streak,savedPlan,lastCheckin,onCheckin,onGoChat}) {
             {/* Check-in countdown — visual reminder of the daily deadline.
                 Mirrors the actual streak-break rule in App: miss a full
                 calendar day with no check-in and no lifeline, streak resets. */}
-            <div style={{marginBottom:24,display:"flex",alignItems:"center",gap:10,padding:"12px 18px",borderRadius:12,background:"rgba(255,140,0,0.05)",border:"1px solid rgba(255,140,0,0.15)"}}>
+            <div className="ci-reminder" style={{marginBottom:24,display:"flex",alignItems:"center",gap:10,padding:"12px 18px",borderRadius:12,background:"rgba(255,140,0,0.05)",border:"1px solid rgba(255,140,0,0.15)"}}>
               <span style={{fontSize:16}}>⏳</span>
               <span style={{fontSize:12,color:"var(--text2)"}}>
                 <CheckinCountdown/> left to check in {streak>0?"and keep your streak alive":"and start your streak"}
