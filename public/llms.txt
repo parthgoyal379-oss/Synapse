@@ -1,0 +1,19 @@
+# SYNAPSE
+
+> SYNAPSE is a free, AI-powered dopamine recovery and habit tracker that helps people quit compulsive digital habits — short-form video (reels), social media, pornography, gaming, junk food, and gambling — through personalized, adaptive guidance and real-time urge support. Reset. Rewire. Rise.
+
+SYNAPSE is a privacy-first Progressive Web App (PWA). It is a self-help behavior-change tool, not medical or clinical treatment. The method has three stages: Understand (learn your triggers and patterns), Guide (personalized interventions when you need them), and Grow (adapt as your habits change).
+
+## Core
+- [Home](https://www.synapserewire.site/): Product overview, how it works, recovery levels, and the SYNAPSE method.
+- [About SYNAPSE](https://www.synapserewire.site/): Mission, vision, founders (Parth Goyal, Sandali Tiwari), and values.
+
+## Guides
+- [How to Stop Watching Reels](https://www.synapserewire.site/quit/reels): A practical, research-informed guide to quitting short-form video addiction — why it's addictive and a step-by-step plan to break the loop.
+
+## Legal
+- [Privacy Policy](https://www.synapserewire.site/privacy): How data is collected, used, retained, and protected.
+- [Terms of Service](https://www.synapserewire.site/terms): Terms of use, including medical, crisis, and AI disclosures.
+
+## Contact
+- Email: synapserewire@gmail.com

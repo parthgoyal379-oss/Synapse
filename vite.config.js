@@ -108,6 +108,15 @@ const PRERENDER_HOME = `
 
       <p style="margin:24px 0 0;color:#8a7861;font-size:14px;">SYNAPSE is a self-help habit-recovery tool, not medical or clinical treatment.</p>
     </article>
+
+    <footer style="max-width:820px;margin:0 auto;padding:32px 24px 8px;border-top:1px solid rgba(255,140,0,0.15);text-align:left;color:#8a7861;font-size:14px;">
+      <p style="margin:0 0 8px;"><strong style="color:#a9998a;font-weight:600;">Guides:</strong> <a href="/quit/reels" style="color:#ff9500;text-decoration:none;">How to stop watching reels</a></p>
+      <p style="margin:0 0 8px;">Contact: <a href="mailto:synapserewire@gmail.com" style="color:#ff9500;text-decoration:none;">synapserewire@gmail.com</a></p>
+      <p style="margin:0;">
+        <a href="/privacy" style="color:#ff9500;text-decoration:none;margin-right:20px;">Privacy Policy</a>
+        <a href="/terms" style="color:#ff9500;text-decoration:none;">Terms of Service</a>
+      </p>
+    </footer>
   </div>
 `.trim()
 
