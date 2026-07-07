@@ -10,6 +10,12 @@ SYNAPSE is a privacy-first Progressive Web App (PWA). It is a self-help behavior
 
 ## Guides
 - [How to Stop Watching Reels](https://www.synapserewire.site/quit/reels): A practical, research-informed guide to quitting short-form video addiction — why it's addictive and a step-by-step plan to break the loop.
+- [How to Stop Watching Porn](https://www.synapserewire.site/quit/porn): A judgment-free, research-informed guide to quitting pornography — the Coolidge effect, escalation, the shame loop, and a step-by-step plan.
+- [How to Quit Social Media](https://www.synapserewire.site/quit/social-media): Why social media is compulsive — validation, comparison, FOMO — and a step-by-step plan to take back your attention.
+- [How to Stop Compulsive Gaming](https://www.synapserewire.site/quit/gaming): Progression loops, loot boxes, and social obligation explained, plus a step-by-step plan to quit or cut back.
+- [How to Stop Gambling](https://www.synapserewire.site/quit/gambling): Near-misses, loss chasing, and the illusion of control — with a step-by-step recovery plan and crisis and debt resources.
+- [How to Stop Eating Junk Food](https://www.synapserewire.site/quit/junk-food): How ultra-processed food is engineered to override fullness, and a plan to rebuild your appetite.
+- [How to Stop Doomscrolling](https://www.synapserewire.site/quit/doomscrolling): Negativity bias and threat-monitoring explained, and a plan to break the anxious bad-news loop.
 
 ## Legal
 - [Privacy Policy](https://www.synapserewire.site/privacy): How data is collected, used, retained, and protected.
