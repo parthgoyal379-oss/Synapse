@@ -41,15 +41,46 @@
     <script type="application/ld+json">
     {
       "@context": "https://schema.org",
-      "@type": "WebApplication",
-      "name": "SYNAPSE",
-      "url": "https://www.synapserewire.site/",
-      "description": "AI-powered dopamine recovery and habit tracking. Reset your brain, rewire your habits, and rise above addiction.",
-      "applicationCategory": "HealthApplication",
-      "operatingSystem": "Web, iOS, Android (PWA)",
-      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
-      "featureList": ["AI check-ins", "Habit tracking", "Dopamine recovery", "Streak tracking", "Multi-language support"],
-      "inLanguage": ["en", "hi"]
+      "@graph": [
+        {
+          "@type": "Organization",
+          "@id": "https://www.synapserewire.site/#organization",
+          "name": "SYNAPSE",
+          "url": "https://www.synapserewire.site/",
+          "logo": {
+            "@type": "ImageObject",
+            "url": "https://www.synapserewire.site/icon-512.png",
+            "width": 512,
+            "height": 512
+          },
+          "image": "https://www.synapserewire.site/og-image.png",
+          "description": "AI-powered dopamine recovery and habit tracking."
+        },
+        {
+          "@type": "WebSite",
+          "@id": "https://www.synapserewire.site/#website",
+          "name": "SYNAPSE",
+          "url": "https://www.synapserewire.site/",
+          "inLanguage": "en",
+          "publisher": { "@id": "https://www.synapserewire.site/#organization" }
+        },
+        {
+          "@type": "WebApplication",
+          "@id": "https://www.synapserewire.site/#webapp",
+          "name": "SYNAPSE",
+          "url": "https://www.synapserewire.site/",
+          "description": "AI-powered dopamine recovery and habit tracking. Reset your brain, rewire your habits, and rise above addiction.",
+          "applicationCategory": "HealthApplication",
+          "operatingSystem": "Web, iOS, Android (PWA)",
+          "browserRequirements": "Requires a modern browser with JavaScript enabled",
+          "isAccessibleForFree": true,
+          "screenshot": "https://www.synapserewire.site/og-image.png",
+          "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+          "featureList": ["AI check-ins", "Habit tracking", "Dopamine recovery", "Streak tracking", "Multi-language support"],
+          "inLanguage": ["en", "hi"],
+          "publisher": { "@id": "https://www.synapserewire.site/#organization" }
+        }
+      ]
     }
     </script>
   </head>
