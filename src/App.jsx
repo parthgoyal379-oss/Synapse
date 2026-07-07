@@ -814,84 +814,13 @@ function NeuralMark({size=36}) {
 }
 
 /* ─── AMBIENT AUDIO TOGGLE ───────────────────────────────────────────────── */
-// Global audio singleton — created once, survives re-renders
-let _ambientAudio = null;
-function getAmbient() {
-  if (!_ambientAudio) {
-    _ambientAudio = new Audio("/ambient.mp3");
-    _ambientAudio.loop = true;
-    _ambientAudio.volume = 0.18;
-  }
-  return _ambientAudio;
-}
-// Background music disabled — kept as a no-op so existing callers stay safe.
+// Background music removed. AmbientAudio renders nothing and exposes a no-op
+// play fn so existing callers (e.g. the first-interaction handler) stay safe.
 window.__synapsePlayAmbient = () => {};
 
 function AmbientAudio({ onReady }) {
-  // Background music removed — render nothing and expose a no-op play fn.
   useEffect(() => { if (onReady) onReady(() => {}); }, []);
   return null;
-}
-
-// eslint-disable-next-line no-unused-vars
-function _AmbientAudioLegacy({ onReady }) {
-  const [playing, setPlaying] = useState(false);
-  const [vol, setVol] = useState(false);
-
-  useEffect(() => {
-    if (onReady) onReady(window.__synapsePlayAmbient);
-    const a = getAmbient();
-    const onPlay = () => setPlaying(true);
-    const onPause = () => setPlaying(false);
-    a.addEventListener("play", onPlay);
-    a.addEventListener("pause", onPause);
-    return () => { a.removeEventListener("play", onPlay); a.removeEventListener("pause", onPause); };
-  }, []);
-
-  const toggle = () => {
-    const a = getAmbient();
-    if (playing) { a.pause(); }
-    else { a.play().catch(() => {}); }
-  };
-
-  return (
-    <div style={{ position:"fixed", bottom:20, right:20, zIndex:800, display:"flex", alignItems:"center", gap:8 }}>
-      {vol && playing && (
-        <div style={{ background:"rgba(7,4,10,0.88)", border:"1px solid rgba(255,140,0,0.18)", borderRadius:999, padding:"6px 12px", backdropFilter:"blur(12px)", display:"flex", alignItems:"center", gap:8 }}>
-          <span style={{ fontSize:9, color:"rgba(255,180,80,0.5)", letterSpacing:1.5, textTransform:"uppercase" }}>VOL</span>
-          <input type="range" min="0" max="0.5" step="0.01" defaultValue="0.18"
-            onChange={e=>{ getAmbient().volume=parseFloat(e.target.value); }}
-            style={{ width:64, accentColor:"#ff8c00", cursor:"pointer", background:"transparent", height:3 }}/>
-        </div>
-      )}
-      <button onClick={toggle} onMouseEnter={()=>setVol(true)} onMouseLeave={()=>setVol(false)}
-        title={playing?"Mute ambient":"Play ambient sound"}
-        style={{ width:38, height:38, borderRadius:"50%",
-          background: playing?"rgba(255,140,0,0.12)":"rgba(255,255,255,0.04)",
-          border:`1px solid ${playing?"rgba(255,140,0,0.35)":"rgba(255,255,255,0.1)"}`,
-          color: playing?"#ffb347":"rgba(255,255,255,0.25)",
-          display:"flex", alignItems:"center", justifyContent:"center",
-          cursor:"pointer", transition:"all .25s", backdropFilter:"blur(12px)",
-          boxShadow: playing?"0 0 18px rgba(255,140,0,0.2)":"none", fontSize:14, flexShrink:0 }}>
-        {playing ? (
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-            <rect x="1" y="5" width="2" height="6" rx="1" fill="currentColor" opacity="0.6"/>
-            <rect x="4.5" y="3" width="2" height="10" rx="1" fill="currentColor" opacity="0.8"/>
-            <rect x="8" y="1" width="2" height="14" rx="1" fill="currentColor"/>
-            <rect x="11.5" y="3" width="2" height="10" rx="1" fill="currentColor" opacity="0.8"/>
-          </svg>
-        ) : (
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-            <rect x="1" y="6" width="2" height="4" rx="1" fill="currentColor" opacity="0.3"/>
-            <rect x="4.5" y="5" width="2" height="6" rx="1" fill="currentColor" opacity="0.3"/>
-            <rect x="8" y="4" width="2" height="8" rx="1" fill="currentColor" opacity="0.3"/>
-            <rect x="11.5" y="5" width="2" height="6" rx="1" fill="currentColor" opacity="0.3"/>
-            <line x1="2" y1="14" x2="14" y2="2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" opacity="0.4"/>
-          </svg>
-        )}
-      </button>
-    </div>
-  );
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
