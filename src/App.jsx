@@ -2319,21 +2319,31 @@ function About({ onBegin, onBack }){
   const gradText = {
     fontFamily:"'Orbitron',sans-serif", fontWeight:900,
     background:GRAD, WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent",
-    backgroundClip:"text", letterSpacing:"-0.02em", lineHeight:1.05, margin:0,
+    backgroundClip:"text", letterSpacing:"-0.02em", lineHeight:1.18, margin:0,
+    paddingBottom:"0.1em", // prevents descenders (g/y/q) from being clipped by the text-gradient mask at tight line-heights
   };
+  // Kicker letter-spacing was 0.44–0.5em (inconsistent between the hero badge
+  // and section labels) — at a 9px size that's ~4px of air between every
+  // letter, which reads as broken-apart dots rather than a word, especially
+  // on narrow phone widths. Tightened to one shared, still-distinct value.
   const kicker = {
-    fontFamily:"'Space Mono',monospace", fontWeight:400, fontSize:9,
-    letterSpacing:"0.44em", color:"#6a5820", textTransform:"uppercase", marginBottom:18,
+    fontFamily:"'Space Mono',monospace", fontWeight:600, fontSize:10,
+    letterSpacing:"0.28em", color:"#6a5820", textTransform:"uppercase", marginBottom:16,
+    lineHeight:1.4,
   };
   const subHead = {
     fontFamily:"'Space Grotesk',sans-serif", fontWeight:700,
     fontSize:"clamp(15px,2.4vw,20px)", color:"#f5a000", letterSpacing:"0.01em",
-    margin:"0 0 14px",
+    lineHeight:1.35, margin:"0 0 14px",
   };
   const body = {
     fontFamily:"'Inter',sans-serif", fontWeight:400, fontSize:"clamp(14px,1.5vw,16px)",
-    lineHeight:1.85, color:"#a89060", maxWidth:680, margin:0, letterSpacing:"0.01em",
+    lineHeight:1.75, color:"#a89060", maxWidth:680, margin:0, letterSpacing:"0.01em",
   };
+  // Shared token for the smaller 14px copy used *inside* cards — reusing the
+  // 1.75 line-height meant for the larger clamp() body text made these read
+  // too loose/floaty at a fixed 14px. Tightened just for this context.
+  const cardText = { ...body, fontSize:14, lineHeight:1.6, color:"#9a8558" };
   const hl = { color:"#f5a000", fontWeight:500 }; // SEO keyword highlight
   const card = {
     background:"rgba(255,140,0,0.02)", border:"1px solid rgba(255,140,0,0.10)",
@@ -2388,7 +2398,7 @@ function About({ onBegin, onBack }){
         <p style={{...body,color:"#a89060",maxWidth:720,margin:"28px auto 0",textAlign:"center",...reveal("hero")}}>
           Synapse is an <span style={hl}>AI-powered accountability</span> and habit-building platform that helps people overcome addictive habits—including doomscrolling, social media addiction, pornography, gaming, caffeine, junk food, and gambling—through <span style={hl}>personalized guidance</span>, <span style={hl}>real-time interventions</span>, and intelligent <span style={hl}>behavior change</span>.
         </p>
-        <div style={{...kicker,marginTop:34,marginBottom:0,letterSpacing:"0.5em",color:"#f5a000",...reveal("hero")}}>RESET · REWIRE · RECONQUER</div>
+        <div style={{...kicker,marginTop:34,marginBottom:0,color:"#f5a000",...reveal("hero")}}>RESET · REWIRE · RECONQUER</div>
       </section>
 
       {/* ── PROBLEM ── */}
@@ -2401,11 +2411,11 @@ function About({ onBegin, onBack }){
         <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(260px,1fr))",gap:20,marginTop:40}}>
           <div style={card}>
             <div style={subHead}>Why it exists</div>
-            {["Modern platforms are designed to capture attention and encourage repeated engagement.","Most habits are reinforced by recurring triggers, environments, and routines.","People often rely on motivation alone, even though motivation naturally fluctuates."].map((t,i)=><p key={i} style={{...body,fontSize:14,marginBottom:i<2?12:0,color:"#9a8558"}}>— {t}</p>)}
+            {["Modern platforms are designed to capture attention and encourage repeated engagement.","Most habits are reinforced by recurring triggers, environments, and routines.","People often rely on motivation alone, even though motivation naturally fluctuates."].map((t,i)=><p key={i} style={{...cardText,marginBottom:i<2?12:0}}>— {t}</p>)}
           </div>
           <div style={card}>
             <div style={subHead}>Why current solutions fail</div>
-            {["Blockers remove access but rarely change behavior.","Generic habit trackers provide data without meaningful guidance.","Most solutions stop at tracking progress instead of helping users navigate moments of temptation."].map((t,i)=><p key={i} style={{...body,fontSize:14,marginBottom:i<2?12:0,color:"#9a8558"}}>— {t}</p>)}
+            {["Blockers remove access but rarely change behavior.","Generic habit trackers provide data without meaningful guidance.","Most solutions stop at tracking progress instead of helping users navigate moments of temptation."].map((t,i)=><p key={i} style={{...cardText,marginBottom:i<2?12:0}}>— {t}</p>)}
           </div>
         </div>
       </section>
@@ -2434,21 +2444,21 @@ function About({ onBegin, onBack }){
             <div key={n} style={card}>
               <div style={{fontFamily:"'Orbitron',sans-serif",fontWeight:700,fontSize:26,color:"#f5a000",filter:"drop-shadow(0 0 12px rgba(245,160,0,.4))",marginBottom:12}}>{n}</div>
               <div style={subHead}>{h}</div>
-              <p style={{...body,fontSize:14,color:"#9a8558"}}>{t}</p>
+              <p style={{...cardText}}>{t}</p>
             </div>
           ))}
         </div>
         <div style={{marginTop:38}}>
-          <div style={subHead}>Impact</div>
-          <Chip label="Build sustainable discipline instead of relying on temporary motivation"/>
-          <Chip label="Replace unhealthy habits with healthier routines"/>
+          <div style={{...subHead,marginBottom:20}}>Impact</div>
           <Chip label="Regain control over attention, decisions, and daily life"/>
+          <Chip label="Replace unhealthy habits with healthier routines"/>
+          <Chip label="Build sustainable discipline instead of relying on temporary motivation"/>
         </div>
       </section>
 
       {/* ── MISSION + VISION ── */}
       <section data-asec="mv" style={{...sectionStyle,...reveal("mv")}}>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(300px,1fr))",gap:28}}>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(260px,1fr))",gap:28}}>
           <div>
             <div style={kicker}>MISSION</div>
             <h2 style={{...gradText,fontSize:"clamp(22px,3.4vw,34px)",marginBottom:18}}>Why we exist</h2>
@@ -2468,7 +2478,7 @@ function About({ onBegin, onBack }){
         <div style={kicker}>THE TEAM</div>
         <h2 style={{...gradText,fontSize:"clamp(26px,4.5vw,44px)"}}>Founders</h2>
         <div style={rule}/>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(300px,1fr))",gap:22}}>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(260px,1fr))",gap:22}}>
           {[
             {ini:"PG",name:"Parth Goyal",role:"Co-Founder & CEO",focus:"Engineering, AI Systems, Technical Strategy, Product Development",contrib:"Built the first prototype of Synapse, leads the platform's technical architecture, engineering, and AI development."},
             {ini:"ST",name:"Sandali Tiwari",role:"Co-Founder & COO",focus:"Product Management, Marketing, Operations, Growth",contrib:"Leads product strategy, user research, marketing, branding, partnerships, and company operations to ensure Synapse is built around real user needs."},
@@ -2482,9 +2492,9 @@ function About({ onBegin, onBack }){
                 </div>
               </div>
               <div style={{fontFamily:"'Space Mono',monospace",fontSize:10,letterSpacing:"0.04em",color:"#6a5820",textTransform:"uppercase",marginBottom:8}}>Focus</div>
-              <p style={{...body,fontSize:14,marginBottom:14,color:"#9a8558"}}>{f.focus}</p>
+              <p style={{...cardText,marginBottom:14}}>{f.focus}</p>
               <div style={{fontFamily:"'Space Mono',monospace",fontSize:10,letterSpacing:"0.04em",color:"#6a5820",textTransform:"uppercase",marginBottom:8}}>Contribution</div>
-              <p style={{...body,fontSize:14,color:"#9a8558"}}>{f.contrib}</p>
+              <p style={{...cardText}}>{f.contrib}</p>
             </div>
           ))}
         </div>
@@ -2499,7 +2509,7 @@ function About({ onBegin, onBack }){
           {[["Discipline over motivation","Sustainable systems outperform temporary inspiration."],["People before metrics","Every decision begins with understanding the people we serve."],["Continuous improvement","Small, consistent progress creates meaningful change."],["Build with purpose","Technology should empower people, not compete for their attention."]].map(([h,t])=>(
             <div key={h} style={card}>
               <div style={subHead}>{h}</div>
-              <p style={{...body,fontSize:14,color:"#9a8558"}}>{t}</p>
+              <p style={{...cardText}}>{t}</p>
             </div>
           ))}
         </div>
@@ -2513,8 +2523,8 @@ function About({ onBegin, onBack }){
         <div style={{border:"1px solid rgba(255,140,0,0.14)",borderRadius:16,overflow:"hidden"}}>
           {/* header row */}
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr"}}>
-            <div style={{padding:"14px clamp(14px,2.5vw,24px)",fontFamily:"'Space Grotesk',sans-serif",fontWeight:700,fontSize:"clamp(12px,1.6vw,15px)",color:"#8a7040",background:"rgba(255,255,255,0.015)",borderBottom:"1px solid rgba(255,140,0,0.14)"}}>Traditional Solutions</div>
-            <div style={{padding:"14px clamp(14px,2.5vw,24px)",fontFamily:"'Space Grotesk',sans-serif",fontWeight:700,fontSize:"clamp(12px,1.6vw,15px)",color:"#f5a000",background:"rgba(255,140,0,0.06)",borderBottom:"1px solid rgba(255,140,0,0.22)"}}>Synapse</div>
+            <div style={{padding:"14px clamp(14px,2.5vw,24px)",fontFamily:"'Space Grotesk',sans-serif",fontWeight:700,fontSize:"clamp(13px,1.6vw,15px)",letterSpacing:"0.01em",color:"#8a7040",background:"rgba(255,255,255,0.015)",borderBottom:"1px solid rgba(255,140,0,0.14)"}}>Traditional Solutions</div>
+            <div style={{padding:"14px clamp(14px,2.5vw,24px)",fontFamily:"'Space Grotesk',sans-serif",fontWeight:700,fontSize:"clamp(13px,1.6vw,15px)",letterSpacing:"0.01em",color:"#f5a000",background:"rgba(255,140,0,0.06)",borderBottom:"1px solid rgba(255,140,0,0.22)"}}>Synapse</div>
           </div>
           {diffRows.map(([a,b],i)=>(
             <div key={i} style={{display:"grid",gridTemplateColumns:"1fr 1fr",borderTop:i?"1px solid rgba(255,140,0,0.07)":"none"}}>
@@ -2533,7 +2543,7 @@ function About({ onBegin, onBack }){
         <p style={{...body,marginBottom:28}}>We build alongside our users, not ahead of them. Every feature begins with a real problem, it's shaped through user feedback, and is refined through continuous iteration. Our goal isn't to maximize screen time—it's to help people spend less time fighting unhealthy habits and compulsive behaviours, and more time living intentionally.</p>
         <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))",gap:18}}>
           {["Build for real problems, not assumptions.","Listen first, iterate second.","Prioritize long-term impact over short-term engagement."].map((t,i)=>(
-            <div key={i} style={card}><p style={{...body,fontSize:14,color:"#9a8558"}}>{t}</p></div>
+            <div key={i} style={card}><p style={{...cardText}}>{t}</p></div>
           ))}
         </div>
       </section>
@@ -6270,7 +6280,7 @@ class ErrorBoundary extends Component {
           If it keeps happening, email <span style={{color:"#ffb347"}}>synapserewire@gmail.com</span>.
         </div>
         <button onClick={this.handleReload} style={{ background:"linear-gradient(135deg,#ff9500,#ff5000)",
-          border:"none", color:"#fff", padding:"14px 36px", borderRadius:999, fontFamily:"'Inter',sansretryserif",
+          border:"none", color:"#fff", padding:"14px 36px", borderRadius:999, fontFamily:"'Inter',sans-serif",
           fontSize:13, fontWeight:700, letterSpacing:.3, cursor:"pointer",
           boxShadow:"0 0 40px rgba(255,140,0,0.35)" }}>
           Reload SYNAPSE
