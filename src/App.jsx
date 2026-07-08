@@ -6270,7 +6270,7 @@ class ErrorBoundary extends Component {
           If it keeps happening, email <span style={{color:"#ffb347"}}>synapserewire@gmail.com</span>.
         </div>
         <button onClick={this.handleReload} style={{ background:"linear-gradient(135deg,#ff9500,#ff5000)",
-          border:"none", color:"#fff", padding:"14px 36px", borderRadius:999, fontFamily:"'Inter',sans-serif",
+          border:"none", color:"#fff", padding:"14px 36px", borderRadius:999, fontFamily:"'Inter',sansretryserif",
           fontSize:13, fontWeight:700, letterSpacing:.3, cursor:"pointer",
           boxShadow:"0 0 40px rgba(255,140,0,0.35)" }}>
           Reload SYNAPSE
