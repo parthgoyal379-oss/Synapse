@@ -1187,6 +1187,20 @@ input[type=range]{-webkit-appearance:none;appearance:none;background:transparent
   background-attachment:fixed;
 }
 
+/* ── CHECK-IN HERO NUMBER (all screen sizes) ──
+   The huge streak digit was flat white, which at clamp(72px,16vw,200px) on
+   desktop reads as a plain pale block with no depth — this is what looked
+   "broken" on Day 0. Amber/gold gradient + glow matches the brand and gives
+   it real weight instead of a flat slab. Previously this was only applied
+   inside the ≤768px mobile block; desktop never got it. */
+.ci-num{
+  background:linear-gradient(135deg,#ffd24d 0%,#ff9500 48%,#ff5000 100%) !important;
+  -webkit-background-clip:text !important;background-clip:text !important;
+  -webkit-text-fill-color:transparent !important;color:transparent !important;
+  text-shadow:none !important;
+  filter:drop-shadow(0 0 22px rgba(255,140,0,.45)) drop-shadow(0 2px 6px rgba(255,80,0,.25)) !important;
+}
+
 /* ── MOBILE RESPONSIVE ── */
 .step-inner{box-sizing:border-box;width:100%;}
 .archetype-grid{box-sizing:border-box;}
@@ -1284,15 +1298,7 @@ input[type=range]{-webkit-appearance:none;appearance:none;background:transparent
         component's hero — no other screen carries them, so desktop and every
         other screen are untouched) ══ */
 
-  /* 1 ─ Central streak number: amber/gold gradient + glow to match the brand
-        (was a flat white number that read as a plain rounded block on Day 0) */
-  .ci-num{
-    background:linear-gradient(135deg,#ffd24d 0%,#ff9500 48%,#ff5000 100%) !important;
-    -webkit-background-clip:text !important;background-clip:text !important;
-    -webkit-text-fill-color:transparent !important;color:transparent !important;
-    text-shadow:none !important;
-    filter:drop-shadow(0 0 22px rgba(255,140,0,.45)) drop-shadow(0 2px 6px rgba(255,80,0,.25)) !important;
-  }
+  /* 1 ─ (gradient treatment now applied globally above, not just here) */
 
   /* 2 ─ Standardized vertical rhythm between the stacked hero elements so the
         badge row → number → label → level → progress → signal card read as an
