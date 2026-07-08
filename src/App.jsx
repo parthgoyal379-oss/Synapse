@@ -2395,7 +2395,7 @@ function About({ onBegin, onBack }){
         <p style={{...body,color:"#a89060",maxWidth:720,margin:"28px auto 0",textAlign:"center",...reveal("hero")}}>
           Synapse is an <span style={hl}>AI-powered accountability</span> and habit-building platform that helps people overcome addictive habits—including doomscrolling, social media addiction, pornography, gaming, caffeine, junk food, and gambling—through <span style={hl}>personalized guidance</span>, <span style={hl}>real-time interventions</span>, and intelligent <span style={hl}>behavior change</span>.
         </p>
-        <div style={{...kicker,marginTop:34,marginBottom:0,color:"#f5a000",...reveal("hero")}}>RESET · REWIRE · RECONQUER</div>
+        <div style={{...kicker,marginTop:34,marginBottom:0,fontSize:13,letterSpacing:"0.36em",color:"#f5a000",fontWeight:700,...reveal("hero")}}>RESET · REWIRE · RECONQUER</div>
       </section>
 
       {/* ── PROBLEM ── */}
