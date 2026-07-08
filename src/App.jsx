@@ -2320,16 +2320,12 @@ function About({ onBegin, onBack }){
     fontFamily:"'Orbitron',sans-serif", fontWeight:900,
     background:GRAD, WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent",
     backgroundClip:"text", letterSpacing:"-0.02em", lineHeight:1.18, margin:0,
-    paddingBottom:"0.1em", // prevents descenders (g/y/q) from being clipped by the text-gradient mask at tight line-heights
+    paddingBottom:"0.1em", textAlign:"center",
   };
-  // Kicker letter-spacing was 0.44–0.5em (inconsistent between the hero badge
-  // and section labels) — at a 9px size that's ~4px of air between every
-  // letter, which reads as broken-apart dots rather than a word, especially
-  // on narrow phone widths. Tightened to one shared, still-distinct value.
   const kicker = {
     fontFamily:"'Space Mono',monospace", fontWeight:600, fontSize:10,
     letterSpacing:"0.28em", color:"#6a5820", textTransform:"uppercase", marginBottom:16,
-    lineHeight:1.4,
+    lineHeight:1.4, textAlign:"center",
   };
   const subHead = {
     fontFamily:"'Space Grotesk',sans-serif", fontWeight:700,
@@ -2338,7 +2334,8 @@ function About({ onBegin, onBack }){
   };
   const body = {
     fontFamily:"'Inter',sans-serif", fontWeight:400, fontSize:"clamp(14px,1.5vw,16px)",
-    lineHeight:1.75, color:"#a89060", maxWidth:680, margin:0, letterSpacing:"0.01em",
+    lineHeight:1.75, color:"#a89060", maxWidth:680, margin:"0 auto", letterSpacing:"0.01em",
+    textAlign:"left",
   };
   // Shared token for the smaller 14px copy used *inside* cards — reusing the
   // 1.75 line-height meant for the larger clamp() body text made these read
@@ -2450,8 +2447,8 @@ function About({ onBegin, onBack }){
         </div>
         <div style={{marginTop:38}}>
           <div style={{...subHead,marginBottom:20}}>Impact</div>
-          <Chip label="Regain control over attention, decisions, and daily life"/>
           <Chip label="Replace unhealthy habits with healthier routines"/>
+          <Chip label="Regain control over attention, decisions, and daily life"/>
           <Chip label="Build sustainable discipline instead of relying on temporary motivation"/>
         </div>
       </section>
