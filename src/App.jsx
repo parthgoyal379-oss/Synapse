@@ -1064,6 +1064,8 @@ input{background:transparent;}
 .nav-pill:hover,.nav-pill.active{border-color:rgba(255,140,0,.55);color:var(--accent2);background:var(--accent3);}
 .nav-pill.danger{border-color:var(--danger);color:var(--danger-text);}
 .nav-pill.danger:hover{border-color:rgba(255,50,50,.55);color:#ff6060;background:rgba(255,50,50,.08);}
+/* Icon hidden everywhere by default (mobile/tablet) — desktop media query below re-enables it for the active tab only. */
+.nav-pill-icon{display:none;}
 /* Desktop-only nav upgrade: unified segmented track, glow on active tab only. Mobile/tablet untouched. */
 @media (min-width:768px){
   .nav-tabs-row{background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:5px;gap:2px !important;display:inline-flex !important;width:fit-content;}
@@ -1072,7 +1074,6 @@ input{background:transparent;}
   .light nav .nav-pill{color:rgba(26,26,26,.5) !important;}
   nav .nav-pill.active{padding:9px 18px !important;background:linear-gradient(135deg,rgba(255,140,0,.2),rgba(255,140,0,.06)) !important;box-shadow:0 1px 0 rgba(255,255,255,.06) inset,0 0 16px rgba(255,140,0,.14);color:#ffb35a !important;font-weight:600;}
   .light nav .nav-pill.active{color:#c05a00 !important;}
-  nav .nav-pill .nav-pill-icon{display:none;}
   nav .nav-pill.active .nav-pill-icon{display:inline-flex;margin-right:6px;vertical-align:-2px;}
 }
 .tag{display:inline-flex;align-items:center;gap:8px;background:var(--tag-bg);border:1px solid var(--tag-border);border-radius:999px;padding:6px 16px;font-size:11px;font-weight:500;letter-spacing:1.2px;color:var(--tag-text);text-transform:uppercase;}
@@ -1230,6 +1231,8 @@ input[type=range]{-webkit-appearance:none;appearance:none;background:transparent
      scrolls horizontally instead of cramming to fit) */
   nav .nav-pill{padding:9px 16px !important;font-size:10px !important;letter-spacing:.5px !important;}
   .nav-logo-text div:last-child{display:none !important;} /* hide "RESET · REWIRE · RISE" */
+  .report-issue-pill{padding:9px 12px !important;border-radius:50% !important;width:34px;height:34px;justify-content:center;}
+  .report-issue-text{display:none;}
 
   /* ── Global heading scale ── */
   /* Force all Orbitron giant headings to scale down */
@@ -2313,7 +2316,7 @@ function Nav({screen,goTo,savedPlan,onReset,theme,onThemeToggle,user}) {
               </div>
             )}
           </div>
-          <a className="nav-pill" href={`mailto:synapserewire@gmail.com?subject=${encodeURIComponent("Report an Issue")}&body=${encodeURIComponent("Please describe the issue you encountered:\n\n\nSteps to reproduce:\n\n\nDevice/Browser:\n\n\nAdditional details:\n")}`} style={{flexShrink:0,textDecoration:"none",display:"inline-flex",alignItems:"center"}}>Report an Issue</a>
+          <a className="nav-pill report-issue-pill" href={`mailto:synapserewire@gmail.com?subject=${encodeURIComponent("Report an Issue")}&body=${encodeURIComponent("Please describe the issue you encountered:\n\n\nSteps to reproduce:\n\n\nDevice/Browser:\n\n\nAdditional details:\n")}`} style={{flexShrink:0,textDecoration:"none",display:"inline-flex",alignItems:"center",gap:6}}><AlertTriangle size={13} style={{flexShrink:0}}/><span className="report-issue-text">Report an Issue</span></a>
         </div>
       </div>
       {/* Row 2 — Screen tabs */}
@@ -2394,6 +2397,7 @@ function About({ onBegin, onBack }){
 
   // Scroll-reveal (mirrors the landing page IntersectionObserver pattern)
   const [seen,setSeen]=useState({});
+  const [faqOpen,setFaqOpen]=useState(null);
   useEffect(()=>{
     const obs=new IntersectionObserver((entries)=>{
       entries.forEach(e=>{ if(e.isIntersecting){ const id=e.target.getAttribute("data-asec"); setSeen(p=>p[id]?p:{...p,[id]:true}); } });
@@ -2423,6 +2427,24 @@ function About({ onBegin, onBack }){
     ["Focus on blocking distractions","Focus on understanding and replacing habits"],
     ["Tracks what happened","Helps shape what happens next"],
     ["Data without context","Insights with actionable guidance"],
+  ];
+
+  const faqs=[
+    ["Why use SYNAPSE instead of ChatGPT or other AI chatbots?","Most AI chatbots answer questions. SYNAPSE is built to change behavior. Instead of starting from scratch every conversation, it creates a personalized recovery protocol, remembers your progress, adapts after relapses, analyzes patterns, and keeps you accountable through structured daily check-ins. It's not just an AI conversation — it's an AI-powered recovery system."],
+    ["What is SYNAPSE?","SYNAPSE is an AI-powered recovery platform designed to help people overcome compulsive digital habits such as pornography, doomscrolling, social media addiction, gaming, and other dopamine-driven behaviors. Using personalized coaching, daily accountability, and adaptive recovery plans, SYNAPSE helps you build healthier habits one day at a time."],
+    ["How does SYNAPSE work?","Start by completing a short assessment about your habits and challenges. SYNAPSE then generates a recovery protocol tailored to your goals, behavior, and triggers. Every day, you check in with your AI coach, track your progress, and receive guidance that evolves with your journey."],
+    ["What makes SYNAPSE different?","Most habit trackers count streaks. SYNAPSE focuses on understanding why you relapse and continuously adjusts your recovery strategy based on your behavior. Recovery is personalized — not one-size-fits-all."],
+    ["What happens if I relapse?","Relapse doesn't erase your progress. SYNAPSE helps you analyze what happened, identify triggers, and update your recovery plan to reduce the chances of repeating the same pattern. The goal is long-term improvement — not perfection."],
+    ["How does the AI create my recovery plan?","Your recovery plan is generated using the information you provide during onboarding along with your ongoing check-ins. As your behavior changes, the AI continuously refines your protocol instead of keeping you on a fixed routine."],
+    ["How do daily check-ins work?","Each day you'll complete a quick check-in to record your progress, urges, wins, setbacks, and mindset. Your responses help the AI understand your recovery journey and provide more relevant guidance over time."],
+    ["Can SYNAPSE help with more than porn addiction?","Yes. SYNAPSE is designed for behavioral addictions driven by unhealthy dopamine-seeking patterns, including social media, doomscrolling, gaming, binge-watching, and similar compulsive habits."],
+    ["Does SYNAPSE replace therapy?","No. SYNAPSE is a self-improvement and accountability tool, not a replacement for licensed mental health care. If you're experiencing serious mental health concerns, professional support is recommended."],
+    ["Is my data private?","Yes. Your recovery data is securely stored and used only to personalize your experience. Your information is never shared or sold."],
+    ["Is SYNAPSE free?","SYNAPSE offers a free experience with optional premium features that unlock more advanced AI coaching and recovery tools."],
+    ["Can I use SYNAPSE on my phone?","Yes. SYNAPSE is built as a Progressive Web App (PWA), allowing you to install and use it on desktop, Android, and iPhone without downloading it from an app store."],
+    ["How long does recovery take?","Recovery looks different for everyone. Some users notice improvements within weeks, while lasting behavioral change often requires consistent effort over several months. SYNAPSE is designed to support long-term progress, not quick fixes."],
+    ["What are Recovery Levels?","Recovery Levels mark important milestones in your journey. As you remain consistent and build healthier habits, you'll unlock higher levels that reflect your long-term progress — not just your current streak."],
+    ["Why doesn't SYNAPSE focus only on streaks?","A streak doesn't explain your behavior. SYNAPSE looks beyond the number of days and focuses on patterns, triggers, consistency, and sustainable recovery. The objective isn't to chase the longest streak — it's to build lasting change."],
   ];
 
   return (
@@ -2600,6 +2622,34 @@ function About({ onBegin, onBack }){
               <p style={{...body,fontSize:15,margin:0}}>{t}</p>
             </div>
           ))}
+        </div>
+      </section>
+
+      {/* ── FAQ ── */}
+      <section data-asec="faq" style={{...sectionStyle,...reveal("faq")}}>
+        <div style={kicker}>FAQ</div>
+        <h2 style={{...gradText,fontSize:"clamp(26px,4.5vw,44px)"}}>Common questions</h2>
+        <div style={rule}/>
+        <div style={{display:"flex",flexDirection:"column",gap:10}}>
+          {faqs.map(([q,a],i)=>{
+            const open=faqOpen===i;
+            return (
+              <div key={i} style={{...card,padding:0,overflow:"hidden",transition:"border-color .3s",borderColor:open?"rgba(255,140,0,0.28)":"rgba(255,140,0,0.10)"}}>
+                <button
+                  onClick={()=>setFaqOpen(open?null:i)}
+                  style={{width:"100%",display:"flex",alignItems:"center",justifyContent:"space-between",gap:16,padding:"18px clamp(18px,3vw,26px)",background:"transparent",border:"none",cursor:"pointer",textAlign:"left"}}
+                >
+                  <span style={{fontFamily:"'Space Grotesk',sans-serif",fontWeight:600,fontSize:"clamp(13.5px,1.6vw,15.5px)",color:open?"#f5a000":"var(--text)",lineHeight:1.4,transition:"color .3s"}}>{q}</span>
+                  <span style={{flexShrink:0,color:"#f5a000",transform:open?"rotate(180deg)":"rotate(0deg)",transition:"transform .3s"}}>
+                    <ChevronDown size={18}/>
+                  </span>
+                </button>
+                <div style={{maxHeight:open?400:0,opacity:open?1:0,transition:"max-height .4s ease, opacity .3s ease"}}>
+                  <p style={{...cardText,margin:0,padding:"0 clamp(18px,3vw,26px) 20px"}}>{a}</p>
+                </div>
+              </div>
+            );
+          })}
         </div>
       </section>
 
@@ -3030,7 +3080,36 @@ function Boot({ onBegin, onLogin, hasPlan, theme, onThemeToggle, onAbout }) {
           </div>
         </section>
 
-        {/* ── SECTION 5: CTA ── */}
+        {/* ── SECTION 4.5: TESTIMONIALS ── */}
+        <section data-sec="testi" style={{position:"relative",zIndex:2,padding:"clamp(50px,7vh,80px) clamp(24px,6vw,90px)"}}>
+          <div style={{maxWidth:1160,width:"100%",margin:"0 auto"}}>
+            <div style={{fontFamily:"'Space Mono',monospace",fontWeight:400,fontSize:9,letterSpacing:"0.44em",color:"#6a5820",textTransform:"uppercase",marginBottom:20,textAlign:"center"}}>REAL RESULTS</div>
+            <div style={{width:"100%",height:1,background:"#3a2800",marginBottom:44}}/>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(260px,1fr))",gap:16}}>
+              {[
+                ["As a student, I personally felt a huge difference using Synapse. It has helped me dismantle the habits that I was struggling with for over an year. I've saved a huge amount of time that I'm really really grateful for!","Kanchi","Beta Tester"],
+                ["The UI definitely doesn't feel like another boring habit tracker. It actually made me want to come back every day.","Satyam","Beta Tester"],
+                ["The conversations felt surprisingly personal. It remembered what I was struggling with and gave practical suggestions that were really helpful for me to be better.","Sanvee","Early User"],
+                ["I really liked the fact that it tried to understand why I was procrastinating instead of just telling me to stop.","Kanha","Beta Tester"],
+                ["The AI coach is the feature I liked the most along with the battle plan. It builds a proper plan for addicted people which is very useful and necessary.","Aditya","Early User"],
+                ["The plan was genuinely helpful and made a real difference in managing my compulsive habits. It also provided a clear roadmap to follow which makes the journey to my goal feel achievable.","Jiya","Early User"],
+                ["The website is built impressively. It helped me channelize my time productively. I love using it.","Jyotica","Early User"],
+              ].map(([quote,name,role],i)=>(
+                <div key={i} style={{background:"rgba(255,140,0,0.025)",border:"1px solid rgba(255,140,0,0.12)",borderRadius:16,padding:"22px 20px",display:"flex",flexDirection:"column"}}>
+                  <div style={{color:"#f5a000",fontSize:13,letterSpacing:2,marginBottom:14}}>★★★★★</div>
+                  <p style={{fontFamily:"'Inter',sans-serif",fontSize:13.5,lineHeight:1.65,color:"#c9a860",margin:"0 0 18px",flex:1}}>&ldquo;{quote}&rdquo;</p>
+                  <div style={{display:"flex",alignItems:"center",gap:10}}>
+                    <div style={{width:32,height:32,borderRadius:"50%",flexShrink:0,background:"linear-gradient(135deg,#ff9500,#ff5000)",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Orbitron',sans-serif",fontSize:11,fontWeight:900,color:"#fff"}}>{name[0]}</div>
+                    <div>
+                      <div style={{fontFamily:"'Space Grotesk',sans-serif",fontSize:12,fontWeight:600,color:"var(--text)"}}>{name}</div>
+                      <div style={{fontFamily:"'Space Mono',monospace",fontSize:9.5,letterSpacing:"0.06em",color:"#6a5820",textTransform:"uppercase"}}>{role}</div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
         <section data-sec="s5" style={{minHeight:"70vh",position:"relative",zIndex:2,display:"flex",flexDirection:"column",justifyContent:"center",alignItems:"center",textAlign:"center",padding:"clamp(40px,6vh,70px) clamp(24px,6vw,90px)"}}>
           <div style={{maxWidth:680,width:"100%",textAlign:"center",margin:"0 auto"}}>
             <div style={{fontFamily:"'Space Mono',monospace",fontWeight:400,fontSize:9,letterSpacing:"0.44em",color:"#6a5820",textTransform:"uppercase",marginBottom:20,display:"flex",justifyContent:"center",opacity:s5vis?1:0,transition:"opacity .5s"}}>READY TO RECLAIM CONTROL?</div>
