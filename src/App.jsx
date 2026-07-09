@@ -1064,6 +1064,12 @@ input{background:transparent;}
 .nav-pill:hover,.nav-pill.active{border-color:rgba(255,140,0,.55);color:var(--accent2);background:var(--accent3);}
 .nav-pill.danger{border-color:var(--danger);color:var(--danger-text);}
 .nav-pill.danger:hover{border-color:rgba(255,50,50,.55);color:#ff6060;background:rgba(255,50,50,.08);}
+/* Testimonials marquee — continuous left-scroll, pauses on hover */
+.testi-viewport{overflow:hidden;-webkit-mask-image:linear-gradient(90deg,transparent,#000 6%,#000 94%,transparent);mask-image:linear-gradient(90deg,transparent,#000 6%,#000 94%,transparent);}
+.testi-track{display:flex;gap:16px;width:max-content;animation:testiScroll 46s linear infinite;}
+.testi-track:hover{animation-play-state:paused;}
+.testi-card{width:300px;flex-shrink:0;background:rgba(255,140,0,0.025);border:1px solid rgba(255,140,0,0.12);border-radius:16px;padding:22px 20px;display:flex;flex-direction:column;}
+@keyframes testiScroll{0%{transform:translateX(0);}100%{transform:translateX(-50%);}}
 /* Icon hidden everywhere by default (mobile/tablet) — desktop media query below re-enables it for the active tab only. */
 .nav-pill-icon{display:none;}
 /* Desktop-only nav upgrade: unified segmented track, glow on active tab only. Mobile/tablet untouched. */
@@ -3081,12 +3087,12 @@ function Boot({ onBegin, onLogin, hasPlan, theme, onThemeToggle, onAbout }) {
         </section>
 
         {/* ── SECTION 4.5: TESTIMONIALS ── */}
-        <section data-sec="testi" style={{position:"relative",zIndex:2,padding:"clamp(50px,7vh,80px) clamp(24px,6vw,90px)"}}>
-          <div style={{maxWidth:1160,width:"100%",margin:"0 auto"}}>
-            <div style={{fontFamily:"'Space Mono',monospace",fontWeight:400,fontSize:9,letterSpacing:"0.44em",color:"#6a5820",textTransform:"uppercase",marginBottom:20,textAlign:"center"}}>REAL RESULTS</div>
-            <div style={{width:"100%",height:1,background:"#3a2800",marginBottom:44}}/>
-            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(260px,1fr))",gap:16}}>
-              {[
+        <section data-sec="testi" style={{position:"relative",zIndex:2,padding:"clamp(50px,7vh,80px) 0"}}>
+          <div style={{fontFamily:"'Space Mono',monospace",fontWeight:400,fontSize:9,letterSpacing:"0.44em",color:"#6a5820",textTransform:"uppercase",marginBottom:20,textAlign:"center"}}>REAL RESULTS</div>
+          <div style={{width:"min(100%,1160px)",height:1,background:"#3a2800",marginBottom:44,marginLeft:"auto",marginRight:"auto"}}/>
+          <div className="testi-viewport">
+            <div className="testi-track">
+              {[...Array(2)].flatMap(()=>[
                 ["As a student, I personally felt a huge difference using Synapse. It has helped me dismantle the habits that I was struggling with for over an year. I've saved a huge amount of time that I'm really really grateful for!","Kanchi","Beta Tester"],
                 ["The UI definitely doesn't feel like another boring habit tracker. It actually made me want to come back every day.","Satyam","Beta Tester"],
                 ["The conversations felt surprisingly personal. It remembered what I was struggling with and gave practical suggestions that were really helpful for me to be better.","Sanvee","Early User"],
@@ -3094,8 +3100,8 @@ function Boot({ onBegin, onLogin, hasPlan, theme, onThemeToggle, onAbout }) {
                 ["The AI coach is the feature I liked the most along with the battle plan. It builds a proper plan for addicted people which is very useful and necessary.","Aditya","Early User"],
                 ["The plan was genuinely helpful and made a real difference in managing my compulsive habits. It also provided a clear roadmap to follow which makes the journey to my goal feel achievable.","Jiya","Early User"],
                 ["The website is built impressively. It helped me channelize my time productively. I love using it.","Jyotica","Early User"],
-              ].map(([quote,name,role],i)=>(
-                <div key={i} style={{background:"rgba(255,140,0,0.025)",border:"1px solid rgba(255,140,0,0.12)",borderRadius:16,padding:"22px 20px",display:"flex",flexDirection:"column"}}>
+              ]).map(([quote,name,role],i)=>(
+                <div key={i} className="testi-card">
                   <div style={{color:"#f5a000",fontSize:13,letterSpacing:2,marginBottom:14}}>★★★★★</div>
                   <p style={{fontFamily:"'Inter',sans-serif",fontSize:13.5,lineHeight:1.65,color:"#c9a860",margin:"0 0 18px",flex:1}}>&ldquo;{quote}&rdquo;</p>
                   <div style={{display:"flex",alignItems:"center",gap:10}}>
