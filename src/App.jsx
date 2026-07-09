@@ -1567,7 +1567,24 @@ function AdminDashboard({theme,onClose}){
       const uData=uSnap.docs.map(d=>({id:d.id,...d.data()}));
       const cData=cSnap.docs.map(d=>({id:d.id,...d.data()})).sort(_sortDesc);
       const fData=fSnap.docs.map(d=>({id:d.id,...d.data()})).sort(_sortDesc);
-      setUsers(uData); setCheckins(cData); setFeedbacks(fData);
+      // Merge userstreak data into user objects
+      const userMap = {};
+      uData.forEach(user => {
+        userMap[user.id] = user;
+      });
+      uSnap.docs.forEach(doc => {
+        if (doc.id.startsWith('userstreak_')) {
+          const uid = doc.id.replace('userstreak_', '');
+          const streakData = doc.data();
+          if (userMap[uid]) {
+            Object.assign(userMap[uid], streakData);
+          } else {
+            userMap[uid] = { id: uid, ...streakData };
+          }
+        }
+      });
+      const enrichedUData = Object.values(userMap);
+      setUsers(enrichedUData); setCheckins(cData); setFeedbacks(fData);
       const ts=Date.now();
       setLastUpdated(new Date(ts));
       // Cache in sessionStorage — persists for tab session
@@ -1586,6 +1603,8 @@ function AdminDashboard({theme,onClose}){
           const streak=parseInt(localStorage.getItem("syn_streak")||"0");
           setUsers([{id:u.uid||"local",uid:u.uid||"local",name:u.name||"You",email:u.email||"",photoURL:u.photoURL||"",archetype:archetype?.title||"",addictions:confess?.addictions||[],hoursPerDay:confess?.hours||{},currentStreak:streak,lastCheckin:localStorage.getItem("syn_last")||"",dob:u.dob||"",gender:u.gender||"",lastSeen:{toDate:()=>new Date()}}]);
           setCheckins(h.map((entry,i)=>({id:`local_${i}`,uid:u.uid||"local",date:entry.date||"",status:entry.status||"win",streak:entry.streak||0,msg:entry.msg||"",timestamp:{toDate:()=>new Date(entry.date||Date.now())}})));
+          const f=JSON.parse(localStorage.getItem("syn_feedbacks")||"[]");
+          setFeedbacks(f);
         }catch(le){console.error(le);}
       }
     }finally{
@@ -2060,7 +2079,7 @@ function ProfileSheet({user,theme,onThemeToggle,onClose,onSignOut,onPhotoUpdate,
     }finally{setUploading(false);}
   };
 
-  const handleSaveProfile=()=>{
+  const handleSaveProfile=async ()=>{
     // 1. Save to localStorage INSTANTLY — no async
     const stored=JSON.parse(localStorage.getItem("syn_user")||"{}");
     localStorage.setItem("syn_user",JSON.stringify({...stored,dob,gender}));
@@ -2069,7 +2088,11 @@ function ProfileSheet({user,theme,onThemeToggle,onClose,onSignOut,onPhotoUpdate,
     // 2. Firestore in background — non-blocking, durable (queued + retried)
     const uid=auth.currentUser?.uid;
     if(uid&&db){
-      durableWrite(`profile_${uid}`, "users", uid, {dob,gender,lastSeen:serverTimestamp()});
+      try{
+        await durableWrite(`profile_${uid}`, "users", uid, {dob,gender,lastSeen:serverTimestamp()});
+      }catch(e){
+        console.warn("Profile save failed:",e);
+      }
     }
   };
 
@@ -4497,6 +4520,15 @@ function Checkin({streak,savedPlan,lastCheckin,onCheckin,onGoChat}) {
   const done=lastCheckin===today;
   const lv=getLevel(streak); const nx=getNextLvl(streak);
   const xp=nx?Math.min(100,((streak-lv.minDays)/(nx.minDays-lv.minDays))*100):100;
+  function getGaugePosition(streak) {
+  const next = getNextLvl(streak);
+  if (!next) return 1;
+  const current = getLevel(streak);
+  const currMin = Math.sqrt(current.minDays);
+  const nextMin = Math.sqrt(next.minDays);
+  const streakSqrt = Math.sqrt(streak);
+  return (streakSqrt - currMin) / (nextMin - currMin);
+}
 
   useEffect(()=>{ setTimeout(()=>setEntered(true),60); },[]);
   useEffect(()=>{ if(reply) bottomRef.current?.scrollIntoView({behavior:"smooth"}); },[reply]);
@@ -4669,7 +4701,41 @@ function Checkin({streak,savedPlan,lastCheckin,onCheckin,onGoChat}) {
             <div className="tag"><span className="d"/>Current Streak</div>
             {(()=>{ try{ const arch=JSON.parse(ls.get("syn_archetype","null")); if(!arch) return null; const ad=ARCHETYPES.find(a=>a.id===arch.id); return(<div style={{display:"inline-flex",alignItems:"center",gap:6,background:`rgba(${ad?.accentRgb||"255,140,0"},0.08)`,border:`1px solid rgba(${ad?.accentRgb||"255,140,0"},0.22)`,borderRadius:999,padding:"5px 14px"}}><span style={{fontSize:13}}>{arch.id==="sovereign"?"♛":arch.id==="arbiter"?"⚖":arch.id==="stoic"?"🌳":"▲"}</span><span style={{fontSize:10,letterSpacing:1.5,fontWeight:600,color:`rgba(${ad?.accentRgb||"255,180,80"},0.75)`,textTransform:"uppercase"}}>{arch.title}</span></div>); }catch{return null;} })()}
           </div>
-          <div className="ci-num" style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(72px,16vw,200px)",fontWeight:800,lineHeight:.85,color:"var(--text)",marginBottom:12,textShadow:document.documentElement.classList.contains("light")?`0 2px 0 rgba(0,0,0,0.08),0 0 40px rgba(${lv.hex},0.1)`:`0 0 80px rgba(${lv.hex},0.25)`,transition:"text-shadow 1s"}}><AnimatedNumber target={streak}/></div>
+          <div className="ci-num" style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(72px,16vw,200px)",fontWeight:800,lineHeight:.85,color:"var(--text)",marginBottom:12,textShadow:document.documentElement.classList.contains("light")?`0 2px 0 rgba(0,0,0,0.08),0 0 40px rgba(${lv.hex},0.1)`:`0 0 80px rgba(${lv.hex},0.25)`,transition:"text-shadow 1s"}}><AnimatedNumber target={streak}/></div> <div style={{ width: '8px', height: '300px', position: 'relative' }}>
+  <div style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: '4px' }}></div>
+  {LEVELS.map((level, idx) => {
+    const minD = LEVELS[0].minDays;
+    const maxD = LEVELS[LEVELS.length - 1].minDays;
+    const pos = level.minDays === minD ? 0 : Math.sqrt(level.minDays) / Math.sqrt(maxD);
+    return (
+      <div
+        key={idx}
+        style={{
+          position: 'absolute',
+          bottom: `${pos * 100}%`,
+          left: 0,
+          width: '16px',
+          height: '2px',
+          transform: 'translateX(-50%)',
+          backgroundColor: level.color
+        }}
+      />
+    );
+  })}
+  <div
+    style={{
+      position: 'absolute',
+      bottom: `${getGaugePosition(streak) * 100}%`,
+      left: 0,
+      width: '12px',
+      height: '12px',
+      borderRadius: '50%',
+      transform: 'translate(-50%, 50%)',
+      backgroundColor: lv.color,
+      boxShadow: `0 0 10px ${lv.color}`
+    }}
+  />
+</div>
           <div className="ci-daysclean" style={{fontSize:11,letterSpacing:5,color:document.documentElement.classList.contains("light")?"rgba(26,26,26,0.6)":"var(--text3)",textTransform:"uppercase",marginBottom:24,fontWeight:600}}>Days Clean</div>
           <div className="ci-level" style={{display:"inline-flex",alignItems:"center",gap:9,background:`rgba(${lv.hex},0.09)`,border:`1px solid rgba(${lv.hex},0.3)`,borderRadius:999,padding:"9px 22px",marginBottom:32,transition:"all .8s"}}>
             <div style={{width:7,height:7,borderRadius:"50%",background:lv.color,boxShadow:`0 0 12px ${lv.color}`,transition:"all .8s"}}/>
@@ -5757,7 +5823,11 @@ function AppRoot() {
         const stored=JSON.parse(localStorage.getItem("syn_user")||"{}");
         localStorage.setItem("syn_user",JSON.stringify({...stored,fcmToken:token}));
         if(auth.currentUser?.uid&&db){
-          durableWrite(`fcmtoken_${auth.currentUser.uid}`, "users", auth.currentUser.uid, {fcmToken:token,lastSeen:serverTimestamp()});
+          try{
+            await durableWrite(`fcmtoken_${auth.currentUser.uid}`, "users", auth.currentUser.uid, {fcmToken:token,lastSeen:serverTimestamp()});
+          }catch(e){
+            console.warn("FCM token save failed:",e);
+          }
         }
         console.log("✅ FCM token saved:",token.slice(0,20)+"...");
       }
@@ -5793,7 +5863,7 @@ function AppRoot() {
 
   // Firebase auth state listener — restores session on page reload
   useEffect(()=>{
-    const unsub=onAuthStateChanged(auth,user=>{
+    const unsub=onAuthStateChanged(auth, async (user)=>{
       if(user){
         const displayName=user.displayName||user.email?.split("@")[0]||"";
         ls.set("syn_user",JSON.stringify({email:user.email,name:displayName,uid:user.uid,photoURL:user.photoURL||""}));
@@ -5809,13 +5879,17 @@ function AppRoot() {
         // identity write just never happened. Writing it here, on every auth-ready,
         // decouples identity from the confess flow. merge:true so it never clobbers
         // archetype/addictions/streak written elsewhere.
-        durableWrite(`identity_${user.uid}`, "users", user.uid, {
-          uid:user.uid,
-          name:displayName,
-          email:user.email||"",
-          photoURL:user.photoURL||"",
-          lastSeen:serverTimestamp(),
-        });
+        try{
+          await durableWrite(`identity_${user.uid}`, "users", user.uid, {
+            uid:user.uid,
+            name:displayName,
+            email:user.email||"",
+            photoURL:user.photoURL||"",
+            lastSeen:serverTimestamp(),
+          });
+        }catch(e){
+          console.warn("Identity write failed:",e);
+        }
         // Already logged in — skip boot screen, go straight to app
         const sp=ls.get("syn_plan","");
         setScreen(sp?"checkin":"confess");
@@ -5839,6 +5913,14 @@ function AppRoot() {
     window.addEventListener("online",onOnline);
     return ()=>window.removeEventListener("online",onOnline);
   },[]);
+
+  // Periodically flush sync queue to ensure writes eventually reach Firestore
+  useEffect(() => {
+    const interval = setInterval(() => {
+      flushSyncQueue();
+    }, 30000); // 30 seconds
+    return () => clearInterval(interval);
+  }, []);
 
   // Play ambient on first any interaction — covers already-logged-in users
   useEffect(()=>{
@@ -6026,17 +6108,15 @@ function AppRoot() {
       if(uid){
         const checkinId=`${uid}_${today.replace(/\s/g,"_")}`;
         const finalStreak = status==="SLIP"?0:streak+1;
-        durableWrite(`checkin_${checkinId}`, "checkins", checkinId, {
+        await durableWrite(`checkin_${checkinId}`, "checkins", checkinId, {
           uid, date:today,
           status:status.toLowerCase(),
           streak: finalStreak,
           msg: msg.slice(0,500),
           timestamp:serverTimestamp(),
         });
-        durableWrite(`userstreak_${uid}`, "users", uid, {
-          lastCheckin:today,
-          lastSeen:serverTimestamp(),
-          currentStreak:finalStreak,
+        await durableWrite(`userstreak_${uid}`, "users", uid, {
+          lastCheckin:today, lastSeen:serverTimestamp(), currentStreak:finalStreak,
         });
       }
     }catch(fe){console.warn("Firestore checkin write failed:",fe);}
@@ -6071,7 +6151,7 @@ function AppRoot() {
   ──────────────────────────────────────────────────────────────────────── */
   const thisMonthKey=()=>{const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`;}; // local calendar month, e.g. "2026-07" — was previously computed via toISOString() (UTC), which for positive-offset timezones (e.g. IST) reports the *previous* month for the first several hours of a new local month, occasionally denying a freshly-available lifeline right after a month rollover.
 
-  const breakStreak=(missed)=>{
+  const breakStreak=async (missed)=>{
     const today=new Date().toDateString();
     setStreak(0);
     ls.set("syn_streak","0");
@@ -6079,7 +6159,11 @@ function AppRoot() {
     setHistory(nh); ls.set("syn_history",JSON.stringify(nh));
     const uid=auth.currentUser?.uid;
     if(uid){
-      durableWrite(`userstreak_${uid}`, "users", uid, {currentStreak:0, lastSeen:serverTimestamp()});
+      try{
+        await durableWrite(`userstreak_${uid}`, "users", uid, {currentStreak:0, lastSeen:serverTimestamp()});
+      }catch(e){
+        console.warn("Firestore breakStreak write failed:",e);
+      }
     }
   };
 
