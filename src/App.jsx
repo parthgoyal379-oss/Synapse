@@ -5968,56 +5968,26 @@ function AppRoot() {
   },[authed]);
 
   // Firebase auth state listener — restores session on page reload
+  // PERF FIX: this used to `await` an identity write AND a streak getDoc
+  // before ever calling setAuthLoading(false) — and authLoading gates the
+  // ENTIRE app behind a full-screen spinner. So every signed-in user sat on
+  // a blank spinner for two sequential Firestore round-trips (write + read)
+  // before seeing any UI at all, while signed-out/incognito users hit the
+  // `else` branch and got setAuthLoading(false) instantly. That's exactly
+  // why incognito felt fast and signed-in felt slow — it wasn't the network
+  // in general, it was this specific gate. Fix: resolve authLoading (and
+  // render the app with whatever's already in localStorage) immediately,
+  // then do the identity write + streak sync in the background and patch
+  // state in when they resolve. Nothing about correctness changes — the
+  // durable write queue already retries on failure — this only changes
+  // WHEN the user is allowed to see the screen.
   useEffect(()=>{
-    const unsub=onAuthStateChanged(auth, async (user)=>{
+    const unsub=onAuthStateChanged(auth, (user)=>{
       if(user){
         const displayName=user.displayName||user.email?.split("@")[0]||"";
         ls.set("syn_user",JSON.stringify({email:user.email,name:displayName,uid:user.uid,photoURL:user.photoURL||""}));
         setAuthed(true);
-        // Identity write — guarantee name/email/photoURL exist on the users doc.
-        // Bug fix: previously the ONLY write that set these identity fields was
-        // inside handleConfess(), AFTER an awaited callAI() plan generation. So
-        // if that AI call failed, or the user checked in without ever finishing
-        // confess, the users/{uid} doc got created by handleCheckin() with ONLY
-        // streak fields — no name, no email. The admin dashboard reads u.name /
-        // u.email, so those users showed up as "Unknown" with a blank email
-        // ("data comes but not all"). The field keys read and written match; the
-        // identity write just never happened. Writing it here, on every auth-ready,
-        // decouples identity from the confess flow. merge:true so it never clobbers
-        // archetype/addictions/streak written elsewhere.
-        try{
-          await durableWrite(`identity_${user.uid}`, "users", user.uid, {
-            uid:user.uid,
-            name:displayName,
-            email:user.email||"",
-            photoURL:user.photoURL||"",
-            lastSeen:serverTimestamp(),
-          });
-        }catch(e){
-          console.warn("Identity write failed:",e);
-        }
-        // Cross-device streak sync — Firestore is the source of truth for
-        // currentStreak/lastCheckin (written on every check-in and reset).
-        // Without this, a fresh device has empty localStorage and the streak
-        // silently starts back at 0 even though the account's real streak
-        // lives on the server. Pull it down and hydrate local state/storage
-        // on every login so the streak follows the Gmail account, not the device.
-        try{
-          const snap=await getDoc(doc(db,"users",user.uid));
-          if(snap.exists()){
-            const d=snap.data();
-            if(typeof d.currentStreak==="number"){
-              setStreak(d.currentStreak);
-              ls.set("syn_streak",String(d.currentStreak));
-            }
-            if(d.lastCheckin){
-              setLastCI(d.lastCheckin);
-              ls.set("syn_last",d.lastCheckin);
-            }
-          }
-        }catch(e){
-          console.warn("Streak sync from Firestore failed:",e);
-        }
+        setAuthLoading(false);
         // Land signed-in users on the home page too — they'll choose to
         // continue into the app via the Initialize/Begin button, which
         // routes them straight to check-in since they already have a plan.
@@ -6027,10 +5997,41 @@ function AppRoot() {
         // Retry any Firestore writes that failed/got stuck in a previous session
         // (closed app mid-sync, was offline, auth wasn't ready yet, etc.)
         flushSyncQueue();
+
+        // Everything below runs in the background — UI is already visible.
+        (async ()=>{
+          try{
+            await durableWrite(`identity_${user.uid}`, "users", user.uid, {
+              uid:user.uid,
+              name:displayName,
+              email:user.email||"",
+              photoURL:user.photoURL||"",
+              lastSeen:serverTimestamp(),
+            });
+          }catch(e){
+            console.warn("Identity write failed:",e);
+          }
+          try{
+            const snap=await getDoc(doc(db,"users",user.uid));
+            if(snap.exists()){
+              const d=snap.data();
+              if(typeof d.currentStreak==="number"){
+                setStreak(d.currentStreak);
+                ls.set("syn_streak",String(d.currentStreak));
+              }
+              if(d.lastCheckin){
+                setLastCI(d.lastCheckin);
+                ls.set("syn_last",d.lastCheckin);
+              }
+            }
+          }catch(e){
+            console.warn("Streak sync from Firestore failed:",e);
+          }
+        })();
       } else {
         setAuthed(false);
+        setAuthLoading(false);
       }
-      setAuthLoading(false);
     });
     return unsub;
   },[]);
