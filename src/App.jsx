@@ -12,12 +12,12 @@ import {
 } from "firebase/firestore";
 import {
   Zap, Flame, Check, X, Moon, Sun, Bell, BellOff, ClipboardList,
-  MessageSquare, Lock, Shield, DoorOpen, Camera, Users, BarChart2,
+  MessageSquare, MessageCircle, Lock, Shield, DoorOpen, Camera, Users, BarChart2, BarChart,
   Brain, Wrench, Smartphone, Download, RefreshCw, AlertTriangle,
   Sunrise, Sunset, Eye, TrendingDown, Clock, Heart, ThumbsUp,
   ThumbsDown, Meh, Skull, Send, HelpCircle, CheckCircle, XCircle,
   ChevronRight, ChevronDown, ChevronUp, Star, Award, Target,
-  Activity, LogOut, Settings, User, Mail
+  Activity, LogOut, Settings, User, Mail, Map, Info
 } from "lucide-react";
 
 /* Escapes free-text user input before it's interpolated into a raw HTML
@@ -1064,6 +1064,17 @@ input{background:transparent;}
 .nav-pill:hover,.nav-pill.active{border-color:rgba(255,140,0,.55);color:var(--accent2);background:var(--accent3);}
 .nav-pill.danger{border-color:var(--danger);color:var(--danger-text);}
 .nav-pill.danger:hover{border-color:rgba(255,50,50,.55);color:#ff6060;background:rgba(255,50,50,.08);}
+/* Desktop-only nav upgrade: unified segmented track, glow on active tab only. Mobile/tablet untouched. */
+@media (min-width:768px){
+  .nav-tabs-row{background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:5px;gap:2px !important;display:inline-flex !important;width:fit-content;}
+  .light .nav-tabs-row{background:rgba(0,0,0,.02);border-color:rgba(0,0,0,.06);}
+  nav .nav-pill{border:none !important;background:transparent !important;padding:9px 16px !important;border-radius:10px !important;color:rgba(255,255,255,.45);font-weight:500;}
+  .light nav .nav-pill{color:rgba(26,26,26,.5) !important;}
+  nav .nav-pill.active{padding:9px 18px !important;background:linear-gradient(135deg,rgba(255,140,0,.2),rgba(255,140,0,.06)) !important;box-shadow:0 1px 0 rgba(255,255,255,.06) inset,0 0 16px rgba(255,140,0,.14);color:#ffb35a !important;font-weight:600;}
+  .light nav .nav-pill.active{color:#c05a00 !important;}
+  nav .nav-pill .nav-pill-icon{display:none;}
+  nav .nav-pill.active .nav-pill-icon{display:inline-flex;margin-right:6px;vertical-align:-2px;}
+}
 .tag{display:inline-flex;align-items:center;gap:8px;background:var(--tag-bg);border:1px solid var(--tag-border);border-radius:999px;padding:6px 16px;font-size:11px;font-weight:500;letter-spacing:1.2px;color:var(--tag-text);text-transform:uppercase;}
 .tag .d{width:5px;height:5px;border-radius:50%;background:var(--accent);box-shadow:0 0 7px var(--accent);flex-shrink:0;}
 @keyframes spin{to{transform:rotate(360deg);}}
@@ -2307,11 +2318,11 @@ function Nav({screen,goTo,savedPlan,onReset,theme,onThemeToggle,user}) {
       </div>
       {/* Row 2 — Screen tabs */}
       <div className="nav-tabs-row" style={{display:"flex",gap:6,alignItems:"center",padding:"0 clamp(12px,4vw,48px) 10px",overflowX:"auto",WebkitOverflowScrolling:"touch",scrollbarWidth:"none",msOverflowStyle:"none",whiteSpace:"nowrap"}}>
-        {savedPlan&&[["checkin","Check-In"],["plan","My Plan"],["chat","Coach"],["report","Report"],["history","Log"],["urge","⚡ Urge"]].map(([s,l])=>(
-          <button key={s} className={`nav-pill${screen===s?" active":""}`} onClick={()=>goTo(s)} style={{flexShrink:0}}>{l}</button>
+        {savedPlan&&[["checkin","Check-In",Flame],["plan","My Plan",Map],["chat","Coach",MessageCircle],["report","Report",BarChart2],["history","Log",Clock],["urge","Urge",Zap]].map(([s,l,Ic])=>(
+          <button key={s} className={`nav-pill${screen===s?" active":""}`} onClick={()=>goTo(s)} style={{flexShrink:0}}><Ic size={14} className="nav-pill-icon"/>{l}</button>
         ))}
-        <button className={`nav-pill${screen==="confess"?" active":""}`} onClick={()=>goTo("confess")} style={{flexShrink:0}}>Confess</button>
-        <button className={`nav-pill${screen==="about"?" active":""}`} onClick={()=>goTo("about")} style={{flexShrink:0}}>About</button>
+        <button className={`nav-pill${screen==="confess"?" active":""}`} onClick={()=>goTo("confess")} style={{flexShrink:0}}><Lock size={14} className="nav-pill-icon"/>Confess</button>
+        <button className={`nav-pill${screen==="about"?" active":""}`} onClick={()=>goTo("about")} style={{flexShrink:0}}><Info size={14} className="nav-pill-icon"/>About</button>
       </div>
     </nav>
     {showProfile&&<ProfileSheet user={user} theme={theme} onThemeToggle={()=>{onThemeToggle();}} onClose={()=>setShowProfile(false)} onSignOut={handleSignOut} onPhotoUpdate={(url)=>{user.photoURL=url;}} onAdminOpen={()=>setShowAdmin(true)} onFeedback={()=>setShowFeedback(true)}/>}
