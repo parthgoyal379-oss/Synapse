@@ -2631,34 +2631,6 @@ function About({ onBegin, onBack }){
         </div>
       </section>
 
-      {/* ── FAQ ── */}
-      <section data-asec="faq" style={{...sectionStyle,...reveal("faq")}}>
-        <div style={kicker}>FAQ</div>
-        <h2 style={{...gradText,fontSize:"clamp(26px,4.5vw,44px)"}}>Common questions</h2>
-        <div style={rule}/>
-        <div style={{display:"flex",flexDirection:"column",gap:10}}>
-          {faqs.map(([q,a],i)=>{
-            const open=faqOpen===i;
-            return (
-              <div key={i} style={{...card,padding:0,overflow:"hidden",transition:"border-color .3s",borderColor:open?"rgba(255,140,0,0.28)":"rgba(255,140,0,0.10)"}}>
-                <button
-                  onClick={()=>setFaqOpen(open?null:i)}
-                  style={{width:"100%",display:"flex",alignItems:"center",justifyContent:"space-between",gap:16,padding:"18px clamp(18px,3vw,26px)",background:"transparent",border:"none",cursor:"pointer",textAlign:"left"}}
-                >
-                  <span style={{fontFamily:"'Space Grotesk',sans-serif",fontWeight:600,fontSize:"clamp(13.5px,1.6vw,15.5px)",color:open?"#f5a000":"var(--text)",lineHeight:1.4,transition:"color .3s"}}>{q}</span>
-                  <span style={{flexShrink:0,color:"#f5a000",transform:open?"rotate(180deg)":"rotate(0deg)",transition:"transform .3s"}}>
-                    <ChevronDown size={18}/>
-                  </span>
-                </button>
-                <div style={{maxHeight:open?400:0,opacity:open?1:0,transition:"max-height .4s ease, opacity .3s ease"}}>
-                  <p style={{...cardText,margin:0,padding:"0 clamp(18px,3vw,26px) 20px"}}>{a}</p>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </section>
-
       {/* ── CLOSING + CTA ── */}
       <section data-asec="cta" style={{...sectionStyle,textAlign:"center",minHeight:"70vh",display:"flex",flexDirection:"column",justifyContent:"center",alignItems:"center",...reveal("cta")}}>
         <p style={{...body,maxWidth:640,textAlign:"center",margin:"0 auto 40px",fontSize:"clamp(16px,2vw,19px)",color:"#c9a860"}}>Every habit begins with a choice. Every meaningful change begins with the next one. Synapse is here to help you make it count.</p>
@@ -2702,6 +2674,7 @@ function Boot({ onBegin, onLogin, hasPlan, theme, onThemeToggle, onAbout }) {
   const [ctaFill,setCtaFill]=useState(0);
   const [metric1,setMetric1]=useState(0);
   const [metric2,setMetric2]=useState(0);
+  const [faqOpen,setFaqOpen]=useState(null);
   const chargeRef=useRef(null);
   const chargeVal=useRef(0);
 
@@ -3150,7 +3123,50 @@ function Boot({ onBegin, onLogin, hasPlan, theme, onThemeToggle, onAbout }) {
           </div>
         </section>
 
-        {/* Ticker */}
+        {/* ── FAQ (home page, last section) ── */}
+        <section data-sec="faq" style={{position:"relative",zIndex:2,padding:"clamp(50px,7vh,90px) clamp(24px,6vw,90px) clamp(80px,10vh,120px)"}}>
+          <div style={{maxWidth:760,width:"100%",margin:"0 auto"}}>
+            <div style={{fontFamily:"'Space Mono',monospace",fontWeight:400,fontSize:9,letterSpacing:"0.44em",color:"#6a5820",textTransform:"uppercase",marginBottom:20,textAlign:"center"}}>FAQ</div>
+            <div style={{width:"100%",height:1,background:"#3a2800",marginBottom:44}}/>
+            <div style={{display:"flex",flexDirection:"column",gap:10}}>
+              {[
+                ["Why use SYNAPSE instead of ChatGPT or other AI chatbots?","Most AI chatbots answer questions. SYNAPSE is built to change behavior. Instead of starting from scratch every conversation, it creates a personalized recovery protocol, remembers your progress, adapts after relapses, analyzes patterns, and keeps you accountable through structured daily check-ins. It's not just an AI conversation — it's an AI-powered recovery system."],
+                ["What is SYNAPSE?","SYNAPSE is an AI-powered recovery platform designed to help people overcome compulsive digital habits such as pornography, doomscrolling, social media addiction, gaming, and other dopamine-driven behaviors. Using personalized coaching, daily accountability, and adaptive recovery plans, SYNAPSE helps you build healthier habits one day at a time."],
+                ["How does SYNAPSE work?","Start by completing a short assessment about your habits and challenges. SYNAPSE then generates a recovery protocol tailored to your goals, behavior, and triggers. Every day, you check in with your AI coach, track your progress, and receive guidance that evolves with your journey."],
+                ["What makes SYNAPSE different?","Most habit trackers count streaks. SYNAPSE focuses on understanding why you relapse and continuously adjusts your recovery strategy based on your behavior. Recovery is personalized — not one-size-fits-all."],
+                ["What happens if I relapse?","Relapse doesn't erase your progress. SYNAPSE helps you analyze what happened, identify triggers, and update your recovery plan to reduce the chances of repeating the same pattern. The goal is long-term improvement — not perfection."],
+                ["How does the AI create my recovery plan?","Your recovery plan is generated using the information you provide during onboarding along with your ongoing check-ins. As your behavior changes, the AI continuously refines your protocol instead of keeping you on a fixed routine."],
+                ["How do daily check-ins work?","Each day you'll complete a quick check-in to record your progress, urges, wins, setbacks, and mindset. Your responses help the AI understand your recovery journey and provide more relevant guidance over time."],
+                ["Can SYNAPSE help with more than porn addiction?","Yes. SYNAPSE is designed for behavioral addictions driven by unhealthy dopamine-seeking patterns, including social media, doomscrolling, gaming, binge-watching, and similar compulsive habits."],
+                ["Does SYNAPSE replace therapy?","No. SYNAPSE is a self-improvement and accountability tool, not a replacement for licensed mental health care. If you're experiencing serious mental health concerns, professional support is recommended."],
+                ["Is my data private?","Yes. Your recovery data is securely stored and used only to personalize your experience. Your information is never shared or sold."],
+                ["Is SYNAPSE free?","SYNAPSE offers a free experience with optional premium features that unlock more advanced AI coaching and recovery tools."],
+                ["Can I use SYNAPSE on my phone?","Yes. SYNAPSE is built as a Progressive Web App (PWA), allowing you to install and use it on desktop, Android, and iPhone without downloading it from an app store."],
+                ["How long does recovery take?","Recovery looks different for everyone. Some users notice improvements within weeks, while lasting behavioral change often requires consistent effort over several months. SYNAPSE is designed to support long-term progress, not quick fixes."],
+                ["What are Recovery Levels?","Recovery Levels mark important milestones in your journey. As you remain consistent and build healthier habits, you'll unlock higher levels that reflect your long-term progress — not just your current streak."],
+                ["Why doesn't SYNAPSE focus only on streaks?","A streak doesn't explain your behavior. SYNAPSE looks beyond the number of days and focuses on patterns, triggers, consistency, and sustainable recovery. The objective isn't to chase the longest streak — it's to build lasting change."],
+              ].map(([q,a],i)=>{
+                const open=faqOpen===i;
+                return (
+                  <div key={i} style={{background:"rgba(255,140,0,0.02)",border:"1px solid rgba(255,140,0,0.10)",borderColor:open?"rgba(255,140,0,0.28)":"rgba(255,140,0,0.10)",borderRadius:16,overflow:"hidden",transition:"border-color .3s"}}>
+                    <button
+                      onClick={()=>setFaqOpen(open?null:i)}
+                      style={{width:"100%",display:"flex",alignItems:"center",justifyContent:"space-between",gap:16,padding:"18px clamp(18px,3vw,26px)",background:"transparent",border:"none",cursor:"pointer",textAlign:"left"}}
+                    >
+                      <span style={{fontFamily:"'Space Grotesk',sans-serif",fontWeight:600,fontSize:"clamp(13.5px,1.6vw,15.5px)",color:open?"#f5a000":"var(--text)",lineHeight:1.4,transition:"color .3s"}}>{q}</span>
+                      <span style={{flexShrink:0,color:"#f5a000",transform:open?"rotate(180deg)":"rotate(0deg)",transition:"transform .3s"}}>
+                        <ChevronDown size={18}/>
+                      </span>
+                    </button>
+                    <div style={{maxHeight:open?400:0,opacity:open?1:0,transition:"max-height .4s ease, opacity .3s ease"}}>
+                      <p style={{fontFamily:"'Inter',sans-serif",fontSize:14,lineHeight:1.6,color:"#9a8558",margin:0,padding:"0 clamp(18px,3vw,26px) 20px"}}>{a}</p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </section>
         <div style={{position:"fixed",bottom:0,left:0,right:0,height:28,background:"#0f0900",borderTop:"1px solid #3a2800",overflow:"hidden",display:"flex",alignItems:"center",zIndex:20}}>
           <div style={{fontFamily:"'Space Mono',monospace",fontWeight:400,fontSize:8,letterSpacing:"0.28em",color:"#d4920a",display:"flex",whiteSpace:"nowrap",animation:"tk 30s linear infinite"}}>
             {[1,2].map(k=><span key={k}>DOPAMINE &nbsp;·&nbsp; REWIRE YOUR BRAIN &nbsp;·&nbsp; RISE ABOVE ADDICTION &nbsp;·&nbsp; SYNAPSE PROTOCOL &nbsp;·&nbsp; RESET YOUR DOPAMINE &nbsp;·&nbsp; REWIRE YOUR BRAIN &nbsp;·&nbsp; DOPAMINE &nbsp;·&nbsp; RISE ABOVE ADDICTION &nbsp;·&nbsp; SYNAPSE PROTOCOL &nbsp;·&nbsp; RESET YOUR DOPAMINE &nbsp;·&nbsp;&nbsp;&nbsp;</span>)}
