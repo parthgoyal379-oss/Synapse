@@ -2762,14 +2762,9 @@ function Boot({ onBegin, onLogin, hasPlan, theme, onThemeToggle, onAbout }) {
   const chargeRef=useRef(null);
   const chargeVal=useRef(0);
 
-  // Inject fonts
-  useEffect(()=>{
-    const link=document.createElement("link");
-    link.rel="stylesheet";
-    link.href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Space+Grotesk:wght@500;600;700&family=Space+Mono:wght@400;700&family=Inter:wght@400;500&display=swap";
-    document.head.appendChild(link);
-    return()=>document.head.removeChild(link);
-  },[]);
+  // Font loading moved to index.html (preconnect + <link>) for LCP — see
+  // note there. This JS injection used to make the browser wait for the
+  // full JS bundle to parse/execute before even requesting fonts.
 
   const BL=[
     "> ACCESSING NEURAL INTERFACE...",
@@ -2780,25 +2775,45 @@ function Boot({ onBegin, onLogin, hasPlan, theme, onThemeToggle, onAbout }) {
   ];
 
   // Boot sequence
+  // PERF FIX: the boot overlay is a full-screen opaque black div (z-index 8000)
+  // that sits on top of the real page content until this sequence finishes.
+  // Content behind an opaque overlay doesn't count toward LCP, so every visitor
+  // — including mobile — had their Largest Contentful Paint pushed back by the
+  // full ~4s boot duration (2.1s of typed lines + ~1.8s progress bar), which is
+  // why mobile Speed Insights showed LCP ~6.3s ("Poor") while desktop's faster
+  // CPU absorbed the same delay chain unnoticed. Two changes:
+  //   1. Repeat visitors (localStorage flag) skip the cinematic boot entirely —
+  //      they've seen it, it adds nothing but pure LCP tax on every return visit.
+  //   2. First-time visitors still get the intro, but at half the duration —
+  //      still reads as intentional/cinematic, no longer as "stuck loading".
   useEffect(()=>{
+    const seen = ls.get("syn_boot_seen","");
+    if(seen){
+      // Instant skip — no black overlay delay for returning users.
+      setShowProgress(true);
+      setBpct(100);
+      launch();
+      return;
+    }
+    ls.set("syn_boot_seen","1");
     let i=0;
     const addLine=()=>{
       if(i>=BL.length){ setShowProgress(true); return; }
       setBlogLines(l=>[...l,BL[i]]);
       i++;
-      setTimeout(addLine, i<=2?480:340);
+      setTimeout(addLine, i<=2?240:170); // was 480/340 — halved
     };
-    setTimeout(addLine,500);
+    setTimeout(addLine,250); // was 500
   },[]);
 
   // Progress bar
   useEffect(()=>{
-    if(!showProgress) return;
+    if(!showProgress || bootDone) return;
     let p=0;
     const iv=setInterval(()=>{
-      p=Math.min(p+(p<65?1.4:p<88?.75:.35),100);
+      p=Math.min(p+(p<65?2.8:p<88?1.5:.7),100); // ~2x speed vs original
       setBpct(Math.round(p));
-      if(p>=100){ clearInterval(iv); setTimeout(launch,180); }
+      if(p>=100){ clearInterval(iv); setTimeout(launch,90); }
     },16);
     return()=>clearInterval(iv);
   },[showProgress]);
@@ -2807,12 +2822,12 @@ function Boot({ onBegin, onLogin, hasPlan, theme, onThemeToggle, onAbout }) {
     setBootDone(true);
     setTimeout(()=>{
       setMainVisible(true);
-      setTimeout(()=>{ setWmOn(true); },360);
-      setTimeout(()=>setHt1On(true),800);
-      setTimeout(()=>setHt2On(true),1000);
-      setTimeout(()=>setHmetaOn(true),1280);
+      setTimeout(()=>{ setWmOn(true); },180);
+      setTimeout(()=>setHt1On(true),400);
+      setTimeout(()=>setHt2On(true),500);
+      setTimeout(()=>setHmetaOn(true),640);
       setTimeout(()=>trigGlitch(),2100);
-    },250);
+    },120);
   }
 
   function trigGlitch(){
