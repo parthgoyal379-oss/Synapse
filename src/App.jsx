@@ -1595,10 +1595,13 @@ function AdminDashboard({theme,onClose}){
   };
 
   useEffect(()=>{
-    // If no cache, fetch immediately
-    // If cache exists, fetch in background silently
-    if(!cached) fetchData(false);
-    else fetchData(true); // silent background refresh
+    (async ()=>{
+      await flushSyncQueue();
+      // If no cache, fetch immediately
+      // If cache exists, fetch in background silently
+      if(!cached) fetchData(false);
+      else fetchData(true); // silent background refresh
+    })();
   },[]);
 
   // ── Range filter ──
