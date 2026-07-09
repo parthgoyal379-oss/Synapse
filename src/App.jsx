@@ -4701,42 +4701,7 @@ function Checkin({streak,savedPlan,lastCheckin,onCheckin,onGoChat}) {
             <div className="tag"><span className="d"/>Current Streak</div>
             {(()=>{ try{ const arch=JSON.parse(ls.get("syn_archetype","null")); if(!arch) return null; const ad=ARCHETYPES.find(a=>a.id===arch.id); return(<div style={{display:"inline-flex",alignItems:"center",gap:6,background:`rgba(${ad?.accentRgb||"255,140,0"},0.08)`,border:`1px solid rgba(${ad?.accentRgb||"255,140,0"},0.22)`,borderRadius:999,padding:"5px 14px"}}><span style={{fontSize:13}}>{arch.id==="sovereign"?"♛":arch.id==="arbiter"?"⚖":arch.id==="stoic"?"🌳":"▲"}</span><span style={{fontSize:10,letterSpacing:1.5,fontWeight:600,color:`rgba(${ad?.accentRgb||"255,180,80"},0.75)`,textTransform:"uppercase"}}>{arch.title}</span></div>); }catch{return null;} })()}
           </div>
-          <div className="ci-num" style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(72px,16vw,200px)",fontWeight:800,lineHeight:.85,color:"var(--text)",marginBottom:12,textShadow:document.documentElement.classList.contains("light")?`0 2px 0 rgba(0,0,0,0.08),0 0 40px rgba(${lv.hex},0.1)`:`0 0 80px rgba(${lv.hex},0.25)`,transition:"text-shadow 1s"}}><AnimatedNumber target={streak}/></div> <div style={{ width: '8px', height: '300px', position: 'relative' }}>
-  <div style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: '4px' }}></div>
-  {LEVELS.map((level, idx) => {
-    const minD = LEVELS[0].minDays;
-    const maxD = LEVELS[LEVELS.length - 1].minDays;
-    const pos = level.minDays === minD ? 0 : Math.sqrt(level.minDays) / Math.sqrt(maxD);
-    return (
-      <div
-        key={idx}
-        style={{
-          position: 'absolute',
-          bottom: `${pos * 100}%`,
-          left: 0,
-          width: '16px',
-          height: '2px',
-          transform: 'translateX(-50%)',
-          backgroundColor: level.color
-        }}
-      />
-    );
-  })}
-  <div
-    style={{
-      position: 'absolute',
-      bottom: `${getGaugePosition(streak) * 100}%`,
-      left: 0,
-      width: '12px',
-      height: '12px',
-      borderRadius: '50%',
-      transform: 'translate(-50%, 50%)',
-      backgroundColor: lv.color,
-      boxShadow: `0 0 10px ${lv.color}`
-    }}
-  />
-</div>
-          <div className="ci-daysclean" style={{fontSize:11,letterSpacing:5,color:document.documentElement.classList.contains("light")?"rgba(26,26,26,0.6)":"var(--text3)",textTransform:"uppercase",marginBottom:24,fontWeight:600}}>Days Clean</div>
+          <div className="ci-num" style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(72px,16vw,200px)",fontWeight:800,lineHeight:.85,color:"var(--text)",marginBottom:12,textShadow:document.documentElement.classList.contains("light")?`0 2px 0 rgba(0,0,0,0.08),0 0 40px rgba(${lv.hex},0.1)`:`0 0 80px rgba(${lv.hex},0.25)`,transition:"text-shadow 1s"}}><AnimatedNumber target={streak}/></div>           <div className="ci-daysclean" style={{fontSize:11,letterSpacing:5,color:document.documentElement.classList.contains("light")?"rgba(26,26,26,0.6)":"var(--text3)",textTransform:"uppercase",marginBottom:24,fontWeight:600}}>Days Clean</div>
           <div className="ci-level" style={{display:"inline-flex",alignItems:"center",gap:9,background:`rgba(${lv.hex},0.09)`,border:`1px solid rgba(${lv.hex},0.3)`,borderRadius:999,padding:"9px 22px",marginBottom:32,transition:"all .8s"}}>
             <div style={{width:7,height:7,borderRadius:"50%",background:lv.color,boxShadow:`0 0 12px ${lv.color}`,transition:"all .8s"}}/>
             <span style={{fontSize:11,letterSpacing:2,color:document.documentElement.classList.contains("light")?lv.color.replace("0.","0.9"):lv.color,textTransform:"uppercase",fontWeight:700,transition:"color .8s"}}>Level {lv.level} — {lv.title}</span>
