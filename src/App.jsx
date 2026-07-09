@@ -1,4 +1,5 @@
 import { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo, Component } from "react";
+import { jsPDF } from "jspdf";
 import { auth, googleProvider, db, storage, messaging, requestNotificationPermission, onMessage, VAPID_KEY } from "./firebase";
 import {
   signInWithEmailAndPassword, createUserWithEmailAndPassword,
@@ -562,6 +563,89 @@ async function doShare(streak, lv, setSharing) {
       setSharing(false);
     }, "image/png", 0.95);
   } catch { setSharing(false); }
+}
+
+// Shared PDF generator for the AI battle plan — replaces the old plain-text
+// .txt Blob download. A multi-page PDF paginates automatically and stays
+// readable regardless of plan length, and downloads identically across
+// desktop/Android/iOS without any popup/print-dialog dependency.
+function generatePlanPDF({ name, archName, streak, date, cleanPlan }) {
+  const docPdf = new jsPDF({ unit: "pt", format: "a4" });
+  const pageW = docPdf.internal.pageSize.getWidth();
+  const pageH = docPdf.internal.pageSize.getHeight();
+  const margin = 48;
+  const contentW = pageW - margin * 2;
+  let y = margin;
+
+  const newPageIfNeeded = (lineHeight) => {
+    if (y + lineHeight > pageH - margin) {
+      docPdf.addPage();
+      y = margin;
+    }
+  };
+
+  docPdf.setFont("courier", "bold");
+  docPdf.setFontSize(18);
+  docPdf.setTextColor(255, 120, 0);
+  docPdf.text("SYNAPSE — RECOVERY PROTOCOL", margin, y);
+  y += 22;
+
+  docPdf.setDrawColor(255, 140, 0);
+  docPdf.setLineWidth(1);
+  docPdf.line(margin, y, pageW - margin, y);
+  y += 22;
+
+  docPdf.setFont("courier", "normal");
+  docPdf.setFontSize(11);
+  docPdf.setTextColor(40, 40, 40);
+  const metaLines = [
+    `Name:      ${name || "—"}`,
+    `Archetype: ${archName}`,
+    `Streak:    Day ${streak}`,
+    `Generated: ${date}`,
+  ];
+  metaLines.forEach((line) => {
+    newPageIfNeeded(16);
+    docPdf.text(line, margin, y);
+    y += 16;
+  });
+  y += 10;
+
+  docPdf.setDrawColor(200, 200, 200);
+  docPdf.line(margin, y, pageW - margin, y);
+  y += 24;
+
+  docPdf.setFont("helvetica", "normal");
+  docPdf.setFontSize(11);
+  docPdf.setTextColor(20, 20, 20);
+  const bodyLineHeight = 15;
+
+  const paragraphs = cleanPlan.split("\n");
+  paragraphs.forEach((para) => {
+    if (para.trim() === "") {
+      newPageIfNeeded(bodyLineHeight);
+      y += bodyLineHeight * 0.6;
+      return;
+    }
+    const wrapped = docPdf.splitTextToSize(para, contentW);
+    wrapped.forEach((line) => {
+      newPageIfNeeded(bodyLineHeight);
+      docPdf.text(line, margin, y);
+      y += bodyLineHeight;
+    });
+  });
+
+  y += 10;
+  newPageIfNeeded(20);
+  docPdf.setDrawColor(255, 140, 0);
+  docPdf.line(margin, y, pageW - margin, y);
+  y += 18;
+  docPdf.setFont("courier", "normal");
+  docPdf.setFontSize(9);
+  docPdf.setTextColor(150, 150, 150);
+  docPdf.text("synapserewire.site", margin, y);
+
+  return docPdf;
 }
 
 /* ─── LEVELS ─────────────────────────────────────────────────────────────── */
@@ -4392,48 +4476,18 @@ function Plan({plan,loading,onBegin,onRetry}) {
   const {displayed,done}=useTypewriter(plan,11);
   const isError = !!plan && plan.startsWith("Connection error:");
 
-  // Plain-text Blob download — chosen deliberately over window.print()/popup
-  // PDF because that path was inconsistent across devices: mobile browsers
-  // block or mishandle popups and the print dialog, so some users ended up
-  // with a broken/blank save instead of a real file. A direct .txt download
-  // via Blob has no popup dependency and behaves identically on every
-  // device — desktop, Android, iOS. Markdown bold markers are stripped
-  // since plain text can't render them, so the file reads cleanly.
+  // PDF download via jsPDF — paginates automatically for long plans and
+  // behaves identically across desktop/Android/iOS with no popup dependency.
   const downloadPlan=()=>{
     const user=JSON.parse(ls.get("syn_user","{}"));
     const arch=JSON.parse(ls.get("syn_archetype","null"));
     const streak=parseInt(ls.get("syn_streak","0"))||0;
     const date=new Date().toLocaleDateString("en-IN",{day:"numeric",month:"long",year:"numeric"});
     const archName=arch?.title||"WARRIOR";
-
     const cleanPlan=plan.replace(/\*\*(.+?)\*\*/g,"$1");
 
-    const content=[
-      "SYNAPSE — RECOVERY PROTOCOL",
-      "════════════════════════════════════════",
-      "",
-      `Name:      ${user?.name||"—"}`,
-      `Archetype: ${archName}`,
-      `Streak:    Day ${streak}`,
-      `Generated: ${date}`,
-      "",
-      "────────────────────────────────────────",
-      "",
-      cleanPlan,
-      "",
-      "────────────────────────────────────────",
-      "synapserewire.site",
-    ].join("\n");
-
-    const blob=new Blob([content],{type:"text/plain;charset=utf-8"});
-    const url=URL.createObjectURL(blob);
-    const a=document.createElement("a");
-    a.href=url;
-    a.download=`synapse-battle-plan-${date.replace(/\s+/g,"-")}.txt`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    const pdf=generatePlanPDF({name:user?.name,archName,streak,date,cleanPlan});
+    pdf.save(`synapse-battle-plan-${date.replace(/\s+/g,"-")}.pdf`);
   };
 
   return(
@@ -4938,33 +4992,10 @@ function Checkin({streak,savedPlan,lastCheckin,onCheckin,onGoChat}) {
                 const date=new Date().toLocaleDateString("en-IN",{day:"numeric",month:"long",year:"numeric"});
                 const archName=arch?.title||"WARRIOR";
                 const cleanPlan=savedPlan.replace(/\*\*(.+?)\*\*/g,"$1");
-                // Same reliable Blob-download approach used on the Plan screen —
-                // no popup/print dependency, identical result on every device.
-                const content=[
-                  "SYNAPSE — RECOVERY PROTOCOL",
-                  "════════════════════════════════════════",
-                  "",
-                  `Name:      ${soldierName}`,
-                  `Archetype: ${archName}`,
-                  `Streak:    Day ${streakVal}`,
-                  `Generated: ${date}`,
-                  "",
-                  "────────────────────────────────────────",
-                  "",
-                  cleanPlan,
-                  "",
-                  "────────────────────────────────────────",
-                  "synapserewire.site",
-                ].join("\n");
-                const blob=new Blob([content],{type:"text/plain;charset=utf-8"});
-                const url=URL.createObjectURL(blob);
-                const a=document.createElement("a");
-                a.href=url;
-                a.download=`synapse-battle-plan-${date.replace(/\s+/g,"-")}.txt`;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                URL.revokeObjectURL(url);
+                // Same PDF generator used on the Plan screen — paginates
+                // automatically, no popup/print dependency.
+                const pdf=generatePlanPDF({name:soldierName,archName,streak:streakVal,date,cleanPlan});
+                pdf.save(`synapse-battle-plan-${date.replace(/\s+/g,"-")}.pdf`);
               }} style={{flexShrink:0,background:"var(--accent3)",border:"1px solid var(--border)",color:"var(--accent2)",padding:"10px 14px",borderRadius:10,fontSize:11,fontWeight:600,cursor:"pointer",transition:"all .25s",whiteSpace:"nowrap"}}><Download size={14} style={{display:"inline",marginRight:4}}/>Plan</button>
             </div>}
 
