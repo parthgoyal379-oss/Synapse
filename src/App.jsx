@@ -2888,11 +2888,13 @@ function Boot({ onBegin, onLogin, hasPlan, theme, onThemeToggle, onAbout }) {
           About
         </button>
       )}
+      {onLogin&&(
       <button onClick={onLogin} style={{position:"fixed",top:18,right:"clamp(14px,4vw,32px)",zIndex:7000,background:"rgba(245,160,0,0.08)",border:"1px solid rgba(245,160,0,0.3)",color:"#f5a000",padding:"9px 18px",borderRadius:999,fontFamily:"'Space Mono',monospace",fontSize:9,letterSpacing:"0.15em",textTransform:"uppercase",cursor:"pointer",backdropFilter:"blur(8px)",transition:"all .25s"}}
         onMouseEnter={e=>{e.currentTarget.style.background="rgba(245,160,0,0.16)";e.currentTarget.style.borderColor="rgba(245,160,0,0.55)";}}
         onMouseLeave={e=>{e.currentTarget.style.background="rgba(245,160,0,0.08)";e.currentTarget.style.borderColor="rgba(245,160,0,0.3)";}}>
         Log In →
       </button>
+      )}
 
       {/* Main content */}
       <div style={{opacity:mainVisible?1:0,pointerEvents:mainVisible?"auto":"none",transition:"opacity .7s",position:"relative"}}>
@@ -4112,16 +4114,37 @@ function Confess({onSubmit,loading}) {
    URGE SURFING TIMER
 ══════════════════════════════════════════════════════════════════════════ */
 const URGE_TASKS = [
-  "Drop and do 20 pushups. Right now. No thinking.",
-  "Drink a full glass of cold water. Slowly.",
-  "Go outside. Walk for 2 minutes. Don't take your phone.",
-  "Write down exactly what triggered this urge. Be specific.",
-  "Splash cold water on your face 3 times.",
-  "Do 30 seconds of deep breathing — 4 in, hold 4, out 4.",
-  "Text someone you respect. Anything. Just connect.",
-  "Do 15 squats. Feel your body. You are not your urge.",
-  "Read your battle plan right now. Remember why you started.",
-  "Close your eyes. Name 5 things you can hear around you.",
+  // Physical release — burns adrenaline fast, breaks the freeze
+  "20 pushups, right now, no thinking. Can't do 20? Do as many as you can, then 10 more slow ones on your knees.",
+  "50 jumping jacks. Full speed. Your heart rate spiking kills the urge signal faster than anything else on this list.",
+  "Hold a wall-sit for 45 seconds. Legs burning is a better feeling to sit with than the urge — and it ends.",
+  "Stand up and shake your whole body out for 30 seconds like a wet dog. Feels stupid. Works.",
+
+  // Sensory grounding — properly explained, not vague
+  "5-4-3-2-1 grounding: name 5 things you see, 4 you can touch, 3 you hear, 2 you smell, 1 you taste. Say them out loud, not in your head.",
+  "Hold an ice cube in your fist until it melts. Cold shock resets your nervous system out of urge-mode in under 90 seconds.",
+  "Splash cold water on your face and the back of your neck 3 times. Then look at yourself in the mirror for 10 seconds and say 'not today.'",
+  "Put on one song, headphones in, volume up. Don't scroll — just listen to the whole thing, eyes closed if you can.",
+
+  // Cognitive reframe — gives the brain something real to chew on
+  "Write down exactly what happened in the 10 minutes before this urge hit. What triggered it? Be specific — this is data for tomorrow's you.",
+  "Write one sentence: 'In 30 minutes I will feel ___ if I give in, and ___ if I don't.' Fill both blanks honestly.",
+  "Open your battle plan and read it out loud, not in your head. Hearing your own reasons in your own voice hits different.",
+  "Picture yourself 10 minutes from now, urge gone, having said no. What does that version of you say to you right now?",
+
+  // Connection — breaks isolation, which is usually part of the trigger
+  "Text one person 'hey, thinking of you' — no context needed. Just get a human thread open. Isolation is fuel for urges.",
+  "Call someone, even for 60 seconds, even about nothing. Ask how their day is. Talking out loud interrupts the loop.",
+
+  // Environment change — physically remove yourself from the trigger
+  "Get up and change rooms right now. If you can, go outside for 2 minutes — no phone. New environment, new state.",
+  "Do a 60-second tidy: make your bed, clear your desk, put 5 things away. Small physical order calms a spiking brain.",
+  "Go brush your teeth. Sounds random — it's a hard behavioral signal to your brain that this part of the day is 'closed.'",
+
+  // Productive redirection — replaces the urge with a real 2-minute win
+  "Do the dishes in your sink, even just 3 of them. A finished task beats a fought urge — you get to end this on a win.",
+  "Write down one thing you're proud of from this week. Doesn't have to be big. Read it back to yourself.",
+  "Plan tomorrow's first hour in 3 bullet points. Urges thrive on a blank, aimless mind — give it a job.",
 ];
 
 const URGE_PHASES = [
@@ -4369,111 +4392,50 @@ function Plan({plan,loading,onBegin,onRetry}) {
   const {displayed,done}=useTypewriter(plan,11);
   const isError = !!plan && plan.startsWith("Connection error:");
 
-  const printPlan=()=>{
+  // Plain-text Blob download — chosen deliberately over window.print()/popup
+  // PDF because that path was inconsistent across devices: mobile browsers
+  // block or mishandle popups and the print dialog, so some users ended up
+  // with a broken/blank save instead of a real file. A direct .txt download
+  // via Blob has no popup dependency and behaves identically on every
+  // device — desktop, Android, iOS. Markdown bold markers are stripped
+  // since plain text can't render them, so the file reads cleanly.
+  const downloadPlan=()=>{
     const user=JSON.parse(ls.get("syn_user","{}"));
     const arch=JSON.parse(ls.get("syn_archetype","null"));
     const streak=parseInt(ls.get("syn_streak","0"))||0;
     const date=new Date().toLocaleDateString("en-IN",{day:"numeric",month:"long",year:"numeric"});
     const archName=arch?.title||"WARRIOR";
-    const archSymbol=arch?.symbol||"⚡";
-    const archColor=arch?.accent||"#ff8c00";
 
-    // Convert **bold** markdown to <strong> tags and newlines to <br>
-    const formatted=plan
-      .replace(/\*\*(.+?)\*\*/g,"<strong>$1</strong>")
-      .split("\n").map(line=>{
-        if(line.startsWith("**")&&line.endsWith("**")) return `<h3>${line.replace(/\*\*/g,"")}</h3>`;
-        if(line.trim()==="---") return `<hr/>`;
-        if(!line.trim()) return `<div style="height:4px"></div>`;
-        return `<p>${line}</p>`;
-      }).join("");
+    const cleanPlan=plan.replace(/\*\*(.+?)\*\*/g,"$1");
 
-    const html=`<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>SYNAPSE — Battle Plan</title>
-<style>
-  @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Inter:wght@300;400;500;600;700&display=swap');
-  *{margin:0;padding:0;box-sizing:border-box;word-wrap:break-word;overflow-wrap:break-word;}
-  @page{margin:0.35in 0.45in;size:A4 portrait;}
-  html,body{background:#fff;color:#111;font-family:'Inter',sans-serif;font-size:10px;line-height:1.35;}
-  body{width:100%;padding:0;}
-  /* HEADER */
-  .header{display:flex;align-items:center;justify-content:space-between;padding:0 0 8px;border-bottom:1.5px solid #f0f0f0;margin-bottom:6px;}
-  .brand{display:flex;align-items:center;gap:7px;}
-  .brand-logo{width:22px;height:22px;border-radius:5px;background:linear-gradient(135deg,#ff9500,#ff5000);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;font-family:'Orbitron',sans-serif;color:#fff;flex-shrink:0;}
-  .brand-name{font-family:'Orbitron',sans-serif;font-size:11px;font-weight:900;letter-spacing:2px;color:#ff6000;line-height:1;}
-  .brand-tagline{font-size:6.5px;color:#bbb;letter-spacing:2px;text-transform:uppercase;margin-top:1px;}
-  .doc-title{font-family:'Orbitron',sans-serif;font-size:15px;font-weight:900;color:#111;letter-spacing:-0.5px;line-height:1;text-align:right;}
-  .doc-subtitle{font-size:6.5px;color:#e06000;letter-spacing:1.5px;text-transform:uppercase;font-weight:600;margin-top:2px;text-align:right;}
-  /* META */
-  .meta{display:flex;gap:16px;padding:5px 0;border-bottom:1px solid #f5f5f5;margin-bottom:8px;align-items:center;flex-wrap:wrap;}
-  .meta-label{font-size:6px;color:#ccc;letter-spacing:1.5px;text-transform:uppercase;font-weight:600;}
-  .meta-value{font-size:10px;color:#111;font-weight:600;margin-top:1px;}
-  .arch-badge{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:999px;border:1px solid #ffb347;background:#fff8f0;font-family:'Orbitron',sans-serif;font-size:7.5px;font-weight:700;color:#b35000;letter-spacing:0.5px;}
-  /* PLAN */
-  .section-label{font-size:6.5px;color:#e06000;letter-spacing:2.5px;text-transform:uppercase;font-weight:700;margin-bottom:6px;}
-  .card{border:1px solid #f0f0f0;border-left:2.5px solid #ff6000;border-radius:4px;padding:8px 12px;}
-  .plan-text{font-size:9.5px;line-height:1.55;color:#222;}
-  .plan-text p{margin-bottom:0;}
-  .plan-text h3{font-size:7.5px;font-weight:700;color:#c05000;letter-spacing:1.5px;text-transform:uppercase;margin:8px 0 3px;padding-top:6px;border-top:1px solid #f5f5f5;}
-  .plan-text h3:first-child{margin-top:0;padding-top:0;border-top:none;}
-  .plan-text hr{border:none;border-top:1px solid #f5f5f5;margin:5px 0;}
-  .plan-text strong{color:#b35000;font-weight:700;}
-  .plan-text div[style]{height:3px!important;}
-  /* FOOTER */
-  .footer{display:flex;justify-content:space-between;padding:5px 0 0;border-top:1px solid #f5f5f5;margin-top:6px;font-size:6.5px;color:#ccc;}
-  /* WATERMARK */
-  .watermark{position:fixed;bottom:-10px;right:-5px;font-family:'Orbitron',sans-serif;font-size:100px;font-weight:900;color:rgba(255,100,0,.03);pointer-events:none;line-height:1;z-index:0;}
-  /* PRINT BUTTON — screen only */
-  .print-btn{position:fixed;top:10px;right:10px;background:linear-gradient(135deg,#ff9500,#ff5000);border:none;color:#fff;padding:7px 18px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;z-index:999;box-shadow:0 2px 12px rgba(255,140,0,.3);}
-  @media print{.print-btn{display:none!important;}}
-  /* Screen preview */
-  @media screen{body{max-width:680px;margin:0 auto;padding:20px;background:#f8f8f8;}
-  .page{background:#fff;padding:0.35in 0.45in;box-shadow:0 2px 20px rgba(0,0,0,.1);border-radius:4px;}}
-</style>
-</head>
-<body>
-<button class="print-btn" onclick="window.print()"><Download size={14} style={{display:"inline",marginRight:4}}/>Save as PDF</button>
-<div class="watermark">S</div>
-<div class="page">
-<div class="header">
-  <div class="brand">
-    <div class="brand-logo">S</div>
-    <div>
-      <div class="brand-name">SYNAPSE</div>
-      <div class="brand-tagline">Dopamine Recovery Protocol</div>
-    </div>
-  </div>
-  <div class="header-right">
-    <div class="doc-title">BATTLE PLAN</div>
-    <div class="doc-subtitle">Personalized Recovery Protocol — Classified</div>
-  </div>
-</div>
-<div class="meta">
-  <div class="meta-item"><div class="meta-label">Soldier</div><div class="meta-value">${escapeHtml(user.name||"Anonymous")}</div></div>
-  <div class="meta-item"><div class="meta-label">Streak</div><div class="meta-value">Day ${streak}</div></div>
-  <div class="meta-item"><div class="meta-label">Issued</div><div class="meta-value">${date}</div></div>
-  <div class="meta-item"><div class="meta-label">Archetype</div><div class="arch-badge">${archSymbol} ${archName}</div></div>
-</div>
-<div class="content">
-  <div class="section-label">Mission Briefing</div>
-  <div class="card"><div class="plan-text">${formatted}</div></div>
-</div>
-<div class="footer">
-  <div>Generated by SYNAPSE • synapserewire@gmail.com</div>
-  <div>synapse-parth.vercel.app • ${date}</div>
-</div>
-</div>
-</body>
-</html>`;
+    const content=[
+      "SYNAPSE — RECOVERY PROTOCOL",
+      "════════════════════════════════════════",
+      "",
+      `Name:      ${user?.name||"—"}`,
+      `Archetype: ${archName}`,
+      `Streak:    Day ${streak}`,
+      `Generated: ${date}`,
+      "",
+      "────────────────────────────────────────",
+      "",
+      cleanPlan,
+      "",
+      "────────────────────────────────────────",
+      "synapserewire.site",
+    ].join("\n");
 
-    const w=window.open("","_blank","width=900,height=800");
-    w.document.write(html);
-    w.document.close();
+    const blob=new Blob([content],{type:"text/plain;charset=utf-8"});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement("a");
+    a.href=url;
+    a.download=`synapse-battle-plan-${date.replace(/\s+/g,"-")}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   };
+
   return(
     <div style={{minHeight:"100vh",paddingTop:80,position:"relative",overflowX:"hidden"}}>
       <div className="hero-pad" style={{padding:"clamp(60px,8vw,80px) clamp(20px,8vw,100px) clamp(40px,5vw,64px)",borderBottom:"1px solid rgba(255,140,0,0.07)",position:"relative",zIndex:1}}>
@@ -4497,7 +4459,7 @@ function Plan({plan,loading,onBegin,onRetry}) {
               ?<div style={{marginTop:40,paddingTop:28,borderTop:"1px solid rgba(255,140,0,0.08)",animation:"fadeUp .6s ease both"}}><button className="btn-primary" onClick={onRetry} style={{fontSize:14,padding:"16px 48px",background:"linear-gradient(135deg,#cc4400,#992200)"}}>← Back to Confess & Retry</button></div>
               :<div style={{marginTop:40,paddingTop:28,borderTop:"1px solid rgba(255,140,0,0.08)",display:"flex",gap:16,flexWrap:"wrap",animation:"fadeUp .6s ease both"}}>
                   <button className="btn-primary" onClick={()=>onBegin(plan)} style={{fontSize:14,padding:"16px 48px"}}>Begin Day 1 →</button>
-                  <button onClick={printPlan} style={{background:"rgba(255,140,0,0.07)",border:"1px solid rgba(255,140,0,0.25)",color:"rgba(255,180,80,0.8)",padding:"16px 28px",borderRadius:12,fontFamily:"'Inter',sans-serif",fontSize:13,fontWeight:600,letterSpacing:.3,cursor:"pointer",transition:"all .3s",display:"flex",alignItems:"center",gap:8}} onMouseEnter={e=>{e.currentTarget.style.background="rgba(255,140,0,0.12)";e.currentTarget.style.borderColor="rgba(255,140,0,0.45)";}} onMouseLeave={e=>{e.currentTarget.style.background="rgba(255,140,0,0.07)";e.currentTarget.style.borderColor="rgba(255,140,0,0.25)";}}>
+                  <button onClick={downloadPlan} style={{background:"rgba(255,140,0,0.07)",border:"1px solid rgba(255,140,0,0.25)",color:"rgba(255,180,80,0.8)",padding:"16px 28px",borderRadius:12,fontFamily:"'Inter',sans-serif",fontSize:13,fontWeight:600,letterSpacing:.3,cursor:"pointer",transition:"all .3s",display:"flex",alignItems:"center",gap:8}} onMouseEnter={e=>{e.currentTarget.style.background="rgba(255,140,0,0.12)";e.currentTarget.style.borderColor="rgba(255,140,0,0.45)";}} onMouseLeave={e=>{e.currentTarget.style.background="rgba(255,140,0,0.07)";e.currentTarget.style.borderColor="rgba(255,140,0,0.25)";}}>
                     <span>⬇</span><span>Download Plan</span>
                   </button>
                 </div>
@@ -4964,24 +4926,45 @@ function Checkin({streak,savedPlan,lastCheckin,onCheckin,onGoChat}) {
               <div style={{flex:1}}><BattlePlanAccordion plan={savedPlan}/></div>
               <button onClick={()=>{
                 const user=JSON.parse(ls.get("syn_user","{}"));
-                // If no name saved, prompt first
                 let soldierName=user.name||"";
                 if(!soldierName||soldierName==="Anonymous"){
-                  soldierName=window.prompt("Enter your name for the PDF:","")?.trim()||"Soldier";
+                  soldierName=window.prompt("Enter your name for the file:","")?.trim()||"Soldier";
                   if(soldierName&&soldierName!=="Soldier"){
                     ls.set("syn_user",JSON.stringify({...user,name:soldierName}));
                   }
                 }
-                soldierName=escapeHtml(soldierName); // sanitize before HTML interpolation below
                 const arch=JSON.parse(ls.get("syn_archetype","null"));
                 const streakVal=parseInt(ls.get("syn_streak","0"))||0;
                 const date=new Date().toLocaleDateString("en-IN",{day:"numeric",month:"long",year:"numeric"});
-                const archName=arch?.title||"WARRIOR"; const archSymbol=arch?.symbol||"⚡";
-                const formatted=savedPlan.replace(/\*\*(.+?)\*\*/g,"<strong>$1</strong>").split("\n").map(line=>line.startsWith("**")&&line.endsWith("**")?`<h3>${line.replace(/\*\*/g,"")}</h3>`:line.trim()==="---"?`<hr/>`:!line.trim()?`<div style="height:4px"></div>`:`<p>${line}</p>`).join("");
-                const w=window.open("","_blank","width=900,height=800");
-                if(!w){ alert("Please allow pop-ups for this site to download your Battle Plan PDF."); return; }
-                w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"/><title>SYNAPSE — Battle Plan</title><style>@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Inter:wght@300;400;500;600;700&display=swap');*{margin:0;padding:0;box-sizing:border-box;word-wrap:break-word;overflow-wrap:break-word;}@page{margin:0.5in 0.6in;size:A4 portrait;}html,body{background:#fff;color:#111;font-family:'Inter',sans-serif;font-size:10px;line-height:1.35;}body{width:100%;padding:0;}.header{display:flex;align-items:center;justify-content:space-between;padding:0 0 8px;border-bottom:1.5px solid #f0f0f0;margin-bottom:6px;}.brand{display:flex;align-items:center;gap:7px;}.brand-logo{width:22px;height:22px;border-radius:5px;background:linear-gradient(135deg,#ff9500,#ff5000);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;font-family:'Orbitron',sans-serif;color:#fff;flex-shrink:0;}.brand-name{font-family:'Orbitron',sans-serif;font-size:11px;font-weight:900;letter-spacing:2px;color:#ff6000;line-height:1;}.brand-tagline{font-size:6.5px;color:#bbb;letter-spacing:2px;text-transform:uppercase;margin-top:1px;}.doc-title{font-family:'Orbitron',sans-serif;font-size:15px;font-weight:900;color:#111;letter-spacing:-0.5px;line-height:1;text-align:right;}.doc-subtitle{font-size:6.5px;color:#e06000;letter-spacing:1.5px;text-transform:uppercase;font-weight:600;margin-top:2px;text-align:right;}.meta{display:flex;gap:16px;padding:5px 0;border-bottom:1px solid #f5f5f5;margin-bottom:8px;align-items:center;flex-wrap:wrap;}.meta-label{font-size:6px;color:#ccc;letter-spacing:1.5px;text-transform:uppercase;font-weight:600;}.meta-value{font-size:10px;color:#111;font-weight:600;margin-top:1px;}.arch-badge{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:999px;border:1px solid #ffb347;background:#fff8f0;font-family:'Orbitron',sans-serif;font-size:7.5px;font-weight:700;color:#b35000;letter-spacing:0.5px;}.section-label{font-size:6.5px;color:#e06000;letter-spacing:2.5px;text-transform:uppercase;font-weight:700;margin-bottom:6px;}.card{border:1px solid #f0f0f0;border-left:2.5px solid #ff6000;border-radius:4px;padding:8px 12px;}.plan-text{font-size:9.5px;line-height:1.55;color:#222;}.plan-text p{margin-bottom:0;}.plan-text h3{font-size:7.5px;font-weight:700;color:#c05000;letter-spacing:1.5px;text-transform:uppercase;margin:8px 0 3px;padding-top:6px;border-top:1px solid #f5f5f5;}.plan-text h3:first-child{margin-top:0;padding-top:0;border-top:none;}.plan-text hr{border:none;border-top:1px solid #f5f5f5;margin:5px 0;}.plan-text strong{color:#b35000;font-weight:700;}.plan-text div[style]{height:3px!important;}.footer{display:flex;justify-content:space-between;padding:5px 0 0;border-top:1px solid #f5f5f5;margin-top:6px;font-size:6.5px;color:#ccc;}.watermark{position:fixed;bottom:-10px;right:-5px;font-family:'Orbitron',sans-serif;font-size:100px;font-weight:900;color:rgba(255,100,0,.03);pointer-events:none;line-height:1;}.print-btn{position:fixed;top:10px;right:10px;background:linear-gradient(135deg,#ff9500,#ff5000);border:none;color:#fff;padding:7px 18px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;z-index:999;}@media print{.print-btn{display:none!important;}}@media screen{body{max-width:680px;margin:0 auto;padding:20px;background:#f8f8f8;}.page{background:#fff;padding:0.35in 0.45in;box-shadow:0 2px 20px rgba(0,0,0,.1);border-radius:4px;}}</style></head><body><button class="print-btn" onclick="window.print()"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:-2px;margin-right:5px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Save as PDF</button><div class="watermark">S</div><div class="page"><div class="header"><div class="brand"><div class="brand-logo">S</div><div><div class="brand-name">SYNAPSE</div><div class="brand-tagline">Dopamine Recovery Protocol</div></div></div><div style="text-align:right"><div class="doc-title">BATTLE PLAN</div><div class="doc-subtitle">Personalized Recovery Protocol — Classified</div></div></div><div class="meta"><div><div class="meta-label">Soldier</div><div class="meta-value">${soldierName}</div></div><div><div class="meta-label">Streak</div><div class="meta-value">Day ${streakVal}</div></div><div><div class="meta-label">Issued</div><div class="meta-value">${date}</div></div><div><div class="meta-label">Archetype</div><div class="arch-badge">${archSymbol} ${archName}</div></div></div><div class="content"><div class="section-label">Mission Briefing</div><div class="card"><div class="plan-text">${formatted}</div></div></div><div class="footer"><div>Generated by SYNAPSE • synapserewire@gmail.com</div><div>synapserewire.site • ${date}</div></div></div></body></html>`);
-                w.document.close();
+                const archName=arch?.title||"WARRIOR";
+                const cleanPlan=savedPlan.replace(/\*\*(.+?)\*\*/g,"$1");
+                // Same reliable Blob-download approach used on the Plan screen —
+                // no popup/print dependency, identical result on every device.
+                const content=[
+                  "SYNAPSE — RECOVERY PROTOCOL",
+                  "════════════════════════════════════════",
+                  "",
+                  `Name:      ${soldierName}`,
+                  `Archetype: ${archName}`,
+                  `Streak:    Day ${streakVal}`,
+                  `Generated: ${date}`,
+                  "",
+                  "────────────────────────────────────────",
+                  "",
+                  cleanPlan,
+                  "",
+                  "────────────────────────────────────────",
+                  "synapserewire.site",
+                ].join("\n");
+                const blob=new Blob([content],{type:"text/plain;charset=utf-8"});
+                const url=URL.createObjectURL(blob);
+                const a=document.createElement("a");
+                a.href=url;
+                a.download=`synapse-battle-plan-${date.replace(/\s+/g,"-")}.txt`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
               }} style={{flexShrink:0,background:"var(--accent3)",border:"1px solid var(--border)",color:"var(--accent2)",padding:"10px 14px",borderRadius:10,fontSize:11,fontWeight:600,cursor:"pointer",transition:"all .25s",whiteSpace:"nowrap"}}><Download size={14} style={{display:"inline",marginRight:4}}/>Plan</button>
             </div>}
 
@@ -5967,9 +5950,32 @@ function AppRoot() {
         }catch(e){
           console.warn("Identity write failed:",e);
         }
-        // Already logged in — skip boot screen, go straight to app
-        const sp=ls.get("syn_plan","");
-        setScreen(sp?"checkin":"confess");
+        // Cross-device streak sync — Firestore is the source of truth for
+        // currentStreak/lastCheckin (written on every check-in and reset).
+        // Without this, a fresh device has empty localStorage and the streak
+        // silently starts back at 0 even though the account's real streak
+        // lives on the server. Pull it down and hydrate local state/storage
+        // on every login so the streak follows the Gmail account, not the device.
+        try{
+          const snap=await getDoc(doc(db,"users",user.uid));
+          if(snap.exists()){
+            const d=snap.data();
+            if(typeof d.currentStreak==="number"){
+              setStreak(d.currentStreak);
+              ls.set("syn_streak",String(d.currentStreak));
+            }
+            if(d.lastCheckin){
+              setLastCI(d.lastCheckin);
+              ls.set("syn_last",d.lastCheckin);
+            }
+          }
+        }catch(e){
+          console.warn("Streak sync from Firestore failed:",e);
+        }
+        // Land signed-in users on the home page too — they'll choose to
+        // continue into the app via the Initialize/Begin button, which
+        // routes them straight to check-in since they already have a plan.
+        setScreen("boot");
         window.scrollTo(0,0);
         if(document.scrollingElement) document.scrollingElement.scrollTop=0;
         // Retry any Firestore writes that failed/got stuck in a previous session
@@ -6325,7 +6331,7 @@ function AppRoot() {
 
       ) : authed ? (
         <>
-          <Nav screen={screen} goTo={goTo} savedPlan={savedPlan} onReset={handleReset} theme={theme} onThemeToggle={handleThemeToggle} user={JSON.parse(ls.get("syn_user","{}"))}/>
+          {screen!=="boot"&&<Nav screen={screen} goTo={goTo} savedPlan={savedPlan} onReset={handleReset} theme={theme} onThemeToggle={handleThemeToggle} user={JSON.parse(ls.get("syn_user","{}"))}/>}
           <div key={screen} ref={topRef} style={{position:"relative",zIndex:2,opacity:tr?0:1,transition:"opacity .26s ease"}}>
             {screen==="confess" &&<Confess onSubmit={handleConfess} loading={planLoading}/>}
             {screen==="plan"    &&<Plan plan={plan||savedPlan} loading={planLoading} onBegin={handleBeginDay1} onRetry={()=>goTo("confess")}/>}
@@ -6335,6 +6341,7 @@ function AppRoot() {
             {screen==="chat"    &&<Chat streak={streak} savedPlan={savedPlan}/>}
             {screen==="report"  &&<Report history={history} savedPlan={savedPlan} streak={streak} planHistory={planHistory}/>}
             {screen==="about"   &&<About onBegin={()=>goTo(savedPlan?"checkin":"confess")} onBack={()=>goTo(savedPlan?"checkin":"boot")}/>}
+            {screen==="boot"    &&<Boot onBegin={()=>goTo(savedPlan?"checkin":"confess")} onLogin={null} hasPlan={!!savedPlan} theme={theme} onThemeToggle={handleThemeToggle} onAbout={()=>goTo("about")}/>}
           </div>
           {screen!=="boot"&&<div style={{position:"relative",zIndex:2,marginTop:80,overflow:"hidden",width:"100%",maxWidth:"100%"}}><Marquee/></div>}
           {/* Emergency floating button — only on checkin screen */}
@@ -6361,6 +6368,7 @@ function AppRoot() {
             ls.set("syn_pwa_prompted","1");
             setShowInstallPrompt(false);
           }}/>}
+          {screen!=="boot"&&(
           <div className="footer-wrap" style={{position:"relative",zIndex:2,borderTop:"1px solid rgba(255,140,0,0.06)",padding:"28px clamp(16px,4vw,48px)",display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:16,background:"rgba(255,140,0,0.01)",boxSizing:"border-box",width:"100%"}}>
             <div style={{display:"flex",alignItems:"center",gap:12}}>
               <div style={{width:36,height:36,borderRadius:10,background:"linear-gradient(135deg,rgba(255,140,0,0.15),rgba(255,60,0,0.08))",border:"1px solid rgba(255,140,0,0.2)",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Orbitron',sans-serif",fontSize:11,fontWeight:800,color:"rgba(255,180,80,0.7)",letterSpacing:1}}>PG</div>
@@ -6371,6 +6379,7 @@ function AppRoot() {
               
             </div>
           </div>
+          )}
         </>
       ) : showAuth ? (
         <div style={{position:"relative",zIndex:2}}>
