@@ -3296,7 +3296,7 @@ function Boot({ onBegin, onLogin, hasPlan, theme, onThemeToggle, onAbout }) {
         {/* ── FAQ (home page, last section) ── */}
         <section data-sec="faq" style={{position:"relative",zIndex:2,padding:"clamp(50px,7vh,90px) clamp(24px,6vw,90px) clamp(80px,10vh,120px)"}}>
           <div style={{maxWidth:760,width:"100%",margin:"0 auto"}}>
-            <div style={{fontFamily:"'Space Mono',monospace",fontWeight:600,fontSize:13,letterSpacing:"0.4em",color:"#c9962e",textTransform:"uppercase",marginBottom:24,textAlign:"center"}}>FAQ</div>
+            <div style={{fontFamily:"'Space Mono',monospace",fontWeight:600,fontSize:22,letterSpacing:"0.25em",color:"#c9962e",textTransform:"uppercase",marginBottom:24,textAlign:"center"}}>FAQ</div>
             <div style={{width:"100%",height:1,background:"#3a2800",marginBottom:44}}/>
             <div style={{display:"flex",flexDirection:"column",gap:10}}>
               {[
