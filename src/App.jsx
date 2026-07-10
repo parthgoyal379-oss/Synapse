@@ -638,6 +638,43 @@ async function doShare(streak, lv, setSharing) {
 // .txt Blob download. A multi-page PDF paginates automatically and stays
 // readable regardless of plan length, and downloads identically across
 // desktop/Android/iOS without any popup/print-dialog dependency.
+// Manual word-wrap — does NOT rely on jsPDF's splitTextToSize, which has
+// had version-specific wrapping bugs. Measures each candidate line with
+// getTextWidth against the CURRENT font/size and breaks strictly before
+// any line would exceed maxWidth. Guaranteed to never overflow the page.
+function wrapTextManual(docPdf, text, maxWidth) {
+  const words = text.split(" ");
+  const lines = [];
+  let current = "";
+  for (let i = 0; i < words.length; i++) {
+    const word = words[i];
+    const candidate = current ? current + " " + word : word;
+    if (docPdf.getTextWidth(candidate) <= maxWidth) {
+      current = candidate;
+    } else {
+      if (current) lines.push(current);
+      // handle a single word longer than maxWidth by hard-breaking it
+      if (docPdf.getTextWidth(word) > maxWidth) {
+        let chunk = "";
+        for (const ch of word) {
+          const test = chunk + ch;
+          if (docPdf.getTextWidth(test) > maxWidth) {
+            lines.push(chunk);
+            chunk = ch;
+          } else {
+            chunk = test;
+          }
+        }
+        current = chunk;
+      } else {
+        current = word;
+      }
+    }
+  }
+  if (current) lines.push(current);
+  return lines.length ? lines : [""];
+}
+
 function generatePlanPDF({ name, archName, streak, date, cleanPlan }) {
   const docPdf = new jsPDF({ unit: "pt", format: "a4" });
   const pageW = docPdf.internal.pageSize.getWidth();
@@ -701,7 +738,7 @@ function generatePlanPDF({ name, archName, streak, date, cleanPlan }) {
       y += bodyLineHeight * 0.6;
       return;
     }
-    const wrapped = docPdf.splitTextToSize(para, contentW);
+    const wrapped = wrapTextManual(docPdf, para, contentW);
     wrapped.forEach((line) => {
       newPageIfNeeded(bodyLineHeight);
       docPdf.text(line, margin, y);
