@@ -3254,13 +3254,13 @@ function Boot({ onBegin, onLogin, hasPlan, theme, onThemeToggle, onAbout }) {
                       onClick={()=>setFaqOpen(open?null:i)}
                       style={{width:"100%",display:"flex",alignItems:"center",justifyContent:"space-between",gap:16,padding:"18px clamp(18px,3vw,26px)",background:"transparent",border:"none",cursor:"pointer",textAlign:"left"}}
                     >
-                      <span style={{fontFamily:"'Space Grotesk',sans-serif",fontWeight:600,fontSize:"clamp(13.5px,1.6vw,15.5px)",color:open?"#f5a000":"var(--text)",lineHeight:1.4,transition:"color .3s"}}>{q}</span>
+                      <span style={{fontFamily:"'Space Grotesk',sans-serif",fontWeight:600,fontSize:"clamp(15px,2vw,19px)",color:open?"#f5a000":"var(--text)",lineHeight:1.4,transition:"color .3s"}}>{q}</span>
                       <span style={{flexShrink:0,color:"#f5a000",transform:open?"rotate(180deg)":"rotate(0deg)",transition:"transform .3s"}}>
                         <ChevronDown size={18}/>
                       </span>
                     </button>
                     <div style={{maxHeight:open?400:0,opacity:open?1:0,transition:"max-height .4s ease, opacity .3s ease"}}>
-                      <p style={{fontFamily:"'Inter',sans-serif",fontSize:14,lineHeight:1.6,color:"#9a8558",margin:0,padding:"0 clamp(18px,3vw,26px) 20px"}}>{a}</p>
+                      <p style={{fontFamily:"'Inter',sans-serif",fontSize:"clamp(14px,1.8vw,17px)",lineHeight:1.7,color:"#b89968",margin:0,padding:"0 clamp(18px,3vw,26px) 22px"}}>{a}</p>
                     </div>
                   </div>
                 );
