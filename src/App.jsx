@@ -642,8 +642,10 @@ function generatePlanPDF({ name, archName, streak, date, cleanPlan }) {
   const docPdf = new jsPDF({ unit: "pt", format: "a4" });
   const pageW = docPdf.internal.pageSize.getWidth();
   const pageH = docPdf.internal.pageSize.getHeight();
-  const margin = 48;
-  const contentW = pageW - margin * 2;
+  const margin = 56;
+  // Extra safety buffer beyond the raw margin math — guards against any
+  // font-metric rounding so wrapped lines never touch the page edge.
+  const contentW = pageW - margin * 2 - 12;
   let y = margin;
 
   const newPageIfNeeded = (lineHeight) => {
@@ -689,7 +691,10 @@ function generatePlanPDF({ name, archName, streak, date, cleanPlan }) {
   docPdf.setTextColor(20, 20, 20);
   const bodyLineHeight = 15;
 
-  const paragraphs = cleanPlan.split("\n");
+  const paragraphs = String(cleanPlan || "")
+    .replace(/\r\n/g, "\n")
+    .replace(/\*\*/g, "")
+    .split("\n");
   paragraphs.forEach((para) => {
     if (para.trim() === "") {
       newPageIfNeeded(bodyLineHeight);
