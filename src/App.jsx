@@ -550,7 +550,7 @@ async function generateShareCard(streak, lv) {
   ctx.font="700 28px 'Orbitron',monospace"; ctx.fillStyle=`rgba(${rgb},0.55)`; ctx.textAlign="left";
   ctx.fillText("SYNAPSE", pad+34, pad+66);
   ctx.font="400 13px 'Space Mono',monospace"; ctx.fillStyle="rgba(255,255,255,0.22)";
-  ctx.fillText("RESET · REWIRE · RISE", pad+34, pad+86);
+  ctx.fillText("RESET · REWIRE · RECONQUER", pad+34, pad+86);
 
   // Level badge pill (top right)
   ctx.font="600 17px 'JetBrains Mono',monospace";
@@ -1389,7 +1389,7 @@ input[type=range]{-webkit-appearance:none;appearance:none;background:transparent
      scroll/fade treatment; padding intentionally roomy now that the tab row
      scrolls horizontally instead of cramming to fit) */
   nav .nav-pill{padding:9px 16px !important;font-size:10px !important;letter-spacing:.5px !important;}
-  .nav-logo-text div:last-child{display:none !important;} /* hide "RESET · REWIRE · RISE" */
+  .nav-logo-text div:last-child{display:none !important;} /* hide "RESET · REWIRE · RECONQUER" */
   .report-issue-pill{padding:9px 12px !important;border-radius:50% !important;width:34px;height:34px;justify-content:center;}
   .report-issue-text{display:none;}
 
@@ -2461,7 +2461,7 @@ function Nav({screen,goTo,savedPlan,onReset,theme,onThemeToggle,user}) {
           <NeuralMark size={32}/>
           <div className="nav-logo-text">
             <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:13,fontWeight:800,letterSpacing:2.5,color:"var(--text)",lineHeight:1}}>SYNAPSE</div>
-            <div style={{fontSize:7,letterSpacing:2.5,color:"var(--accent)",opacity:.5,marginTop:2}}>RESET · REWIRE · RISE</div>
+            <div style={{fontSize:7,letterSpacing:2.5,color:"var(--accent)",opacity:.5,marginTop:2}}>RESET · REWIRE · RECONQUER</div>
           </div>
         </div>
         <div style={{display:"flex",gap:8,alignItems:"center"}}>
@@ -2495,7 +2495,7 @@ function Nav({screen,goTo,savedPlan,onReset,theme,onThemeToggle,user}) {
 }
 
 function Marquee() {
-  const txt="RESET YOUR DOPAMINE · REWIRE YOUR BRAIN · RISE ABOVE ADDICTION · SYNAPSE PROTOCOL · ";
+  const txt="RESET YOUR DOPAMINE · REWIRE YOUR BRAIN · RECONQUER YOUR MIND · SYNAPSE PROTOCOL · ";
   return(<div style={{overflow:"hidden",borderTop:"1px solid rgba(255,140,0,0.07)",padding:"10px 0",background:"rgba(255,140,0,0.015)",width:"100%",maxWidth:"100%",boxSizing:"border-box",contain:"layout"}}><div style={{display:"flex",animation:"marqueeAnim 35s linear infinite",whiteSpace:"nowrap",width:"max-content",willChange:"transform"}}>{Array(16).fill(txt).map((t,i)=><span key={i} style={{fontSize:10,letterSpacing:4,color:"rgba(255,140,0,0.28)",textTransform:"uppercase",fontWeight:500,paddingRight:48,flexShrink:0}}>{t}</span>)}</div></div>);
 }
 
@@ -3296,7 +3296,7 @@ function Boot({ onBegin, onLogin, hasPlan, theme, onThemeToggle, onAbout }) {
         {/* ── FAQ (home page, last section) ── */}
         <section data-sec="faq" style={{position:"relative",zIndex:2,padding:"clamp(50px,7vh,90px) clamp(24px,6vw,90px) clamp(80px,10vh,120px)"}}>
           <div style={{maxWidth:760,width:"100%",margin:"0 auto"}}>
-            <div style={{fontFamily:"'Space Mono',monospace",fontWeight:400,fontSize:9,letterSpacing:"0.44em",color:"#6a5820",textTransform:"uppercase",marginBottom:20,textAlign:"center"}}>FAQ</div>
+            <div style={{fontFamily:"'Space Mono',monospace",fontWeight:600,fontSize:13,letterSpacing:"0.4em",color:"#c9962e",textTransform:"uppercase",marginBottom:24,textAlign:"center"}}>FAQ</div>
             <div style={{width:"100%",height:1,background:"#3a2800",marginBottom:44}}/>
             <div style={{display:"flex",flexDirection:"column",gap:10}}>
               {[
@@ -3339,7 +3339,7 @@ function Boot({ onBegin, onLogin, hasPlan, theme, onThemeToggle, onAbout }) {
         </section>
         <div style={{position:"fixed",bottom:0,left:0,right:0,height:28,background:"#0f0900",borderTop:"1px solid #3a2800",overflow:"hidden",display:"flex",alignItems:"center",zIndex:20}}>
           <div style={{fontFamily:"'Space Mono',monospace",fontWeight:400,fontSize:8,letterSpacing:"0.28em",color:"#d4920a",display:"flex",whiteSpace:"nowrap",animation:"tk 30s linear infinite"}}>
-            {[1,2].map(k=><span key={k}>DOPAMINE &nbsp;·&nbsp; REWIRE YOUR BRAIN &nbsp;·&nbsp; RISE ABOVE ADDICTION &nbsp;·&nbsp; SYNAPSE PROTOCOL &nbsp;·&nbsp; RESET YOUR DOPAMINE &nbsp;·&nbsp; REWIRE YOUR BRAIN &nbsp;·&nbsp; DOPAMINE &nbsp;·&nbsp; RISE ABOVE ADDICTION &nbsp;·&nbsp; SYNAPSE PROTOCOL &nbsp;·&nbsp; RESET YOUR DOPAMINE &nbsp;·&nbsp;&nbsp;&nbsp;</span>)}
+            {[1,2].map(k=><span key={k}>DOPAMINE &nbsp;·&nbsp; REWIRE YOUR BRAIN &nbsp;·&nbsp; RECONQUER YOUR MIND &nbsp;·&nbsp; SYNAPSE PROTOCOL &nbsp;·&nbsp; RESET YOUR DOPAMINE &nbsp;·&nbsp; REWIRE YOUR BRAIN &nbsp;·&nbsp; DOPAMINE &nbsp;·&nbsp; RECONQUER YOUR MIND &nbsp;·&nbsp; SYNAPSE PROTOCOL &nbsp;·&nbsp; RESET YOUR DOPAMINE &nbsp;·&nbsp;&nbsp;&nbsp;</span>)}
           </div>
         </div>
 
