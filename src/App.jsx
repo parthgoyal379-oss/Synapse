@@ -1,5 +1,6 @@
 import { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo, Component } from "react";
 import { jsPDF } from "jspdf";
+import { INTER_REGULAR_TTF, INTER_BOLD_TTF, SPACE_GROTESK_BOLD_TTF } from "./pdfFonts";
 import { auth, googleProvider, db, storage, messaging, requestNotificationPermission, onMessage, VAPID_KEY } from "./firebase";
 import {
   signInWithEmailAndPassword, createUserWithEmailAndPassword,
@@ -677,6 +678,22 @@ function wrapTextManual(docPdf, text, maxWidth) {
 
 function generatePlanPDF({ name, archName, streak, date, cleanPlan }) {
   const docPdf = new jsPDF({ unit: "pt", format: "a4" });
+
+  // Register SYNAPSE's real brand fonts (Inter + Space Grotesk) as embedded
+  // TTF data. This guarantees the PDF renders with the correct typography on
+  // every device/viewer — previously the PDF used jsPDF's base-14 "courier"
+  // and "helvetica" fonts, which are NOT embedded in the file and rely on
+  // the viewer supplying its own substitute. Many mobile/in-app PDF viewers
+  // don't ship real Helvetica/Courier metrics and silently fall back to a
+  // single default monospace font for everything, which is why the font
+  // "wasn't fixing" no matter what setFont() calls were made.
+  docPdf.addFileToVFS("Inter-Regular.ttf", INTER_REGULAR_TTF);
+  docPdf.addFont("Inter-Regular.ttf", "Inter", "normal");
+  docPdf.addFileToVFS("Inter-Bold.ttf", INTER_BOLD_TTF);
+  docPdf.addFont("Inter-Bold.ttf", "Inter", "bold");
+  docPdf.addFileToVFS("SpaceGrotesk-Bold.ttf", SPACE_GROTESK_BOLD_TTF);
+  docPdf.addFont("SpaceGrotesk-Bold.ttf", "SpaceGrotesk", "bold");
+
   const pageW = docPdf.internal.pageSize.getWidth();
   const pageH = docPdf.internal.pageSize.getHeight();
   const margin = 56;
@@ -692,7 +709,7 @@ function generatePlanPDF({ name, archName, streak, date, cleanPlan }) {
     }
   };
 
-  docPdf.setFont("courier", "bold");
+  docPdf.setFont("SpaceGrotesk", "bold");
   docPdf.setFontSize(18);
   docPdf.setTextColor(255, 120, 0);
   docPdf.text("SYNAPSE — RECOVERY PROTOCOL", margin, y);
@@ -703,7 +720,7 @@ function generatePlanPDF({ name, archName, streak, date, cleanPlan }) {
   docPdf.line(margin, y, pageW - margin, y);
   y += 22;
 
-  docPdf.setFont("courier", "normal");
+  docPdf.setFont("Inter", "bold");
   docPdf.setFontSize(11);
   docPdf.setTextColor(40, 40, 40);
   const metaLines = [
@@ -723,7 +740,7 @@ function generatePlanPDF({ name, archName, streak, date, cleanPlan }) {
   docPdf.line(margin, y, pageW - margin, y);
   y += 24;
 
-  docPdf.setFont("helvetica", "normal");
+  docPdf.setFont("Inter", "normal");
   docPdf.setFontSize(11);
   docPdf.setTextColor(20, 20, 20);
   const bodyLineHeight = 15;
@@ -751,7 +768,7 @@ function generatePlanPDF({ name, archName, streak, date, cleanPlan }) {
   docPdf.setDrawColor(255, 140, 0);
   docPdf.line(margin, y, pageW - margin, y);
   y += 18;
-  docPdf.setFont("courier", "normal");
+  docPdf.setFont("Inter", "normal");
   docPdf.setFontSize(9);
   docPdf.setTextColor(150, 150, 150);
   docPdf.text("synapserewire.site", margin, y);
@@ -5333,13 +5350,19 @@ function Report({history,savedPlan,streak,planHistory}) {
   // second, different export mechanism.
   const exportReportPDF=()=>{
     const pdf=new jsPDF({unit:"pt",format:"a4"});
+    pdf.addFileToVFS("Inter-Regular.ttf", INTER_REGULAR_TTF);
+    pdf.addFont("Inter-Regular.ttf", "Inter", "normal");
+    pdf.addFileToVFS("Inter-Bold.ttf", INTER_BOLD_TTF);
+    pdf.addFont("Inter-Bold.ttf", "Inter", "bold");
+    pdf.addFileToVFS("SpaceGrotesk-Bold.ttf", SPACE_GROTESK_BOLD_TTF);
+    pdf.addFont("SpaceGrotesk-Bold.ttf", "SpaceGrotesk", "bold");
     const pageW=pdf.internal.pageSize.getWidth(), pageH=pdf.internal.pageSize.getHeight();
     const margin=48; let y=margin;
     const nl=(h)=>{ if(y+h>pageH-margin){ pdf.addPage(); y=margin; } };
-    pdf.setFont("courier","bold"); pdf.setFontSize(18); pdf.setTextColor(255,120,0);
+    pdf.setFont("SpaceGrotesk","bold"); pdf.setFontSize(18); pdf.setTextColor(255,120,0);
     pdf.text("SYNAPSE — NEURAL REPORT",margin,y); y+=22;
     pdf.setDrawColor(255,140,0); pdf.setLineWidth(1); pdf.line(margin,y,pageW-margin,y); y+=22;
-    pdf.setFont("courier","normal"); pdf.setFontSize(11); pdf.setTextColor(40,40,40);
+    pdf.setFont("Inter","bold"); pdf.setFontSize(11); pdf.setTextColor(40,40,40);
     const rangeLabel=range===9999?"All-time":`Last ${range} days`;
     [
       `Generated:      ${new Date().toLocaleDateString("en-IN",{day:"numeric",month:"long",year:"numeric"})}`,
@@ -5353,22 +5376,22 @@ function Report({history,savedPlan,streak,planHistory}) {
     y+=10; pdf.setDrawColor(200,200,200); pdf.line(margin,y,pageW-margin,y); y+=24;
 
     if(triggerCounts.length){
-      nl(16); pdf.setFont("courier","bold"); pdf.text("TOP TRIGGERS",margin,y); y+=18;
-      pdf.setFont("courier","normal");
+      nl(16); pdf.setFont("Inter","bold"); pdf.text("TOP TRIGGERS",margin,y); y+=18;
+      pdf.setFont("Inter","normal");
       triggerCounts.forEach(([id,count])=>{
         nl(15); pdf.text(`${(TRIGGER_LABELS[id]||id).replace(/^\S+\s/,"")}: ${count}×`,margin,y); y+=15;
       });
       y+=10;
     }
     if(Object.values(timeCounts).some(v=>v>0)){
-      nl(16); pdf.setFont("courier","bold"); pdf.text("WHEN SLIPS HAPPEN",margin,y); y+=18;
-      pdf.setFont("courier","normal");
+      nl(16); pdf.setFont("Inter","bold"); pdf.text("WHEN SLIPS HAPPEN",margin,y); y+=18;
+      pdf.setFont("Inter","normal");
       Object.entries(timeCounts).forEach(([id,count])=>{
         nl(15); pdf.text(`${TIME_LABELS[id].replace(/^\S+\s/,"")}: ${count}`,margin,y); y+=15;
       });
     }
     y+=14; nl(20); pdf.setDrawColor(255,140,0); pdf.line(margin,y,pageW-margin,y); y+=18;
-    pdf.setFont("courier","normal"); pdf.setFontSize(9); pdf.setTextColor(150,150,150);
+    pdf.setFont("Inter","normal"); pdf.setFontSize(9); pdf.setTextColor(150,150,150);
     pdf.text("synapserewire.site",margin,y);
     pdf.save(`synapse-report-${new Date().toISOString().slice(0,10)}.pdf`);
   };
