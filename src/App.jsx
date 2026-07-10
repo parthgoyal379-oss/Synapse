@@ -451,7 +451,8 @@ function getCoachContext() {
     recent.forEach(entry=>{
       (entry.addictions||[]).forEach(a=>{
         (a.triggers||[]).forEach(t=>{ triggerCounts[t]=(triggerCounts[t]||0)+1; });
-        if(a.timeOfDay) timeCounts[a.timeOfDay]=(timeCounts[a.timeOfDay]||0)+1;
+        const times=Array.isArray(a.timeOfDay)?a.timeOfDay:(a.timeOfDay?[a.timeOfDay]:[]);
+        times.forEach(ti=>{ timeCounts[ti]=(timeCounts[ti]||0)+1; });
       });
     });
     const topTriggers=Object.entries(triggerCounts).sort((a,b)=>b[1]-a[1]).slice(0,3).filter(([,c])=>c>=2);
@@ -482,65 +483,133 @@ async function generateShareCard(streak, lv) {
   canvas.width=W; canvas.height=H;
   const ctx=canvas.getContext("2d");
 
-  // Background
-  ctx.fillStyle="#07040a"; ctx.fillRect(0,0,W,H);
+  const accent=lv?.color||"#ff8c00";
+  // Small helper: hex/rgb string -> "r,g,b" for building rgba() strings from
+  // the level color, so the whole card tints itself to the user's current
+  // level instead of always being flat orange.
+  const rgbOf=(c)=>{
+    if(c.startsWith("#")){
+      const h=c.slice(1);
+      const n=h.length===3?h.split("").map(x=>x+x).join(""):h;
+      const r=parseInt(n.slice(0,2),16),g=parseInt(n.slice(2,4),16),b=parseInt(n.slice(4,6),16);
+      return `${r},${g},${b}`;
+    }
+    const m=c.match(/\d+/g); return m?m.slice(0,3).join(","):"255,140,0";
+  };
+  const rgb=rgbOf(accent);
 
-  // Radial glow
-  const grd=ctx.createRadialGradient(W/2,H*0.44,0,W/2,H*0.44,W*0.54);
-  grd.addColorStop(0,"rgba(255,140,0,0.15)"); grd.addColorStop(0.5,"rgba(255,60,0,0.05)"); grd.addColorStop(1,"rgba(0,0,0,0)");
+  // Background — near-black, slightly warm rather than flat
+  ctx.fillStyle="#060309"; ctx.fillRect(0,0,W,H);
+
+  // Deep radial glow tinted to the level color
+  const grd=ctx.createRadialGradient(W/2,H*0.42,0,W/2,H*0.42,W*0.62);
+  grd.addColorStop(0,`rgba(${rgb},0.22)`); grd.addColorStop(0.45,`rgba(${rgb},0.07)`); grd.addColorStop(1,"rgba(0,0,0,0)");
   ctx.fillStyle=grd; ctx.fillRect(0,0,W,H);
 
-  // Subtle grid
-  ctx.strokeStyle="rgba(255,140,0,0.035)"; ctx.lineWidth=1;
-  for(let i=0;i<W;i+=90){ctx.beginPath();ctx.moveTo(i,0);ctx.lineTo(i,H);ctx.stroke();ctx.beginPath();ctx.moveTo(0,i);ctx.lineTo(W,i);ctx.stroke();}
+  // Neural network scatter — deterministic pseudo-random nodes connected by
+  // faint lines, echoing the app's boot-screen neural canvas so the share
+  // card actually looks like it belongs to the product instead of being a
+  // generic stat card.
+  let seed=streak*137+7; // deterministic per streak so it isn't jarring/random each export
+  const rnd=()=>{ seed=(seed*9301+49297)%233280; return seed/233280; };
+  const nodes=[];
+  for(let i=0;i<26;i++){
+    nodes.push({x:rnd()*W, y:rnd()*H, r:1+rnd()*2.2});
+  }
+  ctx.strokeStyle=`rgba(${rgb},0.10)`; ctx.lineWidth=1;
+  for(let i=0;i<nodes.length;i++){
+    for(let j=i+1;j<nodes.length;j++){
+      const dx=nodes[i].x-nodes[j].x, dy=nodes[i].y-nodes[j].y;
+      const dist=Math.sqrt(dx*dx+dy*dy);
+      if(dist<200){
+        ctx.globalAlpha=1-dist/200;
+        ctx.beginPath(); ctx.moveTo(nodes[i].x,nodes[i].y); ctx.lineTo(nodes[j].x,nodes[j].y); ctx.stroke();
+      }
+    }
+  }
+  ctx.globalAlpha=1;
+  nodes.forEach(n=>{
+    ctx.beginPath(); ctx.arc(n.x,n.y,n.r,0,Math.PI*2);
+    ctx.fillStyle=`rgba(${rgb},0.35)`; ctx.fill();
+  });
 
-  // Outer border
-  const pad=52;
-  ctx.strokeStyle="rgba(255,140,0,0.2)"; ctx.lineWidth=2;
-  ctx.strokeRect(pad,pad,W-pad*2,H-pad*2);
+  // Outer border with rounded corners
+  const pad=52, rad=28;
+  ctx.strokeStyle=`rgba(${rgb},0.28)`; ctx.lineWidth=2;
+  ctx.beginPath();
+  ctx.roundRect(pad,pad,W-pad*2,H-pad*2,rad);
+  ctx.stroke();
 
-  // Corner accents
-  const cs=28; ctx.strokeStyle="rgba(255,140,0,0.55)"; ctx.lineWidth=3;
+  // Corner accents (brighter than the border)
+  const cs=30; ctx.strokeStyle=`rgba(${rgb},0.8)`; ctx.lineWidth=3;
   [[pad,pad,1,1],[W-pad,pad,-1,1],[pad,H-pad,1,-1],[W-pad,H-pad,-1,-1]].forEach(([x,y,dx,dy])=>{
     ctx.beginPath();ctx.moveTo(x+dx*cs,y);ctx.lineTo(x,y);ctx.lineTo(x,y+dy*cs);ctx.stroke();
   });
 
   // SYNAPSE wordmark (top left)
-  ctx.font="700 30px 'Orbitron',monospace"; ctx.fillStyle="rgba(255,140,0,0.45)"; ctx.textAlign="left";
-  ctx.fillText("SYNAPSE", pad+32, pad+62);
+  ctx.font="700 28px 'Orbitron',monospace"; ctx.fillStyle=`rgba(${rgb},0.55)`; ctx.textAlign="left";
+  ctx.fillText("SYNAPSE", pad+34, pad+66);
+  ctx.font="400 13px 'Space Mono',monospace"; ctx.fillStyle="rgba(255,255,255,0.22)";
+  ctx.fillText("RESET · REWIRE · RISE", pad+34, pad+86);
 
-  // Level badge (top right)
-  ctx.font="500 18px 'JetBrains Mono',monospace"; ctx.fillStyle=lv.color; ctx.textAlign="right";
-  ctx.fillText(`LVL ${lv.level} — ${lv.title}`, W-pad-32, pad+62);
+  // Level badge pill (top right)
+  ctx.font="600 17px 'JetBrains Mono',monospace";
+  const badgeText=`LVL ${lv.level} · ${lv.title.toUpperCase()}`;
+  const badgeW=ctx.measureText(badgeText).width+40;
+  const badgeX=W-pad-32-badgeW, badgeY=pad+34;
+  ctx.strokeStyle=`rgba(${rgb},0.5)`; ctx.lineWidth=1.5;
+  ctx.beginPath(); ctx.roundRect(badgeX,badgeY,badgeW,36,18); ctx.stroke();
+  ctx.fillStyle=accent; ctx.textAlign="center";
+  ctx.fillText(badgeText, badgeX+badgeW/2, badgeY+24);
+
+  // Circular progress ring behind the streak number — visualizes rewire
+  // progress toward the 90-day mark rather than the number floating alone.
+  const ringCx=W/2, ringCy=H*0.46, ringR=280;
+  const pct=Math.min(1,streak/90);
+  ctx.lineWidth=10; ctx.lineCap="round";
+  ctx.strokeStyle="rgba(255,255,255,0.05)";
+  ctx.beginPath(); ctx.arc(ringCx,ringCy,ringR,0,Math.PI*2); ctx.stroke();
+  ctx.strokeStyle=accent; ctx.shadowColor=`rgba(${rgb},0.6)`; ctx.shadowBlur=24;
+  ctx.beginPath(); ctx.arc(ringCx,ringCy,ringR,-Math.PI/2,-Math.PI/2+pct*Math.PI*2); ctx.stroke();
+  ctx.shadowBlur=0;
 
   // Big streak number
   const digits=streak.toString().length;
-  const numSize=digits===1?460:digits===2?360:260;
+  const numSize=digits===1?260:digits===2?220:170;
   ctx.font=`900 ${numSize}px 'Orbitron',monospace`; ctx.textAlign="center";
-  ctx.shadowColor="rgba(255,140,0,0.45)"; ctx.shadowBlur=70;
+  ctx.shadowColor=`rgba(${rgb},0.5)`; ctx.shadowBlur=50;
   ctx.fillStyle="#ffffff";
-  ctx.fillText(streak.toString(), W/2, H*0.5+numSize*0.30);
+  ctx.fillText(streak.toString(), ringCx, ringCy+numSize*0.32);
   ctx.shadowBlur=0;
 
   // DAYS CLEAN label
-  ctx.font="400 34px 'JetBrains Mono',monospace"; ctx.fillStyle="rgba(255,255,255,0.25)"; ctx.textAlign="center";
-  ctx.fillText("DAYS CLEAN", W/2, H*0.5+numSize*0.30+60);
+  ctx.font="500 26px 'JetBrains Mono',monospace"; ctx.fillStyle="rgba(255,255,255,0.35)"; ctx.textAlign="center";
+  ctx.fillText("DAYS CLEAN", ringCx, ringCy+numSize*0.32+52);
+
+  // Percent-to-90 caption under the ring
+  ctx.font="400 16px 'Inter',sans-serif"; ctx.fillStyle=`rgba(${rgb},0.7)`;
+  ctx.fillText(streak>=90?"NEURAL RESET COMPLETE":`${Math.round(pct*100)}% TO FULL NEURAL RESET`, ringCx, ringCy+ringR+52);
 
   // Horizontal divider
-  const divY=H-240;
-  ctx.strokeStyle="rgba(255,140,0,0.1)"; ctx.lineWidth=1;
+  const divY=H-232;
+  ctx.strokeStyle=`rgba(${rgb},0.15)`; ctx.lineWidth=1;
   ctx.beginPath(); ctx.moveTo(pad+100,divY); ctx.lineTo(W-pad-100,divY); ctx.stroke();
 
   // Archetype row
   if(arch){
     const arcEmoji=arch.id==="sovereign"?"♛":arch.id==="arbiter"?"⚖":arch.id==="stoic"?"⬡":"▲";
-    ctx.font="600 22px 'Inter',sans-serif"; ctx.fillStyle="rgba(255,180,80,0.52)"; ctx.textAlign="center";
+    ctx.font="600 24px 'Inter',sans-serif"; ctx.fillStyle="rgba(255,200,150,0.6)"; ctx.textAlign="center";
     ctx.fillText(`${arcEmoji}  ${arch.title.toUpperCase()}`, W/2, divY+54);
   }
 
-  // URL watermark
-  ctx.font="400 18px 'JetBrains Mono',monospace"; ctx.fillStyle="rgba(255,255,255,0.12)"; ctx.textAlign="center";
-  ctx.fillText("synapseparth.vercel.app", W/2, H-pad-32);
+  // Date
+  ctx.font="400 15px 'JetBrains Mono',monospace"; ctx.fillStyle="rgba(255,255,255,0.18)"; ctx.textAlign="center";
+  ctx.fillText(new Date().toLocaleDateString("en-IN",{day:"numeric",month:"long",year:"numeric"}), W/2, divY+86);
+
+  // URL watermark — was pointing at the retired synapseparth.vercel.app
+  // domain; every card exported before this fix advertised a dead link.
+  ctx.font="400 17px 'JetBrains Mono',monospace"; ctx.fillStyle="rgba(255,255,255,0.14)"; ctx.textAlign="center";
+  ctx.fillText("synapserewire.site", W/2, H-pad-30);
 
   return canvas;
 }
@@ -4636,7 +4705,7 @@ function Checkin({streak,savedPlan,lastCheckin,onCheckin,onGoChat}) {
   // Per-addiction trigger tags (only relevant for partial/slip)
   const [adTriggers,setAdTriggers]=useState(()=>Object.fromEntries(addictions.map(a=>[a.id,[]])));
   // Per-addiction time of day it happened
-  const [adTimeOfDay,setAdTimeOfDay]=useState(()=>Object.fromEntries(addictions.map(a=>[a.id,null])));
+  const [adTimeOfDay,setAdTimeOfDay]=useState(()=>Object.fromEntries(addictions.map(a=>[a.id,[]])));
   // Overall mood
   const [mood,setMood]=useState(null);
   // Optional notes
@@ -4728,8 +4797,8 @@ function Checkin({streak,savedPlan,lastCheckin,onCheckin,onGoChat}) {
       const usageStr=a.isFreq?`${usage}x today`:`${usage}h today`;
       const triggerIds=adTriggers[a.id]||[];
       const triggerStr=triggerIds.length?` | Triggers: ${triggerIds.map(t=>TRIGGERS.find(tr=>tr.id===t)?.label.replace(/^\S+\s/,"")||t).join(", ")}`:"";
-      const timeId=adTimeOfDay[a.id];
-      const timeStr=timeId?` | When: ${TIME_SLOTS.find(t=>t.id===timeId)?.label.replace(/^\S+\s/,"")||timeId}`:"";
+      const timeIds=adTimeOfDay[a.id]||[];
+      const timeStr=timeIds.length?` | When: ${timeIds.map(id=>TIME_SLOTS.find(t=>t.id===id)?.label.replace(/^\S+\s/,"")||id).join(", ")}`:"";
       return `${a.emoji} ${a.label}: ${s==="partial"?"PARTIAL ~":"SLIPPED ✗"} (${usageStr}, ${goal}, ${baseline}${triggerStr}${timeStr})`;
     }).join("\n");
     const moodLine=mood?`\nOverall mood: ${MOODS.find(m=>m.id===mood)?.label||mood}`:"";
@@ -4925,14 +4994,21 @@ function Checkin({streak,savedPlan,lastCheckin,onCheckin,onGoChat}) {
 
                             {/* Time of day picker */}
                             <div style={{marginTop:14,paddingTop:12,borderTop:"1px solid rgba(255,255,255,0.05)"}}>
-                              <div style={{fontSize:10,color:"var(--text3)",marginBottom:8}}>When did it happen?</div>
+                              <div style={{fontSize:10,color:"var(--text3)",marginBottom:8}}>When did it happen? <span style={{opacity:.6}}>(pick any)</span></div>
                               <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-                                {TIME_SLOTS.map(t=>(
-                                  <button key={t.id} onClick={()=>setAdTimeOfDay(p=>({...p,[a.id]:p[a.id]===t.id?null:t.id}))}
-                                    style={{padding:"5px 11px",borderRadius:999,border:`1px solid ${adTimeOfDay[a.id]===t.id?"rgba(255,140,0,0.5)":"rgba(255,255,255,0.08)"}`,background:adTimeOfDay[a.id]===t.id?"rgba(255,140,0,0.1)":"transparent",color:adTimeOfDay[a.id]===t.id?"var(--accent2)":"var(--text3)",fontSize:10,fontWeight:500,transition:"all .2s"}}>
+                                {TIME_SLOTS.map(t=>{
+                                  const sel=(adTimeOfDay[a.id]||[]).includes(t.id);
+                                  return (
+                                  <button key={t.id} onClick={()=>setAdTimeOfDay(p=>{
+                                      const cur=p[a.id]||[];
+                                      const next=cur.includes(t.id)?cur.filter(x=>x!==t.id):[...cur,t.id];
+                                      return {...p,[a.id]:next};
+                                    })}
+                                    style={{padding:"5px 11px",borderRadius:999,border:`1px solid ${sel?"rgba(255,140,0,0.5)":"rgba(255,255,255,0.08)"}`,background:sel?"rgba(255,140,0,0.1)":"transparent",color:sel?"var(--accent2)":"var(--text3)",fontSize:10,fontWeight:500,transition:"all .2s"}}>
                                     {t.label}
                                   </button>
-                                ))}
+                                  );
+                                })}
                               </div>
                             </div>
 
@@ -5111,13 +5187,39 @@ function History({history}) {
 
 /* ─── REPORT ─────────────────────────────────────────────────────────────── */
 function Report({history,savedPlan,streak,planHistory}) {
-  const [planOpen,setPlanOpen]=useState(false);
+  const [planOpen,setPlanOpen]=useState(true);
   const [oldPlanIdx,setOldPlanIdx]=useState(null);
-  const wins=history.filter(h=>h.status==="win").length;
-  const slips=history.filter(h=>h.status==="slip").length;
-  const mids=history.filter(h=>h.status==="mid").length;
-  const total=history.length;
+  // Date-range filter — everything below reacts to this instead of hardcoded
+  // 14/30-day windows, so the report actually reflects what the person asks
+  // to see rather than one fixed slice.
+  const [range,setRange]=useState(30); // days; 9999 = all-time
+  const RANGES=[{id:7,label:"7D"},{id:30,label:"30D"},{id:9999,label:"All"}];
+  const daysAgo=(n)=>{ const d=new Date(); d.setDate(d.getDate()-n); return d; };
+  const withinRange=(dateStr,days)=>{
+    const d=new Date(dateStr);
+    if(isNaN(d)) return true;
+    return d>=daysAgo(days);
+  };
+
+  const filteredHistory=useMemo(()=>history.filter(h=>withinRange(h.date,range)),[history,range]);
+  const wins=filteredHistory.filter(h=>h.status==="win").length;
+  const slips=filteredHistory.filter(h=>h.status==="slip").length;
+  const mids=filteredHistory.filter(h=>h.status==="mid").length;
+  const total=filteredHistory.length;
   const winRate=total>0?Math.round((wins/total)*100):0;
+
+  // Week-over-week delta — same-length window immediately before the current
+  // one, so "62%" means something (vs "was 48% last period").
+  const prevWinRate=useMemo(()=>{
+    if(range===9999) return null; // no meaningful "previous all-time" window
+    const prevStart=daysAgo(range*2), prevEnd=daysAgo(range);
+    const prevEntries=history.filter(h=>{ const d=new Date(h.date); return !isNaN(d)&&d>=prevStart&&d<prevEnd; });
+    if(prevEntries.length===0) return null;
+    const prevWins=prevEntries.filter(h=>h.status==="win").length;
+    return Math.round((prevWins/prevEntries.length)*100);
+  },[history,range]);
+  const winRateDelta=prevWinRate===null?null:winRate-prevWinRate;
+
   const rewire=Math.min(100,Math.round((streak/90)*100));
   const rewireLabel=rewire<20?"Early Detox":rewire<40?"Rewiring Begins":rewire<60?"Pathways Forming":rewire<80?"Deep Rewire":"Neural Reset Complete";
   const [entered,setEntered]=useState(false);
@@ -5130,43 +5232,128 @@ function Report({history,savedPlan,streak,planHistory}) {
 
   const TRIGGER_LABELS={bored:"😑 Bored",stressed:"😰 Stressed",lonely:"🫤 Lonely",alone_room:"🚪 Alone in room",phone_bed:"📱 Phone in bed",after_argument:"💢 Argument",tired:"😴 Tired",social_media:"📲 Social media",friends_around:"👥 Friends around",failure:"📉 Felt failure",free_time:"⏳ Free time",habit_cue:"🔁 Habit/autopilot"};
   const TIME_LABELS={morning:"🌅 Morning",afternoon:"☀️ Afternoon",evening:"🌆 Evening",late_night:"🌙 Late Night"};
+  const DAY_LABELS=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
 
-  // Aggregate: trigger frequency across all addictions, last 30 entries
+  const rangedTriggerLog=useMemo(()=>triggerLog.filter(e=>withinRange(e.date,range)),[triggerLog,range]);
+
+  // Aggregate: trigger frequency within selected range
   const triggerCounts=useMemo(()=>{
     const counts={};
-    triggerLog.slice(-30).forEach(e=>(e.addictions||[]).forEach(a=>(a.triggers||[]).forEach(t=>{counts[t]=(counts[t]||0)+1;})));
+    rangedTriggerLog.forEach(e=>(e.addictions||[]).forEach(a=>(a.triggers||[]).forEach(t=>{counts[t]=(counts[t]||0)+1;})));
     return Object.entries(counts).sort((a,b)=>b[1]-a[1]).slice(0,6);
-  },[triggerLog]);
+  },[rangedTriggerLog]);
 
-  // Aggregate: time of day frequency
+  // Aggregate: time of day frequency within selected range
   const timeCounts=useMemo(()=>{
     const counts={morning:0,afternoon:0,evening:0,late_night:0};
-    triggerLog.slice(-30).forEach(e=>(e.addictions||[]).forEach(a=>{if(a.timeOfDay)counts[a.timeOfDay]=(counts[a.timeOfDay]||0)+1;}));
+    rangedTriggerLog.forEach(e=>(e.addictions||[]).forEach(a=>{
+      const times=Array.isArray(a.timeOfDay)?a.timeOfDay:(a.timeOfDay?[a.timeOfDay]:[]);
+      times.forEach(ti=>{counts[ti]=(counts[ti]||0)+1;});
+    }));
     return counts;
-  },[triggerLog]);
+  },[rangedTriggerLog]);
   const maxTimeCount=Math.max(1,...Object.values(timeCounts));
 
-  // Per-addiction last-14-day usage trend
-  const last14=triggerLog.slice(-14);
+  // Aggregate: day-of-week frequency — separate from time-of-day, this
+  // answers "which day of the week trips me up" rather than "which hour".
+  const dayOfWeekCounts=useMemo(()=>{
+    const counts=[0,0,0,0,0,0,0];
+    rangedTriggerLog.forEach(e=>{
+      const d=new Date(e.date);
+      if(isNaN(d)) return;
+      const slipCount=(e.addictions||[]).length; // one slip-log entry per non-clean addiction that day
+      if(slipCount>0) counts[d.getDay()]+=slipCount;
+    });
+    return counts;
+  },[rangedTriggerLog]);
+  const maxDayCount=Math.max(1,...dayOfWeekCounts);
+
+  // Per-addiction usage trend for the selected range (capped at 30 points
+  // rendered so the chart doesn't get unreadably dense on "All" range)
+  const rangedForTrend=range===9999?triggerLog:rangedTriggerLog;
+  const trendWindow=rangedForTrend.slice(-30);
   const addictionTrends=useMemo(()=>{
     return allAddictions.map(ad=>{
-      const points=last14.map(e=>{
+      const points=trendWindow.map(e=>{
         const entry=(e.addictions||[]).find(a=>a.id===ad.id);
         return entry?(entry.status==="clean"?0:entry.usage||0):0;
       });
-      const cleanDays=last14.filter(e=>!((e.addictions||[]).find(a=>a.id===ad.id))).length;
-      return {...ad,points,cleanDays,total14:last14.length};
+      const cleanDays=trendWindow.filter(e=>!((e.addictions||[]).find(a=>a.id===ad.id))).length;
+      return {...ad,points,cleanDays,total14:trendWindow.length};
     });
-  },[allAddictions,last14]);
+  },[allAddictions,trendWindow]);
 
   const maxTrigger=triggerCounts.length?triggerCounts[0][1]:1;
 
+  // Share/export — a PDF snapshot of the current report view, reusing the
+  // same jsPDF approach as the battle-plan export so the download behaves
+  // identically (paginated, no popup dependency) rather than introducing a
+  // second, different export mechanism.
+  const exportReportPDF=()=>{
+    const pdf=new jsPDF({unit:"pt",format:"a4"});
+    const pageW=pdf.internal.pageSize.getWidth(), pageH=pdf.internal.pageSize.getHeight();
+    const margin=48; let y=margin;
+    const nl=(h)=>{ if(y+h>pageH-margin){ pdf.addPage(); y=margin; } };
+    pdf.setFont("courier","bold"); pdf.setFontSize(18); pdf.setTextColor(255,120,0);
+    pdf.text("SYNAPSE — NEURAL REPORT",margin,y); y+=22;
+    pdf.setDrawColor(255,140,0); pdf.setLineWidth(1); pdf.line(margin,y,pageW-margin,y); y+=22;
+    pdf.setFont("courier","normal"); pdf.setFontSize(11); pdf.setTextColor(40,40,40);
+    const rangeLabel=range===9999?"All-time":`Last ${range} days`;
+    [
+      `Generated:      ${new Date().toLocaleDateString("en-IN",{day:"numeric",month:"long",year:"numeric"})}`,
+      `Range:          ${rangeLabel}`,
+      `Current streak: ${streak} days`,
+      `Rewire progress:${rewire}%  (${rewireLabel})`,
+      `Days logged:    ${total}`,
+      `Win / Held / Reset: ${wins} / ${mids} / ${slips}`,
+      `Win rate:       ${winRate}%${winRateDelta!==null?`  (${winRateDelta>=0?"+":""}${winRateDelta}% vs previous period)`:""}`,
+    ].forEach(line=>{ nl(16); pdf.text(line,margin,y); y+=16; });
+    y+=10; pdf.setDrawColor(200,200,200); pdf.line(margin,y,pageW-margin,y); y+=24;
+
+    if(triggerCounts.length){
+      nl(16); pdf.setFont("courier","bold"); pdf.text("TOP TRIGGERS",margin,y); y+=18;
+      pdf.setFont("courier","normal");
+      triggerCounts.forEach(([id,count])=>{
+        nl(15); pdf.text(`${(TRIGGER_LABELS[id]||id).replace(/^\S+\s/,"")}: ${count}×`,margin,y); y+=15;
+      });
+      y+=10;
+    }
+    if(Object.values(timeCounts).some(v=>v>0)){
+      nl(16); pdf.setFont("courier","bold"); pdf.text("WHEN SLIPS HAPPEN",margin,y); y+=18;
+      pdf.setFont("courier","normal");
+      Object.entries(timeCounts).forEach(([id,count])=>{
+        nl(15); pdf.text(`${TIME_LABELS[id].replace(/^\S+\s/,"")}: ${count}`,margin,y); y+=15;
+      });
+    }
+    y+=14; nl(20); pdf.setDrawColor(255,140,0); pdf.line(margin,y,pageW-margin,y); y+=18;
+    pdf.setFont("courier","normal"); pdf.setFontSize(9); pdf.setTextColor(150,150,150);
+    pdf.text("synapserewire.site",margin,y);
+    pdf.save(`synapse-report-${new Date().toISOString().slice(0,10)}.pdf`);
+  };
+
   return(
+
     <div style={{minHeight:"100vh",paddingTop:80,position:"relative",overflowX:"hidden",opacity:entered?1:0,transform:entered?"translateY(0)":"translateY(24px)",transition:"all .8s cubic-bezier(.16,1,.3,1)"}}>
       <div style={{padding:"clamp(60px,8vw,80px) clamp(20px,8vw,100px) clamp(40px,5vw,64px)",borderBottom:"1px solid rgba(255,140,0,0.07)",position:"relative",zIndex:1}}>
         <div style={{position:"absolute",inset:0,background:"radial-gradient(ellipse at 60% 40%, rgba(255,100,0,0.07) 0%, transparent 60%)",pointerEvents:"none"}}/>
         <div className="tag s1" style={{marginBottom:24}}><span className="d"/>Neural Report</div>
         <h2 className="s2 glitch-hl" style={{fontFamily:"'Orbitron',sans-serif",fontSize:"clamp(32px,8vw,104px)",fontWeight:800,lineHeight:.88,letterSpacing:-3,background:"var(--gradient-text)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent"}}>YOUR<br/>REWIRING.</h2>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:14,marginTop:28}}>
+          <div style={{display:"flex",gap:8}}>
+            {RANGES.map(r=>(
+              <button key={r.id} onClick={()=>setRange(r.id)}
+                style={{padding:"7px 16px",borderRadius:999,border:`1px solid ${range===r.id?"rgba(255,140,0,0.5)":"rgba(255,255,255,0.1)"}`,background:range===r.id?"rgba(255,140,0,0.12)":"transparent",color:range===r.id?"var(--accent2)":"var(--text3)",fontSize:11,fontWeight:600,letterSpacing:.5,cursor:"pointer",transition:"all .2s"}}>
+                {r.label}
+              </button>
+            ))}
+          </div>
+          <button onClick={exportReportPDF}
+            style={{display:"flex",alignItems:"center",gap:8,padding:"9px 18px",borderRadius:10,border:"1px solid rgba(255,140,0,0.25)",background:"rgba(255,140,0,0.06)",color:"rgba(255,180,80,0.85)",fontSize:11,fontWeight:600,letterSpacing:.5,cursor:"pointer",transition:"all .2s"}}
+            onMouseEnter={e=>{e.currentTarget.style.background="rgba(255,140,0,0.12)";}}
+            onMouseLeave={e=>{e.currentTarget.style.background="rgba(255,140,0,0.06)";}}>
+            <Download size={13}/> Share My Progress
+          </button>
+        </div>
       </div>
       <div style={{maxWidth:820,margin:"0 auto",padding:"clamp(40px,6vw,72px) clamp(16px,8vw,100px)",position:"relative",zIndex:1}}>
 
@@ -5194,16 +5381,21 @@ function Report({history,savedPlan,streak,planHistory}) {
         {/* Stats row */}
         <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(160px,1fr))",gap:12,marginBottom:32,marginTop:32}}>
           {[
-            {label:"Total Days Logged",val:total,color:"rgba(255,180,80,0.8)"},
+            {label:"Days Logged",val:total,color:"rgba(255,180,80,0.8)"},
             {label:"Win Days 🔥",val:wins,color:"rgba(255,140,0,1)"},
             {label:"Held Days ⚡",val:mids,color:"rgba(255,200,0,0.8)"},
             {label:"Resets ⚔️",val:slips,color:"rgba(255,80,80,0.8)"},
-            {label:"Win Rate",val:`${winRate}%`,color:"rgba(255,160,60,0.9)"},
+            {label:"Win Rate",val:`${winRate}%`,color:"rgba(255,160,60,0.9)",delta:winRateDelta},
             {label:"Current Streak",val:`${streak}d`,color:"rgba(255,220,100,1)"},
-          ].map(({label,val,color})=>(
-            <div key={label} className="glass" style={{padding:"20px 22px",textAlign:"center"}}>
+          ].map(({label,val,color,delta})=>(
+            <div key={label} className="glass" style={{padding:"20px 22px",textAlign:"center",position:"relative"}}>
               <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:32,fontWeight:800,color,marginBottom:6,lineHeight:1}}>{val}</div>
               <div style={{fontSize:9,letterSpacing:2,color:"var(--text4)",textTransform:"uppercase"}}>{label}</div>
+              {delta!==undefined&&delta!==null&&delta!==0&&(
+                <div style={{position:"absolute",top:10,right:10,fontSize:10,fontWeight:700,color:delta>0?"#4ade80":"#ff6060"}}>
+                  {delta>0?"▲":"▼"}{Math.abs(delta)}%
+                </div>
+              )}
             </div>
           ))}
         </div>
@@ -5286,9 +5478,9 @@ function Report({history,savedPlan,streak,planHistory}) {
             </div>
 
             {/* Trigger frequency chart */}
-            {triggerCounts.length>0&&(
+            {triggerCounts.length>0?(
               <div className="glass" style={{padding:"26px 30px",marginBottom:20}}>
-                <div style={{fontSize:10,letterSpacing:3,color:"rgba(255,140,0,0.45)",textTransform:"uppercase",marginBottom:18}}>⚡ Top Triggers — Last 30 Days</div>
+                <div style={{fontSize:10,letterSpacing:3,color:"rgba(255,140,0,0.45)",textTransform:"uppercase",marginBottom:18}}>⚡ Top Triggers — {range===9999?"All-Time":`Last ${range} Days`}</div>
                 <div style={{display:"flex",flexDirection:"column",gap:12}}>
                   {triggerCounts.map(([id,count])=>(
                     <div key={id}>
@@ -5303,11 +5495,15 @@ function Report({history,savedPlan,streak,planHistory}) {
                   ))}
                 </div>
               </div>
+            ):(
+              <div className="glass" style={{padding:"22px 26px",marginBottom:20,textAlign:"center"}}>
+                <p style={{fontSize:12,color:"var(--text4)"}}>Not enough slip data in this range yet to spot a trigger pattern — check the "All" range or keep logging.</p>
+              </div>
             )}
 
             {/* Time of day heatmap */}
             {Object.values(timeCounts).some(v=>v>0)&&(
-              <div className="glass" style={{padding:"26px 30px",marginBottom:32}}>
+              <div className="glass" style={{padding:"26px 30px",marginBottom:20}}>
                 <div style={{fontSize:10,letterSpacing:3,color:"rgba(255,140,0,0.45)",textTransform:"uppercase",marginBottom:18}}>🕐 When Slips Happen Most</div>
                 <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:10}}>
                   {Object.entries(timeCounts).map(([id,count])=>{
@@ -5317,6 +5513,31 @@ function Report({history,savedPlan,streak,planHistory}) {
                         <div style={{fontSize:18,marginBottom:6}}>{TIME_LABELS[id].split(" ")[0]}</div>
                         <div style={{fontSize:9,color:"var(--text3)",marginBottom:4,letterSpacing:.5}}>{TIME_LABELS[id].split(" ")[1]}</div>
                         <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:18,fontWeight:800,color:intensity>0.6?"#ff8c00":"var(--text3)"}}>{count}</div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Day of week heatmap — separate axis from time-of-day: this
+                answers "which day trips me up" (e.g. weekends) rather than
+                "which hour", so it earns its own chart instead of overloading
+                the time-of-day one. */}
+            {dayOfWeekCounts.some(v=>v>0)&&(
+              <div className="glass" style={{padding:"26px 30px",marginBottom:32}}>
+                <div style={{fontSize:10,letterSpacing:3,color:"rgba(255,140,0,0.45)",textTransform:"uppercase",marginBottom:18}}>📅 Slips By Day Of Week</div>
+                <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:6}}>
+                  {DAY_LABELS.map((label,i)=>{
+                    const count=dayOfWeekCounts[i];
+                    const intensity=count/maxDayCount;
+                    return(
+                      <div key={label} style={{textAlign:"center"}}>
+                        <div style={{height:60,display:"flex",alignItems:"flex-end",justifyContent:"center",marginBottom:6}}>
+                          <div style={{width:"70%",height:`${Math.max(4,intensity*60)}px`,borderRadius:"4px 4px 0 0",background:count>0?`rgba(255,140,0,${0.25+intensity*0.55})`:"rgba(255,255,255,0.04)",transition:"height .5s"}}/>
+                        </div>
+                        <div style={{fontSize:9,color:"var(--text4)",letterSpacing:.5}}>{label}</div>
+                        <div style={{fontSize:11,fontWeight:700,color:count>0?"var(--text2)":"var(--text4)",fontFamily:"'JetBrains Mono',monospace"}}>{count}</div>
                       </div>
                     );
                   })}
@@ -5356,7 +5577,7 @@ function Report({history,savedPlan,streak,planHistory}) {
                   <span style={{fontSize:11,color:"rgba(255,140,0,0.4)",letterSpacing:1}}>Plan from {new Date(p.date).toLocaleDateString()}</span>
                   <span style={{fontSize:12,color:"var(--text4)"}}>{oldPlanIdx===i?"▲":"▼"}</span>
                 </div>
-                {oldPlanIdx===i&&<div style={{fontSize:13,lineHeight:2,color:"var(--text3)",fontWeight:300,whiteSpace:"pre-wrap",borderLeft:"2px solid rgba(255,140,0,0.12)",paddingLeft:20,marginTop:16}}>{parseBold(p.plan)}</div>}
+                {oldPlanIdx===i&&<div style={{fontSize:13,lineHeight:2,color:"var(--text3)",fontWeight:300,whiteSpace:"pre-wrap",borderLeft:"2px solid rgba(255,140,0,0.12)",paddingLeft:20,marginTop:16,maxHeight:360,overflowY:"auto"}}>{parseBold(p.plan)}</div>}
               </div>
             ))}
           </>
@@ -6416,11 +6637,7 @@ function AppRoot() {
             setShowInstallPrompt(false);
           }}/>}
           {screen!=="boot"&&(
-          <div className="footer-wrap" style={{position:"relative",zIndex:2,borderTop:"1px solid rgba(255,140,0,0.06)",padding:"28px clamp(16px,4vw,48px)",display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:16,background:"rgba(255,140,0,0.01)",boxSizing:"border-box",width:"100%"}}>
-            <div style={{display:"flex",alignItems:"center",gap:12}}>
-              <div style={{width:36,height:36,borderRadius:10,background:"linear-gradient(135deg,rgba(255,140,0,0.15),rgba(255,60,0,0.08))",border:"1px solid rgba(255,140,0,0.2)",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Orbitron',sans-serif",fontSize:11,fontWeight:800,color:"rgba(255,180,80,0.7)",letterSpacing:1}}>PG</div>
-              <div><div style={{fontSize:12,fontWeight:600,color:"var(--text2)",letterSpacing:.5}}>Parth Goyal</div><div style={{fontSize:10,color:"rgba(255,140,0,0.35)",letterSpacing:.5,marginTop:1}}>Designed & Built</div></div>
-            </div>
+          <div className="footer-wrap" style={{position:"relative",zIndex:2,borderTop:"1px solid rgba(255,140,0,0.06)",padding:"28px clamp(16px,4vw,48px)",display:"flex",alignItems:"center",justifyContent:"flex-end",flexWrap:"wrap",gap:16,background:"rgba(255,140,0,0.01)",boxSizing:"border-box",width:"100%"}}>
             <div style={{display:"flex",gap:12,alignItems:"center",flexWrap:"wrap"}}>
               <a href="mailto:synapserewire@gmail.com" style={{display:"flex",alignItems:"center",gap:7,fontSize:11,color:"rgba(255,180,80,0.4)",letterSpacing:.5,textDecoration:"none",border:"1px solid rgba(255,140,0,0.12)",borderRadius:999,padding:"7px 16px",transition:"all .3s",fontWeight:500}} onMouseEnter={e=>{e.currentTarget.style.color="#ffb347";e.currentTarget.style.borderColor="rgba(255,140,0,0.45)";e.currentTarget.style.background="rgba(255,140,0,0.07)";}} onMouseLeave={e=>{e.currentTarget.style.color="rgba(255,180,80,0.4)";e.currentTarget.style.borderColor="rgba(255,140,0,0.12)";e.currentTarget.style.background="transparent;"}}><span>✉</span><span>synapserewire@gmail.com</span></a>
               
