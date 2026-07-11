@@ -2060,7 +2060,7 @@ function AdminDashboard({theme,onClose}){
                   <div key={u.id} onClick={()=>setSelectedUser(selectedUser===u.id?null:u.id)} style={{background:card,border:`1px solid ${selectedUser===u.id?acc:bdr}`,borderRadius:14,padding:"16px",cursor:"pointer",transition:"all .2s"}}>
                     <div style={{display:"flex",alignItems:"center",gap:12}}>
                       <div style={{position:"relative",flexShrink:0}}>
-                        {u.photoURL?<img src={u.photoURL} style={{width:44,height:44,borderRadius:"50%",objectFit:"cover",border:`2px solid ${bdr}`}}/>:
+                        {u.photoURL?<img src={u.photoURL} alt="User avatar" style={{width:44,height:44,borderRadius:"50%",objectFit:"cover",border:`2px solid ${bdr}`}}/>:
                         <div style={{width:44,height:44,borderRadius:"50%",background:`rgba(${isL?"196,122,122":"255,140,0"},0.15)`,border:`1px solid ${bdr}`,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Orbitron',sans-serif",fontSize:13,fontWeight:700,color:acc}}>{initials}</div>}
                         <div style={{position:"absolute",bottom:0,right:0,width:10,height:10,borderRadius:"50%",background:isOnline?green:"rgba(255,255,255,0.15)",border:`2px solid ${bg}`}}/>
                       </div>
