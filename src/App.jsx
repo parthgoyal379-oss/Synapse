@@ -3158,10 +3158,10 @@ function Boot({ onBegin, onLogin, hasPlan, theme, onThemeToggle, onAbout }) {
               transition:"opacity .7s,transform .7s cubic-bezier(.1,0,0,1)",
               position:"relative",
             }}>
-              SYNAPSE
+              SYNAPSE – Reset. Rewire. Reconquer.
               {glitch&&<>
-                <span style={{position:"absolute",top:0,left:0,width:"100%",fontFamily:"'Orbitron',sans-serif",fontWeight:900,fontSize:"inherit",letterSpacing:"-0.03em",lineHeight:.9,background:"linear-gradient(165deg,#ff8800,#ff5500)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",backgroundClip:"text",clipPath:"polygon(0 12%,100% 12%,100% 34%,0 34%)",transform:"translateX(-4px)",opacity:.88}}>SYNAPSE</span>
-                <span style={{position:"absolute",top:0,left:0,width:"100%",fontFamily:"'Orbitron',sans-serif",fontWeight:900,fontSize:"inherit",letterSpacing:"-0.03em",lineHeight:.9,background:"linear-gradient(165deg,#f5a000,#d4920a)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",backgroundClip:"text",clipPath:"polygon(0 64%,100% 64%,100% 82%,0 82%)",transform:"translateX(4px)",opacity:.88}}>SYNAPSE</span>
+                <span style={{position:"absolute",top:0,left:0,width:"100%",fontFamily:"'Orbitron',sans-serif",fontWeight:900,fontSize:"inherit",letterSpacing:"-0.03em",lineHeight:.9,background:"linear-gradient(165deg,#ff8800,#ff5500)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",backgroundClip:"text",clipPath:"polygon(0 12%,100% 12%,100% 34%,0 34%)",transform:"translateX(-4px)",opacity:.88}}>SYNAPSE – Reset. Rewire. Reconquer.</span>
+                <span style={{position:"absolute",top:0,left:0,width:"100%",fontFamily:"'Orbitron',sans-serif",fontWeight:900,fontSize:"inherit",letterSpacing:"-0.03em",lineHeight:.9,background:"linear-gradient(165deg,#f5a000,#d4920a)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",backgroundClip:"text",clipPath:"polygon(0 64%,100% 64%,100% 82%,0 82%)",transform:"translateX(4px)",opacity:.88}}>SYNAPSE – Reset. Rewire. Reconquer.</span>
               </>}
             </span>
           </div>
@@ -4382,7 +4382,12 @@ const URGE_PHASES = [
   { at: 0,   label: "YOU SURVIVED", color: "#4caf50", sub: "The urge passed. It always does. Log this win." },
 ];
 
-function UrgeTimer({ streak, savedPlan }) {
+// Single source of truth for the rescue/urge-surfing flow. Extracted out of
+// UrgeTimer so both Command Mode's <UrgeTimer/> and Focus Mode's rescue UI
+// consume the exact same timer, task generator, and syn_urge_log writes —
+// only one of each may ever exist. Logic is unchanged from before the
+// extraction; only its location moved.
+function useRescue() {
   const DURATION = 600; // 10 minutes
   const [active, setActive] = useState(false);
   const [timeLeft, setTimeLeft] = useState(DURATION);
@@ -4445,6 +4450,18 @@ function UrgeTimer({ streak, savedPlan }) {
 
   const survived = urgeLog.filter(u => u.survived).length;
   const total = urgeLog.length;
+
+  return {
+    DURATION, active, timeLeft, done, task, intensity, setIntensity, urgeLog,
+    phase, progress, mins, secs, startTimer, reset, logUrge, newTask, survived, total,
+  };
+}
+
+function UrgeTimer({ streak, savedPlan, rescue }) {
+  const {
+    active, timeLeft, done, task, intensity, setIntensity, urgeLog,
+    phase, progress, mins, secs, startTimer, reset, logUrge, newTask, survived, total,
+  } = rescue;
 
   return (
     <div style={{ maxWidth: 600, margin: "0 auto", padding: "clamp(80px,12vw,120px) clamp(16px,5vw,40px) 40px" }}>
@@ -6151,6 +6168,13 @@ function AppRoot() {
   const deferredInstallPrompt=useRef(null);
   const audioPlayRef = useRef(null);
 
+  // Single shared rescue/urge-surfing state — Command Mode's <UrgeTimer/>
+  // and Focus Mode's rescue UI both read/drive this same object, so only
+  // one timer, one task generator, and one syn_urge_log writer ever exist.
+  // When Focus Mode's screen is mounted, pass the same object down:
+  //   <FocusModeUrgeLog rescue={rescue} streak={streak} onNavigate={goTo}/>
+  const rescue = useRescue();
+
   // Apply theme class to root element
   useEffect(()=>{
     const root=document.documentElement;
@@ -6670,7 +6694,7 @@ function AppRoot() {
             {screen==="plan"    &&<Plan plan={plan||savedPlan} loading={planLoading} onBegin={handleBeginDay1} onRetry={()=>goTo("confess")}/>}
             {screen==="checkin" &&<Checkin streak={streak} savedPlan={savedPlan} lastCheckin={lastCI} onCheckin={handleCheckin} onGoChat={()=>goTo("chat")}/>}
             {screen==="history" &&<History history={history}/>}
-            {screen==="urge"    &&<UrgeTimer streak={streak} savedPlan={savedPlan}/>}
+            {screen==="urge"    &&<UrgeTimer streak={streak} savedPlan={savedPlan} rescue={rescue}/>}
             {screen==="chat"    &&<Chat streak={streak} savedPlan={savedPlan}/>}
             {screen==="report"  &&<Report history={history} savedPlan={savedPlan} streak={streak} planHistory={planHistory}/>}
             {screen==="about"   &&<About onBegin={()=>goTo(savedPlan?"checkin":"confess")} onBack={()=>goTo(savedPlan?"checkin":"boot")}/>}
