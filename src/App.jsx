@@ -21,6 +21,7 @@ import {
   ChevronRight, ChevronDown, ChevronUp, Star, Award, Target,
   Activity, LogOut, Settings, User, Mail, Map, Info
 } from "lucide-react";
+import FocusModeRouter, { FOCUS_SUPPORTED_SCREENS } from "./focus-mode/FocusModeRouter";
 
 /* Escapes free-text user input before it's interpolated into a raw HTML
    string (document.write PDF export windows). Prevents self-XSS if a
@@ -1214,41 +1215,6 @@ svg{background:transparent!important;overflow:visible;}
   --shadow:rgba(0,0,0,.5);
   --gradient-text:linear-gradient(135deg,#ffffff 0%,#ffcc00 60%,#ff9500 100%);
 }
-.light{
-  --bg:#f7f5f2;
-  --bg2:#efebe4;
-  --bg3:#e6dfd3;
-  --surface:rgba(220,80,30,.06);
-  --surface2:rgba(30,25,20,.04);
-  --surface3:rgba(30,25,20,.055);
-  --border:rgba(210,80,30,.18);
-  --border2:rgba(30,25,20,.1);
-  --border3:rgba(220,80,30,.32);
-  --text:#1a1209;
-  --text2:rgba(26,18,9,.82);
-  --text3:rgba(26,18,9,.62);
-  --text4:rgba(26,18,9,.45);
-  --accent:#e0540f;
-  --accent2:#b8420a;
-  --accent3:rgba(224,84,15,.1);
-  --accent4:rgba(184,66,10,.85);
-  --glass-bg:linear-gradient(135deg,rgba(255,255,255,.9) 0%,rgba(247,243,237,.65) 100%);
-  --glass-before:rgba(255,255,255,.6);
-  --nav-text:rgba(184,66,10,.65);
-  --tag-bg:rgba(224,84,15,.1);
-  --tag-border:rgba(224,84,15,.3);
-  --tag-text:rgba(168,55,5,.92);
-  --input-bg:rgba(255,255,255,.8);
-  --input-border:rgba(210,80,30,.25);
-  --input-placeholder:rgba(28,24,21,.35);
-  --selection:rgba(224,84,15,.22);
-  --danger:rgba(190,40,30,.16);
-  --danger-text:rgba(170,40,30,.7);
-  --shadow:rgba(40,30,20,.1);
-  --gradient-text:linear-gradient(150deg,#1c1815 15%,#e0540f 100%);
-  --teal-accent:#0a8f80;
-  --coral-accent:#e8552f;
-}
 
 html{scroll-behavior:auto;overflow-x:hidden;width:100%;margin:0;padding:0;box-sizing:border-box;scrollbar-width:none;-ms-overflow-style:none;}
 html::-webkit-scrollbar{width:0!important;height:0!important;display:none!important;}
@@ -2413,20 +2379,6 @@ function ProfileSheet({user,theme,onThemeToggle,onClose,onSignOut,onPhotoUpdate,
               <div style={{marginLeft:"auto",fontSize:12,color:isL?"rgba(196,122,122,0.5)":"rgba(255,140,0,0.4)"}}>→</div>
             </div>
           )}
-          {/* Theme toggle */}
-          <div onClick={onThemeToggle} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"14px 16px",borderRadius:14,background:isL?"rgba(229,238,228,0.5)":"rgba(255,255,255,0.03)",border:isL?"1px solid rgba(192,225,210,0.4)":"1px solid rgba(255,255,255,0.06)",cursor:"pointer",transition:"all .2s"}}>
-            <div style={{display:"flex",alignItems:"center",gap:12}}>
-              <span style={{fontSize:18}}>{isL?<Moon size={18}/>:<Sun size={18}/>}</span>
-              <div>
-                <div style={{fontSize:13,fontWeight:500,color:"var(--text)"}}>Theme</div>
-                <div style={{fontSize:11,color:"var(--text3)",marginTop:1}}>{isL?"Switch to Dark Mode":"Switch to Light Mode"}</div>
-              </div>
-            </div>
-            <div style={{width:44,height:24,borderRadius:999,background:isL?"rgba(196,122,122,0.3)":"rgba(255,140,0,0.25)",border:isL?"1px solid rgba(196,122,122,0.5)":"1px solid rgba(255,140,0,0.4)",position:"relative",transition:"all .3s"}}>
-              <div style={{position:"absolute",top:3,left:isL?3:19,width:16,height:16,borderRadius:"50%",background:isL?"#c47a7a":"#ff9500",transition:"left .3s",boxShadow:"0 2px 4px rgba(0,0,0,0.3)"}}/>
-            </div>
-          </div>
-
           {/* Notifications toggle */}
           {(()=>{
             const granted="Notification" in window && Notification.permission==="granted";
@@ -3158,10 +3110,10 @@ function Boot({ onBegin, onLogin, hasPlan, theme, onThemeToggle, onAbout }) {
               transition:"opacity .7s,transform .7s cubic-bezier(.1,0,0,1)",
               position:"relative",
             }}>
-              SYNAPSE – Reset. Rewire. Reconquer.
+              SYNAPSE
               {glitch&&<>
-                <span style={{position:"absolute",top:0,left:0,width:"100%",fontFamily:"'Orbitron',sans-serif",fontWeight:900,fontSize:"inherit",letterSpacing:"-0.03em",lineHeight:.9,background:"linear-gradient(165deg,#ff8800,#ff5500)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",backgroundClip:"text",clipPath:"polygon(0 12%,100% 12%,100% 34%,0 34%)",transform:"translateX(-4px)",opacity:.88}}>SYNAPSE – Reset. Rewire. Reconquer.</span>
-                <span style={{position:"absolute",top:0,left:0,width:"100%",fontFamily:"'Orbitron',sans-serif",fontWeight:900,fontSize:"inherit",letterSpacing:"-0.03em",lineHeight:.9,background:"linear-gradient(165deg,#f5a000,#d4920a)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",backgroundClip:"text",clipPath:"polygon(0 64%,100% 64%,100% 82%,0 82%)",transform:"translateX(4px)",opacity:.88}}>SYNAPSE – Reset. Rewire. Reconquer.</span>
+                <span style={{position:"absolute",top:0,left:0,width:"100%",fontFamily:"'Orbitron',sans-serif",fontWeight:900,fontSize:"inherit",letterSpacing:"-0.03em",lineHeight:.9,background:"linear-gradient(165deg,#ff8800,#ff5500)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",backgroundClip:"text",clipPath:"polygon(0 12%,100% 12%,100% 34%,0 34%)",transform:"translateX(-4px)",opacity:.88}}>SYNAPSE</span>
+                <span style={{position:"absolute",top:0,left:0,width:"100%",fontFamily:"'Orbitron',sans-serif",fontWeight:900,fontSize:"inherit",letterSpacing:"-0.03em",lineHeight:.9,background:"linear-gradient(165deg,#f5a000,#d4920a)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",backgroundClip:"text",clipPath:"polygon(0 64%,100% 64%,100% 82%,0 82%)",transform:"translateX(4px)",opacity:.88}}>SYNAPSE</span>
               </>}
             </span>
           </div>
@@ -5703,7 +5655,15 @@ function ChatBubble({msg,idx}){
   );
 }
 
-function Chat({streak,savedPlan}){
+// Single source of truth for the AI Coach conversation. Extracted out of
+// Chat so both Command Mode's <Chat/> and Focus Mode's coach screen
+// consume the exact same messages, tone, and syn_chat_history writes —
+// there is only ever one AI system, one conversation, one storage key.
+// Logic is unchanged from before the extraction (same callAI, same
+// SYSTEM_CHAT, same detectCrisis/checkSafetyRisk, same withTone/
+// getCoachContext, same CRISIS_RESPONSE/OFF_TOPIC_MSG); only its location
+// moved so it can be shared.
+function useCoachChat({streak,savedPlan}){
   const [msgs,setMsgs]=useState(()=>{
     const history=loadChatHistory();
     if(history.length>0) return history;
@@ -5711,23 +5671,15 @@ function Chat({streak,savedPlan}){
   });
   const [input,setInput]=useState("");
   const [loading,setLoading]=useState(false);
-  const [vis,setVis]=useState(false);
   const [mode,setMode]=useState(getMode());
-  const bottomRef=useRef(null);
-  useEffect(()=>{setTimeout(()=>setVis(true),60);},[]);
-  const isFirstRender=useRef(true);
-  useEffect(()=>{
-    if(isFirstRender.current){isFirstRender.current=false;return;}
-    bottomRef.current?.scrollIntoView({behavior:"smooth"});
-  },[msgs,loading]);
 
   const switchMode=(m)=>{
     ls.set("syn_mode",m.id);
     setMode(m);
   };
 
-  const send=async()=>{
-    const txt=input.trim();
+  const send=async(overrideText)=>{
+    const txt=(overrideText??input).trim();
     if(!txt||loading) return;
     setInput("");
     const userMsg={role:"user",text:txt};
@@ -5767,6 +5719,20 @@ function Chat({streak,savedPlan}){
     }
     setLoading(false);
   };
+
+  return {msgs,input,setInput,loading,mode,switchMode,send};
+}
+
+function Chat({streak,savedPlan,coach}){
+  const {msgs,input,setInput,loading,mode,switchMode,send}=coach;
+  const [vis,setVis]=useState(false);
+  const bottomRef=useRef(null);
+  useEffect(()=>{setTimeout(()=>setVis(true),60);},[]);
+  const isFirstRender=useRef(true);
+  useEffect(()=>{
+    if(isFirstRender.current){isFirstRender.current=false;return;}
+    bottomRef.current?.scrollIntoView({behavior:"smooth"});
+  },[msgs,loading]);
 
   return(
     <div style={{minHeight:"100vh",display:"flex",flexDirection:"column",opacity:vis?1:0,transition:"opacity .6s ease"}}>
@@ -6154,7 +6120,18 @@ function AppRoot() {
   const [emergency,setEmergency]=useState(false);
   const [milestone,setMilestone]=useState(null);
   const [toured,setToured]  =useState(()=>ls.get("syn_toured","")!=="1");
-  const [theme,setTheme]    =useState(()=>ls.get("syn_theme","dark"));
+  const theme="dark"; // Light mode removed — Command Mode is dark-only now.
+  // Focus Mode / Command Mode UI preference. Defaults to "command" so
+  // existing users see zero behavior change unless they explicitly switch —
+  // same syn_ui_mode key Focus Mode's Settings screen reads/writes.
+  const [uiMode,setUiModeState]=useState(()=>ls.get("syn_ui_mode","command"));
+  const toggleUiMode=useCallback(()=>{
+    setUiModeState(m=>{
+      const next=m==="focus"?"command":"focus";
+      ls.set("syn_ui_mode",next);
+      return next;
+    });
+  },[]);
   const [showInstallPrompt,setShowInstallPrompt]=useState(false);
   const [showNotifPrompt,setShowNotifPrompt]=useState(false);
   const [showFeedback,setShowFeedback]=useState(false);
@@ -6165,6 +6142,7 @@ function AppRoot() {
   const [lifelineMonth,setLifelineMonth]=useState(()=>ls.get("syn_lifeline_month",""));
   const [showLifelinePrompt,setShowLifelinePrompt]=useState(false);
   const [missedDays,setMissedDays]=useState(0);
+  const [showFmProfile,setShowFmProfile]=useState(false);
   const deferredInstallPrompt=useRef(null);
   const audioPlayRef = useRef(null);
 
@@ -6175,15 +6153,16 @@ function AppRoot() {
   //   <FocusModeUrgeLog rescue={rescue} streak={streak} onNavigate={goTo}/>
   const rescue = useRescue();
 
-  // Apply theme class to root element
-  useEffect(()=>{
-    const root=document.documentElement;
-    if(theme==="light"){root.classList.add("light");document.body.classList.add("light");}
-    else{root.classList.remove("light");document.body.classList.remove("light");}
-  },[theme]);
+  // Single shared AI Coach conversation — Command Mode's <Chat/> and Focus
+  // Mode's coach screen both read/drive this same object: one message
+  // list, one tone, one syn_chat_history writer.
+  const coach = useCoachChat({streak,savedPlan});
+
+  // Light mode removed — theme is always dark now, no class toggling needed.
 
   const handleThemeToggle=useCallback(()=>{
-    setTheme(t=>{const next=t==="dark"?"light":"dark";ls.set("syn_theme",next);return next;});
+    // Light mode removed — this is now a no-op kept only so existing
+    // prop-drilling to Nav/Boot/ProfileSheet doesn't need to change.
   },[]);
 
   useEffect(()=>{const s=document.createElement("style");s.textContent=G;document.head.appendChild(s);return()=>document.head.removeChild(s);},[]);
@@ -6687,6 +6666,36 @@ function AppRoot() {
         </div>
 
       ) : authed ? (
+        uiMode==="focus" ? (
+          <>
+            <FocusModeRouter
+              screen={FOCUS_SUPPORTED_SCREENS.includes(screen)?screen:"home"}
+              onNavigate={goTo}
+              onOpenProfile={()=>setShowFmProfile(true)}
+              streak={streak}
+              savedPlan={savedPlan}
+              lastCheckin={lastCI}
+              history={history}
+              planHistory={planHistory}
+              rescue={rescue}
+              coach={coach}
+              tones={MODES}
+              renderMessage={parseBold}
+              onCheckin={handleCheckin}
+              onGoChat={()=>goTo("chat")}
+              onDeleteAccount={handleReset}
+              uid={auth.currentUser?.uid}
+            />
+            <button
+              onClick={toggleUiMode}
+              title="Switch to Command Mode"
+              style={{position:"fixed",bottom:20,right:20,zIndex:1000,background:"#1a1410",color:"#fff",border:"1px solid rgba(255,140,0,0.35)",borderRadius:999,padding:"10px 18px",fontSize:12,fontWeight:600,letterSpacing:.3,cursor:"pointer",boxShadow:"0 6px 20px rgba(0,0,0,0.25)"}}
+            >
+              ⚡ Command Mode
+            </button>
+            {showFmProfile&&<ProfileSheet user={JSON.parse(ls.get("syn_user","{}"))} theme={theme} onThemeToggle={handleThemeToggle} onClose={()=>setShowFmProfile(false)} onSignOut={()=>{setShowFmProfile(false);signOut(auth).catch(()=>{});}} onPhotoUpdate={()=>{}} onAdminOpen={()=>{}} onFeedback={()=>setShowFeedback(true)}/>}
+          </>
+        ) : (
         <>
           {screen!=="boot"&&<Nav screen={screen} goTo={goTo} savedPlan={savedPlan} onReset={handleReset} theme={theme} onThemeToggle={handleThemeToggle} user={JSON.parse(ls.get("syn_user","{}"))}/>}
           <div key={screen} ref={topRef} style={{position:"relative",zIndex:2,opacity:tr?0:1,transition:"opacity .26s ease"}}>
@@ -6695,7 +6704,7 @@ function AppRoot() {
             {screen==="checkin" &&<Checkin streak={streak} savedPlan={savedPlan} lastCheckin={lastCI} onCheckin={handleCheckin} onGoChat={()=>goTo("chat")}/>}
             {screen==="history" &&<History history={history}/>}
             {screen==="urge"    &&<UrgeTimer streak={streak} savedPlan={savedPlan} rescue={rescue}/>}
-            {screen==="chat"    &&<Chat streak={streak} savedPlan={savedPlan}/>}
+            {screen==="chat"    &&<Chat streak={streak} savedPlan={savedPlan} coach={coach}/>}
             {screen==="report"  &&<Report history={history} savedPlan={savedPlan} streak={streak} planHistory={planHistory}/>}
             {screen==="about"   &&<About onBegin={()=>goTo(savedPlan?"checkin":"confess")} onBack={()=>goTo(savedPlan?"checkin":"boot")}/>}
             {screen==="boot"    &&<Boot onBegin={()=>goTo(savedPlan?"checkin":"confess")} onLogin={null} hasPlan={!!savedPlan} theme={theme} onThemeToggle={handleThemeToggle} onAbout={()=>goTo("about")}/>}
@@ -6734,6 +6743,7 @@ function AppRoot() {
           </div>
           )}
         </>
+        )
       ) : showAuth ? (
         <div style={{position:"relative",zIndex:2}}>
           <Auth onAuth={handleAuth} context={pendingPlan?"lock":""}/>
