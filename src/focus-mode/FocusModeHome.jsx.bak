@@ -367,6 +367,7 @@ export default function FocusModeHome({ onNavigate, onOpenProfile }) {
                 </Card>
               </motion.div>
             </div>
+          </div>
         </div>
 
         {/* ── Next Milestone strip ──────────────────────────────── */}
