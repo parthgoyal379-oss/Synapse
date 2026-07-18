@@ -68,6 +68,7 @@ export default function FocusModeHome({ onNavigate, onOpenProfile }) {
     weekly,
     recentCheckin,
     todayEntry,
+    checkedInToday,
     addictions,
     stats,
   } = data;
