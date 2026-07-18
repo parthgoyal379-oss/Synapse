@@ -240,7 +240,7 @@ export default function FocusModeHome({ onNavigate, onOpenProfile }) {
                       <motion.div
                         initial={playIntro ? { opacity: 0, y: 8 } : false}
                         animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.3, ease: EASE, delay: playIntro ? 0.7 + i * 0.06 : 0 }}
+                        transition={{ duration: 0.3, ease: EASE, delay: 0 }}
                         variants={staggerContainer}
                       >
                         {addictions.map((a, i) => (
