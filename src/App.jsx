@@ -4350,6 +4350,7 @@ function useRescue() {
   });
   const [intensity, setIntensity] = useState(null); // null = not selected yet
   const intervalRef = useRef(null);
+  const completedWhileHiddenRef = useRef(false); // was the tab backgrounded when the timer hit 0?
 
   const phase = URGE_PHASES.find(p => timeLeft > p.at) || URGE_PHASES[URGE_PHASES.length - 1];
   const progress = ((DURATION - timeLeft) / DURATION) * 100;
@@ -4367,6 +4368,7 @@ function useRescue() {
           clearInterval(intervalRef.current);
           setActive(false);
           setDone(true);
+          completedWhileHiddenRef.current = typeof document !== "undefined" && document.hidden;
           return 0;
         }
         return t - 1;
@@ -4393,6 +4395,24 @@ function useRescue() {
     const updated = [entry, ...urgeLog].slice(0, 30);
     setUrgeLog(updated);
     ls.set("syn_urge_log", JSON.stringify(updated));
+
+    // Best-effort cloud mirror — powers the "rescue complete" push when
+    // the app was backgrounded (functions/rescueComplete.js) and real
+    // urge-resistance stats in the weekly summary (functions/weeklySummary.js).
+    // Never blocks the local flow if offline or signed out.
+    if (auth.currentUser?.uid && db) {
+      (async () => {
+        try {
+          const { collection, addDoc, serverTimestamp: fsServerTimestamp } = await import("firebase/firestore");
+          await addDoc(collection(db, "users", auth.currentUser.uid, "urgeSessions"), {
+            ...entry,
+            backgrounded: completedWhileHiddenRef.current,
+            createdAt: fsServerTimestamp(),
+          });
+        } catch (e) { console.warn("urge session cloud sync failed:", e); }
+      })();
+    }
+    completedWhileHiddenRef.current = false;
     reset();
   };
 
@@ -4898,34 +4918,64 @@ function Checkin({streak,savedPlan,lastCheckin,onCheckin,onGoChat}) {
     }
     // AI safety classifier for indirect language
     setChatLoading(true);
-    const aiRisk=await checkSafetyRisk(txt);
+
+    // Build context (do this early so it's ready for both calls)
+    const coachCtx = getCoachContext();
+    // Pull full shared history for context — includes today's report, past days, everything
+    const sharedHistory=loadChatHistory();
+    const ctx=[
+      {role:"user",content:savedPlan+coachCtx},
+      {role:"assistant",content:"Your mission begins now."},
+      ...sharedHistory.slice(-12).map(m=>({role:m.role==="user"?"user":"assistant",content:m.text})),
+      {role:"user",content:txt}
+    ];
+
+    // Start timing
+    const startTime = performance.now();
+
+    // Start both promises: safety check (never throws) and chat (might throw)
+    const safetyPromise = checkSafetyRisk(txt); // Always resolves to boolean
+    const chatPromise = callAI(ctx,withTone(SYSTEM_CHAT)); // Might throw
+
+    // Wait for safety result first (it's fast and won't throw)
+    const safetyStart = performance.now();
+    const aiRisk = await safetyPromise;
+    const safetyTime = performance.now() - safetyStart;
+
+    let aiText;
+    let chatTime = 0;
+    try {
+      // Wait for chat result
+      const chatStart = performance.now();
+      const r = await chatPromise;
+      chatTime = performance.now() - chatStart;
+      aiText=r.startsWith("[OFF_TOPIC]")?"That's outside my scope — I only coach on recovery topics. What's on your mind about your mission?":r;
+    } catch (e) {
+      // Handle chat API error
+      if(e.isRateLimit){
+        setChatMsgs(m=>[...m,{role:"ai",upgradePrompt:true,text:e.message}]);
+      } else {
+        setChatMsgs(m=>[...m,{role:"ai",text:"Connection issue — try again."}]);
+      }
+      setChatLoading(false);
+      const totalTime = performance.now() - startTime;
+      console.log(`[Perf] sendChat: total=${totalTime.toFixed(0)}ms, safety=${safetyTime.toFixed(0)}ms, chat=failed`);
+      return;
+    }
+
+    // Process results
     if(aiRisk){
       setChatMsgs(m=>[...m,{role:"ai",text:CRISIS_RESPONSE,crisis:true}]);
       appendChatHistory({role:"user",text:txt},{role:"ai",text:CRISIS_RESPONSE,crisis:true});
-      setChatLoading(false);
-      return;
-    }
-    try{
-      // Archetype + recurring trigger pattern context — shared with handleCheckin
-      // and the full Coach screen so this inline chat has the same "memory".
-      const coachCtx = getCoachContext();
-      // Pull full shared history for context — includes today's report, past days, everything
-      const sharedHistory=loadChatHistory();
-      const ctx=[
-        {role:"user",content:savedPlan+coachCtx},
-        {role:"assistant",content:"Your mission begins now."},
-        ...sharedHistory.slice(-12).map(m=>({role:m.role==="user"?"user":"assistant",content:m.text})),
-        {role:"user",content:txt}
-      ];
-      const r=await callAI(ctx,withTone(SYSTEM_CHAT));
-      const aiText=r.startsWith("[OFF_TOPIC]")?"That's outside my scope — I only coach on recovery topics. What's on your mind about your mission?":r;
+    } else {
       setChatMsgs(m=>[...m,{role:"ai",text:aiText}]);
       appendChatHistory({role:"user",text:txt},{role:"ai",text:aiText});
-    }catch(e){
-      if(e.isRateLimit){ setChatMsgs(m=>[...m,{role:"ai",upgradePrompt:true,text:e.message}]); }
-      else { setChatMsgs(m=>[...m,{role:"ai",text:"Connection issue — try again."}]); }
     }
     setChatLoading(false);
+
+    // Log timing
+    const totalTime = performance.now() - startTime;
+    console.log(`[Perf] sendChat: total=${totalTime.toFixed(0)}ms, safety=${safetyTime.toFixed(0)}ms, chat=${chatTime.toFixed(0)}ms, aiRisk=${aiRisk}`);
   };
 
   const canSubmit=mood&&!done&&!loading;
@@ -5676,6 +5726,13 @@ function useCoachChat({streak,savedPlan}){
   const switchMode=(m)=>{
     ls.set("syn_mode",m.id);
     setMode(m);
+    // Mirror tone to Firestore so notification Cloud Functions (which run
+    // server-side and can't read localStorage) can send tone-matched
+    // copy. Same users/{uid} doc + durableWrite() already used for
+    // fcmToken — not a new storage system.
+    if(auth.currentUser?.uid&&db){
+      durableWrite(`tone_${auth.currentUser.uid}`,"users",auth.currentUser.uid,{tone:m.id,lastSeen:serverTimestamp()}).catch(()=>{});
+    }
   };
 
   const send=async(overrideText)=>{
@@ -5690,34 +5747,62 @@ function useCoachChat({streak,savedPlan}){
     }
     // AI safety classifier for indirect language
     setLoading(true);
-    const aiRisk=await checkSafetyRisk(txt);
-    if(aiRisk){
-      setMsgs(m=>{ const next=[...m,{role:"ai",text:CRISIS_RESPONSE,crisis:true}]; saveChatHistory(next); return next; });
-      setLoading(false);
-      return;
-    }
-    try{
-      // Build context — last 12 messages for memory, includes checkin reports too
-      const ctx=([...msgs,userMsg]).slice(-12).map(m=>({role:m.role==="user"?"user":"assistant",content:m.text}));
-      // Add streak + archetype + recurring trigger pattern context to first message —
-      // same coach context handleCheckin and the inline checkin chat already use,
-      // so the full Coach screen doesn't "know less" about the user than they do.
-      const coachCtx = getCoachContext();
-      ctx[0]={...ctx[0],content:`[User context: Day ${streak} of recovery. Plan: ${savedPlan?savedPlan.slice(0,120)+"...":"not set yet"}]${coachCtx}\n\n${ctx[0].content}`};
-      const reply=await callAI(ctx,withTone(SYSTEM_CHAT));
-      if(reply.includes("[OFF_TOPIC]")){
-        setMsgs(m=>{ const next=[...m,{role:"ai",text:OFF_TOPIC_MSG,offTopic:true}]; saveChatHistory(next); return next; });
-      } else {
-        setMsgs(m=>{ const next=[...m,{role:"ai",text:reply}]; saveChatHistory(next); return next; });
-      }
-    }catch(e){
+
+    // Build context (do this early so it's ready for both calls)
+    const ctx=([...msgs,userMsg]).slice(-12).map(m=>({role:m.role==="user"?"user":"assistant",content:m.text}));
+    // Add streak + archetype + recurring trigger pattern context to first message —
+    // same coach context handleCheckin and the inline checkin chat already use,
+    // so the full Coach screen doesn't "know less" about the user than they do.
+    const coachCtx = getCoachContext();
+    ctx[0]={...ctx[0],content:`[User context: Day ${streak} of recovery. Plan: ${savedPlan?savedPlan.slice(0,120)+"...":"not set yet"}]${coachCtx}\n\n${ctx[0].content}`};
+
+    // Start timing
+    const startTime = performance.now();
+
+    // Start both promises: safety check (never throws) and chat (might throw)
+    const safetyPromise = checkSafetyRisk(txt); // Always resolves to boolean
+    const chatPromise = callAI(ctx,withTone(SYSTEM_CHAT)); // Might throw
+
+    // Wait for safety result first (it's fast and won't throw)
+    const safetyStart = performance.now();
+    const aiRisk = await safetyPromise;
+    const safetyTime = performance.now() - safetyStart;
+
+    let reply;
+    let chatTime = 0;
+    try {
+      // Wait for chat result
+      const chatStart = performance.now();
+      reply = await chatPromise;
+      chatTime = performance.now() - chatStart;
+    } catch (e) {
+      // Handle chat API error
       if(e.isRateLimit){
         setMsgs(m=>{ const next=[...m,{role:"ai",upgradePrompt:true,text:e.message}]; saveChatHistory(next); return next; });
       } else {
         setMsgs(m=>{ const next=[...m,{role:"ai",text:"Connection error. Stay strong — try again."}]; saveChatHistory(next); return next; });
       }
+      setLoading(false);
+      const totalTime = performance.now() - startTime;
+      console.log(`[Perf] useCoachChat.send: total=${totalTime.toFixed(0)}ms, safety=${safetyTime.toFixed(0)}ms, chat=failed`);
+      return;
+    }
+
+    // Process results
+    if(aiRisk){
+      setMsgs(m=>{ const next=[...m,{role:"ai",text:CRISIS_RESPONSE,crisis:true}]; saveChatHistory(next); return next; });
+    } else {
+      if(reply.includes("[OFF_TOPIC]")){
+        setMsgs(m=>{ const next=[...m,{role:"ai",text:OFF_TOPIC_MSG,offTopic:true}]; saveChatHistory(next); return next; });
+      } else {
+        setMsgs(m=>{ const next=[...m,{role:"ai",text:reply}]; saveChatHistory(next); return next; });
+      }
     }
     setLoading(false);
+
+    // Log timing
+    const totalTime = performance.now() - startTime;
+    console.log(`[Perf] useCoachChat.send: total=${totalTime.toFixed(0)}ms, safety=${safetyTime.toFixed(0)}ms, chat=${chatTime.toFixed(0)}ms, aiRisk=${aiRisk}`);
   };
 
   return {msgs,input,setInput,loading,mode,switchMode,send};
@@ -6117,8 +6202,7 @@ function AppRoot() {
   const [planHistory,setPlanHist]=useState(()=>{try{return JSON.parse(ls.get("syn_plan_history","[]"));}catch{return[];}});
   const [history,setHistory]=useState(()=>{try{return JSON.parse(ls.get("syn_history","[]"));}catch{return[];}});
   const [tr,setTr]          =useState(false);
-  const [emergency,setEmergency]=useState(false);
-  const [milestone,setMilestone]=useState(null);
+    const [milestone,setMilestone]=useState(null);
   const [toured,setToured]  =useState(()=>ls.get("syn_toured","")!=="1");
   const theme="dark"; // Light mode removed — Command Mode is dark-only now.
   // Focus Mode / Command Mode UI preference. Defaults to "command" so
@@ -6382,6 +6466,20 @@ function AppRoot() {
     },260);
   },[]);
 
+  // Route a notification click (see public/firebase-messaging-sw.js) to the
+  // matching in-app screen via the existing goTo() navigator.
+  useEffect(()=>{
+    if(!("serviceWorker" in navigator)) return;
+    const DEEP_LINK_TO_SCREEN={"/checkin":"checkin","/journal":"journal","/urgelog":"urge","/progress":"progress","/report":"report","/plan":"plan","/":"checkin"};
+    const handler=(event)=>{
+      if(event.data?.type!=="SYNAPSE_NOTIFICATION_CLICK") return;
+      const screenId=DEEP_LINK_TO_SCREEN[event.data.deepLink]||"checkin";
+      goTo(screenId);
+    };
+    navigator.serviceWorker.addEventListener("message",handler);
+    return()=>navigator.serviceWorker.removeEventListener("message",handler);
+  },[goTo]);
+
   const handleAuth=(u)=>{
     ls.set("syn_user",JSON.stringify(u));
     if(pendingPlan){setSP(pendingPlan);ls.set("syn_plan",pendingPlan);}
@@ -6444,32 +6542,34 @@ function AppRoot() {
   const handleCheckin=async (msg,forcedStatus)=>{
     if(detectCrisis(msg)) return {reply:CRISIS_RESPONSE, status:"CRISIS"};
     // AI safety classifier for indirect language (runs only if regex didn't catch it)
-    const aiRisk = await checkSafetyRisk(msg);
-    if(aiRisk) return {reply:CRISIS_RESPONSE, status:"CRISIS"};
+
+    // Build AI call arguments early (doesn't depend on safety check)
     const today=new Date().toDateString();
+    const coachCtx = getCoachContext();
+    const verdictInstruction = forcedStatus
+      ? `\n\n[OFFICIAL VERDICT: Today's outcome is ${forcedStatus}, based on the user's own structured report. Start your reply with "[STATUS:${forcedStatus}]" on its own line, then respond per your IF [STATUS:${forcedStatus}] instructions. This verdict is final — do not assign a different status.]`
+      : "";
+    const aiArgs = [
+      {role:"user",content:savedPlan + coachCtx + verdictInstruction},
+      {role:"assistant",content:"Your mission begins now. Show up every day."},
+      {role:"user",content:`Day ${streak+1} check-in: ${msg}`}
+    ];
+
+    // Start both promises: safety check (never throws) and AI call (might throw)
+    const safetyPromise = checkSafetyRisk(msg); // Always resolves to boolean
+    const aiPromise = callAI(aiArgs,withTone(getCheckinPrompt())); // Might throw
+
+    // Wait for safety result first (it's fast and won't throw)
+    const aiRisk = await safetyPromise;
     let rawReply="";
     let aiFailed=false;
-    try{
-      // Archetype + recurring trigger pattern context — shared with the other
-      // two coach entry points (Checkin.sendChat, Chat.send) so the AI has
-      // identical "memory" everywhere, not just here.
-      const coachCtx = getCoachContext();
-      // If the caller computed a deterministic verdict from the user's own
-      // structured answers (Checkin.computeStatus), tell the AI definitively
-      // — it writes the coaching tone for that verdict, it doesn't get to
-      // pick a different one. This is what actually drives the streak below.
-      const verdictInstruction = forcedStatus
-        ? `\n\n[OFFICIAL VERDICT: Today's outcome is ${forcedStatus}, based on the user's own structured report. Start your reply with "[STATUS:${forcedStatus}]" on its own line, then respond per your IF [STATUS:${forcedStatus}] instructions. This verdict is final — do not assign a different status.]`
-        : "";
-      rawReply=await callAI([
-        {role:"user",content:savedPlan + coachCtx + verdictInstruction},
-        {role:"assistant",content:"Your mission begins now. Show up every day."},
-        {role:"user",content:`Day ${streak+1} check-in: ${msg}`}
-      ],withTone(getCheckinPrompt()));
-    }catch(e){
-      // The streak still updates correctly below (driven by forcedStatus, not
-      // by this reply), but we note the failure so the fallback message can
-      // match the real verdict instead of a fixed "you showed up" MID line.
+    try {
+      // Wait for AI result if not risky
+      if (!aiRisk) {
+        rawReply=await aiPromise;
+      }
+    } catch (e){
+      // Handle AI API error
       aiFailed=true;
       console.warn("Check-in coach reply failed:", e?.message||e);
     }
@@ -6489,7 +6589,7 @@ function AppRoot() {
       const FALLBACK={
         WIN:"Day locked in. Couldn't reach the coach network just now — but your win still counts. Show up again tomorrow.",
         MID:"Logged. Couldn't reach the coach network just now, but showing up IS the fight. Back at it tomorrow.",
-        SLIP:"Logged — the streak resets, but the mission doesn't. Couldn't reach the coach network just now; get back up tomorrow.",
+        SLIP:"Logged — the streak resets, but the mission doesn't. Couldn't reach the chat network just now; get back up tomorrow.",
       };
       rawReply=`[STATUS:${status}]\n\n${FALLBACK[status]||FALLBACK.MID}`;
     }
@@ -6649,12 +6749,12 @@ function AppRoot() {
   };
 
   return(
-    <div style={{background:"var(--bg)",minHeight:"100vh",width:"100%",overflowX:"hidden",color:"var(--text)",position:"relative"}}>
+    <div style={{background:uiMode==="focus"?"#F6F0E5":"var(--bg)",minHeight:"100vh",width:"100%",overflowX:"hidden",color:"var(--text)",position:"relative"}}>
       {toured&&<OnboardingTour onComplete={()=>setToured(false)}/>}
       <AmbientAudio onReady={fn=>audioPlayRef.current=fn}/>
-      <CustomCursor/>
-      <SynapseBackground intensity={screen==="checkin"?"heavy":"normal"}/>
-      <FloatingNeurons/>
+      {uiMode!=="focus"&&<CustomCursor/>}
+      {uiMode!=="focus"&&<SynapseBackground intensity={screen==="checkin"?"heavy":"normal"}/>}
+      {uiMode!=="focus"&&<FloatingNeurons/>}
       <div style={{position:"fixed",inset:0,background:"var(--bg)",zIndex:900,pointerEvents:"none",opacity:tr?1:0,transition:"opacity .26s ease"}}/>
 
       {authLoading ? (
@@ -6698,6 +6798,15 @@ function AppRoot() {
         ) : (
         <>
           {screen!=="boot"&&<Nav screen={screen} goTo={goTo} savedPlan={savedPlan} onReset={handleReset} theme={theme} onThemeToggle={handleThemeToggle} user={JSON.parse(ls.get("syn_user","{}"))}/>}
+          {screen!=="boot"&&(
+            <button
+              onClick={toggleUiMode}
+              title="Switch to Focus Mode"
+              style={{position:"fixed",bottom:20,right:20,zIndex:1000,background:"linear-gradient(135deg,#ff9500,#ff5000)",color:"#fff",border:"1px solid rgba(255,140,0,0.5)",borderRadius:999,padding:"10px 18px",fontSize:12,fontWeight:700,letterSpacing:.3,cursor:"pointer",boxShadow:"0 6px 20px rgba(255,100,0,0.35)"}}
+            >
+              ✨ Try Focus Mode
+            </button>
+          )}
           <div key={screen} ref={topRef} style={{position:"relative",zIndex:2,opacity:tr?0:1,transition:"opacity .26s ease"}}>
             {screen==="confess" &&<Confess onSubmit={handleConfess} loading={planLoading}/>}
             {screen==="plan"    &&<Plan plan={plan||savedPlan} loading={planLoading} onBegin={handleBeginDay1} onRetry={()=>goTo("confess")}/>}
@@ -6710,15 +6819,11 @@ function AppRoot() {
             {screen==="boot"    &&<Boot onBegin={()=>goTo(savedPlan?"checkin":"confess")} onLogin={null} hasPlan={!!savedPlan} theme={theme} onThemeToggle={handleThemeToggle} onAbout={()=>goTo("about")}/>}
           </div>
           {screen!=="boot"&&<div style={{position:"relative",zIndex:2,marginTop:80,overflow:"hidden",width:"100%",maxWidth:"100%"}}><Marquee/></div>}
-          {/* Emergency floating button — only on checkin screen */}
-          {screen==="checkin"&&(
-            <button className="sos-btn" onClick={()=>setEmergency(true)} style={{position:"fixed",bottom:"clamp(20px,4vw,32px)",right:"clamp(12px,4vw,28px)",zIndex:800,background:"linear-gradient(135deg,#cc1111,#8b0000)",border:"1px solid rgba(255,80,80,0.4)",borderRadius:999,padding:"clamp(8px,1.5vw,13px) clamp(12px,2.5vw,22px)",color:"var(--text)",fontSize:"clamp(8px,1.8vw,11px)",fontWeight:700,letterSpacing:"clamp(0.5px,0.3vw,1.5px)",textTransform:"uppercase",boxShadow:"0 0 20px rgba(255,30,30,0.35),0 6px 20px rgba(0,0,0,0.5)",cursor:"pointer",display:"flex",alignItems:"center",gap:"clamp(5px,1vw,9px)",fontFamily:"'Orbitron',sans-serif"}}>
-              <span style={{fontSize:"clamp(11px,2.5vw,15px)"}}>🆘</span>
-              <span>I'm Struggling</span>
-            </button>
+                    {screen==="checkin"&&(
+            <button className="sos-btn" onClick={()=>{}} style={{position:"fixed",bottom:"clamp(20px,4vw,32px)",right:"clamp(12px,4vw,28px)",zIndex:800,background:"linear-gradient(135deg,#cc1111,#8b0000)",border:"1px solid rgba(255,80,80,0.4)",borderRadius:999,padding:"clamp(8px,1.5vw,13px) clamp(12px,2.5vw,22px)",color:"var(--text)",fontSize:"clamp(8px,1.8vw,11px)",fontWeight:700,letterSpacing:"clamp(0.5px,0.3vw,1.5px)",textTransform:"uppercase",boxShadow:"0 0 20px rgba(255,30,30,0.35),0 6px 20px rgba(0,0,0,0.5)",cursor:"pointer",display:"flex",alignItems:"center",gap:"clamp(5px,1vw,9px)",fontFamily:"'Orbitron',sans-serif"}}>
+                          </button>
           )}
-          {emergency&&<EmergencyOverlay savedPlan={savedPlan} streak={streak} onClose={()=>setEmergency(false)} onCoach={()=>{setEmergency(false);goTo("chat");}}/>}
-          {milestone&&<MilestoneCelebration day={milestone} onClose={()=>setMilestone(null)}/>}
+                    {milestone&&<MilestoneCelebration day={milestone} onClose={()=>setMilestone(null)}/>}
           <FcmToast toast={fcmToast} theme={theme}/>
           {showLifelinePrompt&&<LifelinePrompt theme={theme} missedDays={missedDays} onUse={useLifeline} onDecline={declineLifeline}/>}
           {showNotifPrompt&&<NotifPrompt theme={theme} onAllow={requestNotifPermission} onDismiss={()=>setShowNotifPrompt(false)}/>}

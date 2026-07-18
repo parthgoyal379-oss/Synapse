@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-SMVKNN4TK3"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-SMVKNN4TK3');
+    </script>
+<link rel="manifest" href="/manifest.json">
+<meta name="google-site-verification" content="D7KGqVMKLymM5UHJHZ-aLizUur1V9BLP12BNP6DfrXU" />
+<meta name="theme-color" content="#ff9500">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="SYNAPSE">
+<link rel="apple-touch-icon" href="/icon-192.png">
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/png" href="/icon-192.png" sizes="192x192" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- Fonts moved here from a JS-injected <style> tag  -  this lets the
+         browser start fetching them immediately on HTML parse, in parallel
+         with the JS bundle, instead of only discovering them after React's
+         first render. Fixes a major LCP bottleneck (was 6.5s). -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;800;900&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500&family=Space+Mono:wght@400;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+    <title>SYNAPSE  -  Reset. Rewire. Reconquer.</title>
+    <link rel="canonical" href="https://www.synapserewire.site/">
+    <meta name="description" content="SYNAPSE  -  AI-powered dopamine recovery and habit tracking. Reset your brain. Rewire your habits. Reconquer your mind.">
+    <meta name="robots" content="index, follow">
+    <meta property="og:title" content="SYNAPSE  -  Reset. Rewire. Reconquer.">
+    <meta property="og:description" content="AI-powered dopamine recovery and habit tracking. Reset your brain. Rewire your habits. Reconquer your mind.">
+    <meta property="og:url" content="https://www.synapserewire.site/">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="SYNAPSE">
+    <meta property="og:locale" content="en_US">
+    <meta property="og:image" content="https://www.synapserewire.site/og-image.png">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:image:alt" content="SYNAPSE  -  Reset. Rewire. Reconquer.">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="SYNAPSE  -  Reset. Rewire. Reconquer.">
+    <meta name="twitter:description" content="AI-powered dopamine recovery and habit tracking. Reset your brain. Rewire your habits. Reconquer your mind.">
+    <meta name="twitter:image" content="https://www.synapserewire.site/og-image.png">
+    <meta name="twitter:image:alt" content="SYNAPSE  -  Reset. Rewire. Reconquer.">
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Organization",
+          "@id": "https://www.synapserewire.site/#organization",
+          "name": "SYNAPSE",
+          "url": "https://www.synapserewire.site/",
+          "logo": {
+            "@type": "ImageObject",
+            "url": "https://www.synapserewire.site/icon-512.png",
+            "width": 512,
+            "height": 512
+          },
+          "image": "https://www.synapserewire.site/og-image.png",
+          "description": "AI-powered dopamine recovery and habit tracking.",
+          "email": "synapserewire@gmail.com",
+          "contactPoint": {
+            "@type": "ContactPoint",
+            "email": "synapserewire@gmail.com",
+            "contactType": "customer support"
+          },
+          "founder": [
+            { "@id": "https://www.synapserewire.site/#parth-goyal" },
+            { "@id": "https://www.synapserewire.site/#sandali-tiwari" }
+          ]
+        },
+        {
+          "@type": "Person",
+          "@id": "https://www.synapserewire.site/#parth-goyal",
+          "name": "Parth Goyal",
+          "jobTitle": "Co-Founder & CEO",
+          "description": "Leads SYNAPSE's engineering, AI systems, technical architecture, and product development. Built the first prototype of SYNAPSE.",
+          "worksFor": { "@id": "https://www.synapserewire.site/#organization" }
+        },
+        {
+          "@type": "Person",
+          "@id": "https://www.synapserewire.site/#sandali-tiwari",
+          "name": "Sandali Tiwari",
+          "jobTitle": "Co-Founder & COO",
+          "description": "Leads SYNAPSE's product management, marketing, operations, user research, branding, partnerships, and growth.",
+          "worksFor": { "@id": "https://www.synapserewire.site/#organization" }
+        },
+        {
+          "@type": "WebSite",
+          "@id": "https://www.synapserewire.site/#website",
+          "name": "SYNAPSE",
+          "url": "https://www.synapserewire.site/",
+          "inLanguage": "en",
+          "publisher": { "@id": "https://www.synapserewire.site/#organization" }
+        },
+        {
+          "@type": "WebApplication",
+          "@id": "https://www.synapserewire.site/#webapp",
+          "name": "SYNAPSE",
+          "url": "https://www.synapserewire.site/",
+          "description": "AI-powered dopamine recovery and habit tracking. Reset your brain, rewire your habits, and rise above addiction.",
+          "applicationCategory": "HealthApplication",
+          "operatingSystem": "Web, iOS, Android (PWA)",
+          "browserRequirements": "Requires a modern browser with JavaScript enabled",
+          "isAccessibleForFree": true,
+          "screenshot": "https://www.synapserewire.site/og-image.png",
+          "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+          "featureList": ["AI check-ins", "Habit tracking", "Dopamine recovery", "Streak tracking", "Multi-language support"],
+          "inLanguage": ["en", "hi"],
+          "publisher": { "@id": "https://www.synapserewire.site/#organization" }
+        }
+      ]
+    }
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>

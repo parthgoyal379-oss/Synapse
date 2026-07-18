@@ -1,92 +1,162 @@
-# Synapse
+# SYNAPSE - AI Habit Tracker for Dopamine Recovery
 
-An AI-powered platform designed to help people break destructive habits, build self-awareness, and make better decisions through intelligent conversation and personalized guidance.
+> AI habit tracker for dopamine recovery. Reset your brain, rewire habits with SYNAPSE. Overcome addictions using science-backed tools and tracking.
 
-## Vision
+## Table of Contents
+- [Overview](#overview)
+- [Features](#features)
+- [Technology Stack](#technology-stack)
+- [Installation](#installation)
+- [Usage](#usage)
+- [Project Structure](#project-structure)
+- [SEO Optimization](#seo-optimization)
+- [Contact](#contact)
+- [Acknowledgments](#acknowledgments)
 
-Most people know what they should do, but struggle to stay consistent.
+## Overview
 
-Synapse aims to bridge that gap by combining AI, behavioral psychology, and personalized feedback into a single platform that helps users understand themselves better and take meaningful action.
+SYNAPSE is an AI-powered recovery platform designed to help people overcome compulsive digital habits such as pornography, doomscrolling, social media addiction, gaming, and other dopamine-driven behaviors. Unlike generic AI chatbots, SYNAPSE is built specifically for behavior change - it creates personalized recovery protocols, adapts after relapses, analyzes patterns, and provides structured daily check-ins for accountability.
+
+The platform combines personalized coaching, daily accountability, and adaptive recovery plans to help users build healthier habits one day at a time. It focuses on understanding why users relapse and continuously adjusts recovery strategies based on behavior, recognizing that recovery is personalized—not one-size-fits-all.
 
 ## Features
 
-- AI-powered conversations
-- Personalized habit guidance
-- Behavioral pattern analysis
-- Clean and responsive interface
-- Real-time AI interaction
-- Continuous improvement through user feedback
+- **Personalized Recovery Protocol**: Starts with a short assessment about your habits and challenges, then generates a customized recovery plan tailored to your goals, behavior, and triggers
+- **AI-Powered Daily Check-ins**: Daily check-ins to record progress, urges, wins, setbacks, and mindset, helping the AI understand your recovery journey and provide more relevant guidance over time
+- **Adaptive Learning**: As your behavior changes, the AI continuously refines your protocol instead of keeping you on a fixed routine
+- **Relapse Support**: Helps you analyze what happened during relapses, identify triggers, and update your recovery plan to reduce chances of repeating patterns
+- **Multi-Habit Support**: Designed for behavioral addictions driven by unhealthy dopamine-seeking patterns, including social media, doomscrolling, gaming, binge-watching, and similar compulsive habits
+- **Progress Tracking**: Recovery Levels mark important milestones in your journey—unlock higher levels as you remain consistent and build healthier habits
+- **Privacy First**: Your recovery data is securely stored and used only to personalize your experience; information is never shared or sold
+- **Cross-Platform**: Built as a Progressive Web App (PWA), allowing installation and use on desktop, Android, and iPhone without downloading from an app store
+- **Free Access**: Offers a free experience with optional premium features that unlock more advanced AI coaching and recovery tools
+- **SEO Optimized**: Implements Schema.org structured data (FAQPage, HowTo) for enhanced search visibility and rich snippets
 
-## Live Demo
+## Technology Stack
 
-🌐 https://synapse-parth.vercel.app
+- **Frontend**: React.js with JavaScript
+- **Styling**: CSS with custom fonts (Orbitron, Inter, JetBrains Mono, Space Mono, Space Grotesk)
+- **Icons**: Custom SVG/PNG icons
+- **Manifest**: Web App Manifest for PWA functionality
+- **SEO**: Schema.org structured data (FAQPage, HowTo, Organization, Person, WebSite, WebApplication)
+- **Analytics**: Google TagManager integration
+- **Fonts**: Google Fonts integration
+- **Build Tool**: Vite (inferred from project structure)
+- **Deployment**: Vercel
 
-## Tech Stack
+## Installation
 
-- React
-- Vite
-- JavaScript
-- Tailwind CSS
-- Vercel
-- AI APIs
+Since SYNAPSE is designed as a Progressive Web App, there's no traditional installation process for end users. However, for development purposes:
 
-## Current Status
+1. Clone the repository:
+   ```bash
+   git clone <repository-url>
+   ```
 
-Synapse is currently under active development.
+2. Navigate to the project directory:
+   ```bash
+   cd synapse
+   ```
 
-New features, UI improvements, and AI capabilities are being added continuously.
+3. Install dependencies:
+   ```bash
+   npm install
+   ```
 
-## Why I Built This
+4. Start the development server:
+   ```bash
+   npm run dev
+   ```
 
-As a student and independent developer, I wanted to build something that goes beyond simple chat interfaces.
+5. Build for production:
+   ```bash
+   npm run build
+   ```
 
-Synapse started as an experiment to explore how AI can help people overcome negative patterns, stay accountable, and make better long-term decisions.
+## Usage
 
-## Roadmap
+1. Visit the application at https://www.synapserewire.site/
+2. Complete the initial assessment about your habits and challenges
+3. Receive your personalized recovery protocol
+4. Check in daily with your AI coach to track progress
+5. Monitor your improvement through Recovery Levels and habit tracking
+6. Adjust your plan as needed based on insights and patterns identified by the AI
 
-### Phase 1
-- Core AI interaction
-- Responsive user interface
-- Deployment and testing
+## Project Structure
 
-### Phase 2
-- Memory and personalization
-- Progress tracking
-- Voice interaction
+```
+synapse/
+├── public/                 # Static assets
+│   ├── favicon.svg         # Favicon
+│   ├── icon-192.png        # App icon (192x192)
+│   ├── icon-512.png        # App icon (512x512)
+│   ├── og-image.png        # Open Graph image for social sharing
+│   └── quit/               # Quit guide articles with SEO schema markup
+│       ├── doomscrolling/
+│       ├── gambling/
+│       ├── gaming/
+│       ├── junk-food/
+│       ├── porn/
+│       ├── reels/
+│       └── social-media/
+├── src/                    # Source code
+│   ├── App.jsx             # Main React component
+│   ├── main.jsx            # Entry point
+│   └── focus-mode/         # Focus mode component
+├── index.html              # Main HTML document with SEO metadata
+├── vercel.json             # Vercel deployment configuration
+└── README.md               # This file
+```
 
-### Phase 3
-- Advanced behavioral insights
-- Multi-agent AI architecture
-- Community features
+## SEO Optimization
 
-## Contributing
+As part of the SEO enhancement initiative, the following improvements have been implemented:
 
-Suggestions, issues, and pull requests are welcome.
+### Structured Data Implementation
+- **FAQPage Schema**: Added to `index.html` with 15 Q&A pairs covering SYNAPSE features, functionality, privacy, pricing, and usage
+- **HowTo Schema**: Added to all quit guide pages:
+  - How to Stop Watching Reels
+  - How to Stop Watching Porn (with corrected text in step 4)
+  - How to Stop Compulsive Gaming
+  - How to Quit Social Media
+  - How to Stop Eating Junk Food
+  - How to Stop Doomscrolling
+  - How to Stop Gambling
 
-## Repository
+Each HowTo schema includes:
+- Proper `@context` and `@type` declarations
+- Descriptive name and description
+- Relevant image URL
+- Estimated cost (set to $0)
+- Time to complete (in ISO 8601 format)
+- Detailed step-by-step instructions
+- Required tools/resources
 
-GitHub: https://github.com/parthgoyal379-oss/Synapse
+### Content Improvements
+- Fixed corrupted text in the porn addiction guide's Step 4
+- Corrected UTF-8 encoding issues across multiple HTML files
+- Added alt text to user avatar images for accessibility and SEO
+- Ensured proper canonical tags and Open Graph metadata
 
-## License
+### Technical SEO
+- Valid JSON-LD implementation for all structured data
+- Proper schema types following schema.org guidelines
+- Enhanced search engine understanding of content
+- Improved potential for rich snippets in search results
 
-MIT License
+## Contact
+
+- **Parth Goyal** - Co-Founder & CEO - [https://www.synapserewire.site/#parth-goyal](https://www.synapserewire.site/#parth-goyal)
+- **Sandali Tiwari** - Co-Founder & COO - [https://www.synapserewire.site/#sandali-tiwari](https://www.synapserewire.site/#sandali-tiwari)
+
+Project Link: [https://www.synapserewire.site/](https://www.synapserewire.site/)
+
+## Acknowledgments
+
+- Built with React and modern web technologies
+- Inspired by behavioral psychology and addiction recovery research
+- Utilizes schema.org structured data for enhanced search visibility
+- Designed as a Progressive Web App for universal accessibility
 
 ---
-
-Built by Parth 🚀# React + Vite
-
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
-
-Currently, two official plugins are available:
-
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
-
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
-
+*Copyright © 2026 SYNAPSE. All rights reserved.*

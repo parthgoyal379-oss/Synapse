@@ -54,7 +54,7 @@
     {
       "source": "/manifest.json",
       "headers": [
-        { "key": "Access-Control-Allow-Origin", "value": "*" },
+        { "key": "Access-Control-Allow-Origin", "value": "${MANIFEST_CORS_ORIGIN}" },
         { "key": "Content-Type", "value": "application/manifest+json" }
       ]
     },
