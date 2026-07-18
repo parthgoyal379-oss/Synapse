@@ -1,25 +1,20 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import { fm } from "./theme";
 import {
   readSynapseSnapshot,
   readArchetype,
-  getTone,
-  setTone as setToneLS,
-  setToneInSettings,
   MODES,
   readNotificationPrefs,
-  setNotificationPrefInSettings,
+  setNotificationPrefCloud,
+  subscribeNotificationPrefs,
+  toggleSilentMode,
   readUIMode,
-  setUIMode as setUIModeLS,
-  setUiModeInSettings,
+  setUIMode,
   readPrivacyCounts,
   readConnectedFeatures,
   exportAllSynapseData,
   resetRecoveryProgress,
   longestStreak,
-  ls,
-  NOTIF_KEYS,
-  writeLocalNotifCache,
 } from "./synapseData";
 import {
   FocusModeShell,
@@ -36,14 +31,6 @@ import {
   MetricCard,
   NeuronArt,
 } from "./components";
-import { doc, onSnapshot } from "firebase/firestore";
-import { db } from "../firebase";
-
-// Simple toast implementation to avoid runtime errors
-const showToast = (message) => {
-  console.log("Toast:", message);
-  // In a real implementation, this would show a UI toast notification
-};
 
 const NOTIF_ITEMS = [
   { key: "checkin", icon: "🔔", title: "Daily Check-In Reminder", desc: "Reminds you to complete your daily check-in." },
@@ -85,427 +72,51 @@ function SectionLabel({ n, title, sub }) {
  *                     "Delete Account Data" — nothing duplicated.
  *   onNavigate, onOpenProfile
  */
-export default function FocusModeSettings({ uid, onDeleteAccount, onNavigate, onOpenProfile }) {
+export default function FocusModeSettings({ uid, coach, onDeleteAccount, onNavigate, onOpenProfile }) {
   const snapshot = readSynapseSnapshot();
   const archetype = readArchetype();
   const longest = longestStreak(snapshot.history, snapshot.streak);
 
-  const [tone, setTone] = useState(() => getTone());
-  const [notif, setNotif] = useState(() => readNotificationPrefs());
-  const [uiMode, setUiMode] = useState(() => readUIMode());
+  // Tone is the literal shared state from App.jsx's useCoachChat() — the
+  // same object <FocusModeCoach/> and Command Mode's <Chat/> read. Selecting
+  // a tone here calls the real coach.switchMode(), so every AI response
+  // anywhere in the app picks it up instantly — no separate tone copy.
+  const tone = coach?.mode || MODES.commander;
+  const [notif, setNotif] = useState(readNotificationPrefs());
+  const [notifLoaded, setNotifLoaded] = useState(!uid); // no account = local is already the full picture
+  const [saveError, setSaveError] = useState(null); // { key, value } of the last failed toggle
+  const [uiMode, setUiModeState] = useState(readUIMode());
   const [confirmAction, setConfirmAction] = useState(null); // 'resetProgress' | 'deleteRecovery' | 'deleteAccount'
-  const [isSavingTone, setIsSavingTone] = useState(false);
-  const [isSavingUiMode, setIsSavingUiMode] = useState(false);
-  const [isSavingNotif, setIsSavingNotif] = useState(false);
 
-  // Notification system state
-  const [notificationPermission, setNotificationPermission] = useState(() => {
-    if (typeof Notification === 'undefined') return 'unsupported';
-    return Notification.permission;
-  });
-  const activeTimersRef = useRef({}); // Store active timer IDs for cleanup
-
-  // Single realtime listener for settings
+  // Cross-device sync: any change made on another device (or a Cloud
+  // Function's idempotency stamp) shows up here in real time.
   useEffect(() => {
-    if (!uid) {
-      // No user: rely on localStorage only; no listener needed
-      return;
-    }
-    let unsubscribed = false;
-    const unsubscribe = onSnapshot(doc(db, "users", uid), (snap) => {
-      if (unsubscribed) return;
-      const data = snap.data();
-      const settings = data?.settings || {};
-
-      // Update React state with Firestore values (fallback to localStorage if missing)
-      const newTone = settings.tone ?? getTone();
-      const newUiMode = settings.uiMode ?? readUIMode();
-      const newNotif = {
-        ...readNotificationPrefs(), // start with localStorage/defaults
-        ...(settings.notifications || {}),
-      };
-
-      // Only update state if changed to avoid unnecessary re-renders
-      if (tone?.id !== newTone.id) setTone(newTone);
-      if (uiMode !== newUiMode) setUiMode(newUiMode);
-      if (JSON.stringify(notif) !== JSON.stringify(newNotif)) setNotif(newNotif);
-
-      // Update localStorage cache for other parts of the app
-      ls.set("syn_mode", newTone.id);
-      ls.set("syn_ui_mode", newUiMode);
-      Object.entries(newNotif).forEach(([key, value]) => {
-        if (NOTIF_KEYS[key]) {
-          ls.set(NOTIF_KEYS[key], String(value));
-        }
-      });
-
-      // Increment version to trigger re-render in children that depend on these values
-      setSettingsVersion(v => v + 1);
-    }, (error) => {
-      console.error("Error fetching settings:", error);
-      showToast("Failed to load settings. Using cached data.");
+    const unsub = subscribeNotificationPrefs(uid, (prefs) => {
+      setNotif(prefs);
+      setNotifLoaded(true);
     });
-
-    return () => {
-      unsubscribed = true;
-      unsubscribe();
-    };
+    return unsub;
   }, [uid]);
-
-  
-  // Request notification permission when needed
-  const requestNotificationPermission = async () => {
-    if (typeof Notification === 'undefined') {
-      return false;
-    }
-
-    if (Notification.permission === 'granted') {
-      return true;
-    }
-
-    if (Notification.permission === 'denied') {
-      return false;
-    }
-
-    // Permission is 'default', ask the user
-    try {
-      const permission = await Notification.requestPermission();
-      setNotificationPermission(permission);
-      return permission === 'granted';
-    } catch (error) {
-      console.error('Error requesting notification permission:', error);
-      return false;
-    }
-  };
-
-  // Show a browser notification
-  const showNotification = (title, body) => {
-    if (typeof Notification === 'undefined' || notificationPermission !== 'granted') {
-      return false;
-    }
-
-    try {
-      new Notification(title, { body });
-      return true;
-    } catch (error) {
-      console.error('Error showing notification:', error);
-      return false;
-    }
-  };
-
-  // Calculate next trigger time for a notification
-  const calculateNextTrigger = (notificationType, reminderTime, timezone) => {
-    // Default to 20:00 if no time set or invalid
-    let timeStr = reminderTime;
-    if (!timeStr || typeof timeStr !== 'string') {
-      timeStr = '20:00';
-    }
-    const [hours, minutes] = timeStr.split(':').map(Number);
-
-    const now = new Date();
-    let targetTime;
-
-    // Handle timezone if provided
-    if (timezone) {
-      try {
-        // Create time in specified timezone
-        targetTime = new Date().toLocaleString('en-US', {
-          timeZone: timezone,
-          hour12: false,
-          hour: '2-digit',
-          minute: '2-digit',
-          second: '2-digit'
-        });
-        // Parse back to Date object - simplified approach
-        const [datePart, timePart] = targetTime.split(', ');
-        const [timeOnly] = timePart.split(' ');
-        const [targetHours, targetMinutes, targetSeconds] = timeOnly.split(':').map(Number);
-
-        targetTime = new Date();
-        targetTime.setHours(targetHours, targetMinutes, targetSeconds, 0);
-      } catch (e) {
-        console.warn('Invalid timezone, using local time:', e);
-        targetTime = new Date();
-        targetTime.setHours(hours, minutes, 0, 0);
-      }
-    } else {
-      targetTime = new Date();
-      targetTime.setHours(hours, minutes, 0, 0);
-    }
-
-    // If target time has already passed today, schedule for tomorrow
-    if (targetTime <= now) {
-      targetTime.setDate(targetTime.getDate() + 1);
-    }
-
-    return targetTime.getTime();
-  };
-
-  // Check if current time is within quiet hours
-  const isWithinQuietHours = (quietHoursStart, quietHoursEnd, timezone) => {
-    if (!quietHoursStart || !quietHoursEnd) return false;
-
-    try {
-      const now = new Date();
-      let nowTime;
-
-      if (timezone) {
-        // Simplified timezone handling for quiet hours
-        nowTime = now.toLocaleTimeString('en-US', {
-          timeZone: timezone,
-          hour12: false,
-          hour: '2-digit',
-          minute: '2-digit'
-        });
-      } else {
-        nowTime = now.toLocaleTimeString('en-US', {
-          hour12: false,
-          hour: '2-digit',
-          minute: '2-digit'
-        });
-      }
-
-      const [nowHours, nowMinutes] = nowTime.split(':').map(Number);
-      const nowTotalMinutes = nowHours * 60 + nowMinutes;
-
-      const [startHours, startMinutes] = quietHoursStart.split(':').map(Number);
-      const [endHours, endMinutes] = quietHoursEnd.split(':').map(Number);
-      const startTotalMinutes = startHours * 60 + startMinutes;
-      const endTotalMinutes = endHours * 60 + endMinutes;
-
-      // Handle overnight quiet hours (e.g., 22:00 to 06:00)
-      if (startTotalMinutes > endTotalMinutes) {
-        return nowTotalMinutes >= startTotalMinutes || nowTotalMinutes <= endTotalMinutes;
-      } else {
-        return nowTotalMinutes >= startTotalMinutes && nowTotalMinutes <= endTotalMinutes;
-      }
-    } catch (e) {
-      console.warn('Error checking quiet hours:', e);
-      return false;
-    }
-  };
-
-  // Schedule notifications for a specific type
-  const scheduleNotification = (notificationType) => {
-    // Clear any existing timer for this type
-    if (activeTimersRef.current[notificationType]) {
-      clearTimeout(activeTimersRef.current[notificationType]);
-    }
-
-    // Don't schedule if notification is disabled or silent mode is on
-    if (!notif[notificationType] || notif.silentMode) {
-      return;
-    }
-
-    // Don't schedule if we don't have permission
-    if (notificationPermission !== 'granted') {
-      return;
-    }
-
-    // Get reminder time (default to daily reminder time for most types)
-    let reminderTime = notif.reminderTime;
-    if (notificationType === 'weekly') {
-      // Weekly notifications could have their own time, but we'll use the same for simplicity
-      reminderTime = notif.weeklyTime || notif.reminderTime;
-    }
-
-    // Calculate next trigger time
-    const triggerTime = calculateNextTrigger(notificationType, reminderTime, notif.timezone);
-    const now = Date.now();
-    const delay = triggerTime - now;
-
-    // Only schedule if in the future
-    if (delay > 0) {
-      // Check quiet hours
-      if (isWithinQuietHours(notif.quietHoursStart, notif.quietHoursEnd, notif.timezone)) {
-        // If in quiet hours, schedule for after quiet hours end
-        // Simplified: just add 1 hour to quiet hours end for demo
-        const adjustedTime = new Date(triggerTime);
-        adjustedTime.setHours(adjustedTime.getHours() + 1);
-        const adjustedDelay = adjustedTime.getTime() - now;
-
-        const timerId = setTimeout(() => {
-          triggerNotification(notificationType);
-          // Reschedule for next occurrence
-          scheduleNotification(notificationType);
-        }, adjustedDelay > 0 ? adjustedDelay : 0);
-
-        activeTimersRef.current = {
-          ...activeTimersRef.current,
-          [notificationType]: timerId
-        };
-      } else {
-        // Not in quiet hours, schedule normally
-        const timerId = setTimeout(() => {
-          triggerNotification(notificationType);
-          // Reschedule for next occurrence
-          scheduleNotification(notificationType);
-        }, delay);
-
-        activeTimersRef.current = {
-          ...activeTimersRef.current,
-          [notificationType]: timerId
-        };
-      }
-    }
-  };
-
-  // Trigger a notification
-  const triggerNotification = (notificationType) => {
-    // Double-check conditions before showing
-    if (!notif[notificationType] || notif.silentMode || notificationPermission !== 'granted') {
-      return;
-    }
-
-    if (isWithinQuietHours(notif.quietHoursStart, notif.quietHoursEnd, notif.timezone)) {
-      return; // Still in quiet hours
-    }
-
-    // Notification title and body based on type
-    let title, body;
-
-    switch (notificationType) {
-      case 'checkin':
-        title = 'Daily Check-in';
-        body = 'Time for today\'s recovery check-in.';
-        break;
-      case 'journal':
-        title = 'Recovery Plan Reminder';
-        body = 'Continue your recovery journey.';
-        break;
-      case 'urge':
-        title = 'Streak Protection Reminder';
-        body = 'Don\'t lose today\'s streak.';
-        break;
-      case 'weekly':
-        title = 'Weekly Progress Report';
-        body = 'Your weekly recovery report is ready.';
-        break;
-      case 'milestones':
-        title = 'Achievement Notifications';
-        body = 'You\'re making real progress.';
-        break;
-      default:
-        title = 'SYNAPSE Reminder';
-        body = 'This is a reminder from SYNAPSE.';
-    }
-
-    showNotification(title, body);
-  };
-
-  // Set up all scheduled notifications
-  useEffect(() => {
-    // Clear existing timers
-    Object.values(activeTimersRef.current).forEach(timer => {
-      if (timer) clearTimeout(timer);
-    });
-    activeTimersRef.current = {};
-
-    // Don't proceed if notifications are disabled globally or we don't have permission
-    if (!notif.dailyMaster || notificationPermission !== 'granted') {
-      return;
-    }
-
-    // Schedule each notification type
-    const notificationTypes = ['checkin', 'journal', 'urge', 'weekly', 'milestones'];
-    notificationTypes.forEach(type => {
-      scheduleNotification(type);
-    });
-
-    // Cleanup on unmount
-    return () => {
-      Object.values(activeTimersRef.current).forEach(timer => {
-        if (timer) clearTimeout(timer);
-      });
-      activeTimersRef.current = {};
-    };
-  }, [notif, notificationPermission]);
-
-  // Handle notification toggle with permission checking
-  const handleNotifToggle = async (key, val) => {
-    // Special handling for dailyMaster - if turning on and we don't have permission, request it
-    if (key === 'dailyMaster' && val === true) {
-      if (notificationPermission !== 'granted') {
-        const permissionGranted = await requestNotificationPermission();
-        if (!permissionGranted) {
-          // User denied or didn't grant permission, don't enable the toggle
-          setNotif(prev => ({ ...prev, [key]: false }));
-          return;
-        }
-      }
-    }
-
-    setIsSavingNotif(true);
-    try {
-      // Update localStorage immediately
-      const current = readNotificationPrefs();
-      const next = { ...current, [key]: val };
-      writeLocalNotifCache(next);
-      // Update React state immediately
-      setNotif(next);
-      // Then sync to Firestore
-      await setNotificationPrefInSettings(uid, key, val);
-
-      // If we just enabled notifications globally, schedule them
-      if (key === 'dailyMaster' && val === true && notificationPermission === 'granted') {
-        // Reschedule all notifications
-        Object.values(activeTimersRef.current).forEach(timer => {
-          if (timer) clearTimeout(timer);
-        });
-        activeTimersRef.current = {};
-
-        const notificationTypes = ['checkin', 'journal', 'urge', 'weekly', 'milestones'];
-        notificationTypes.forEach(type => {
-          if (notif[type]) {
-            scheduleNotification(type);
-          }
-        });
-      }
-
-      // If we just disabled notifications globally, clear timers
-      if (key === 'dailyMaster' && val === false) {
-        Object.values(activeTimersRef.current).forEach(timer => {
-          if (timer) clearTimeout(timer);
-        });
-        activeTimersRef.current = {};
-      }
-    } catch (error) {
-      console.error("Failed to save notification preference:", error);
-      // Optionally revert the optimistic update on error
-    } finally {
-      setIsSavingNotif(false);
-    }
-  };
 
   const privacy = readPrivacyCounts();
   const features = readConnectedFeatures();
 
-  const handleToneSelect = async (id) => {
-    setIsSavingTone(true);
-    try {
-      const toneObj = setToneLS(id); // update localStorage immediately
-      setTone(toneObj);
-      await setToneInSettings(uid, id);
-    } catch (error) {
-      console.error("Failed to save tone:", error);
-      // TODO: show toast
-    } finally {
-      setIsSavingTone(false);
-    }
-  };
+  const handleToneSelect = (m) => coach?.switchMode?.(m);
 
-  const handleUiMode = async (mode) => {
-    setIsSavingUiMode(true);
-    try {
-      setUIModeLS(mode);
-      setUiMode(mode);
-      await setUiModeInSettings(uid, mode);
-    } catch (error) {
-      console.error("Failed to save UI mode:", error);
-      // TODO: show toast
-    } finally {
-      setIsSavingUiMode(false);
+  const handleNotifToggle = async (key, val, { isRetry = false } = {}) => {
+    if (!isRetry) setSaveError(null);
+    if (key === "silentMode") {
+      const next = await toggleSilentMode(uid, val);
+      setNotif(next);
+      return;
     }
+    const { prefs, synced } = await setNotificationPrefCloud(uid, key, val);
+    setNotif(prefs); // local cache already reflects the change even if the cloud write failed
+    if (!synced) setSaveError({ key, value: val });
+  };
+  const handleUiMode = (mode) => {
+    setUIMode(mode);
+    setUiModeState(mode);
   };
 
   const confirmMap = {
@@ -523,6 +134,7 @@ export default function FocusModeSettings({ uid, onDeleteAccount, onNavigate, on
       title: "Delete Recovery Data?",
       description: "This permanently deletes your streak, check-ins, urge log, triggers, and plan. Your journal and account stay intact. This cannot be undone.",
       confirmLabel: "Delete Recovery Data",
+      requireTypedConfirm: "DELETE",
       onConfirm: () => {
         resetRecoveryProgress();
         setConfirmAction(null);
@@ -533,6 +145,7 @@ export default function FocusModeSettings({ uid, onDeleteAccount, onNavigate, on
       title: "Delete Account Data?",
       description: "This permanently deletes everything — profile, journal, chats, history, plans, and settings. Equivalent to a full factory reset. This cannot be undone.",
       confirmLabel: "Delete Everything",
+      requireTypedConfirm: "DELETE",
       onConfirm: () => {
         setConfirmAction(null);
         onDeleteAccount?.();
@@ -576,9 +189,8 @@ export default function FocusModeSettings({ uid, onDeleteAccount, onNavigate, on
                     title={m.label.charAt(0) + m.label.slice(1).toLowerCase()}
                     description={m.desc}
                     selected={tone.id === m.id}
-                    onSelect={() => handleToneSelect(m.id)}
+                    onSelect={() => handleToneSelect(m)}
                     tint={m.accent}
-                    disabled={isSavingTone}
                   />
                 ))}
               </div>
@@ -588,7 +200,7 @@ export default function FocusModeSettings({ uid, onDeleteAccount, onNavigate, on
               <SettingsRow
                 title="Daily Reminder"
                 description="Get reminded to check in daily."
-                control={<Toggle checked={notif.dailyMaster} onChange={(v) => handleNotifToggle("dailyMaster", v)} disabled={isSavingNotif} />}
+                control={<Toggle checked={notif.dailyMaster} onChange={(v) => handleNotifToggle("dailyMaster", v)} />}
               />
               <div style={{ height: 1, background: fm.color.border, margin: "8px 0 16px" }} />
               <Eyebrow style={{ marginBottom: 8 }}>Reminder Time</Eyebrow>
@@ -596,7 +208,7 @@ export default function FocusModeSettings({ uid, onDeleteAccount, onNavigate, on
                 type="time"
                 value={notif.reminderTime}
                 onChange={(e) => handleNotifToggle("reminderTime", e.target.value)}
-                disabled={!notif.dailyMaster || isSavingNotif}
+                disabled={!notif.dailyMaster}
                 style={{
                   width: "100%",
                   padding: "10px 14px",
@@ -606,26 +218,11 @@ export default function FocusModeSettings({ uid, onDeleteAccount, onNavigate, on
                   fontSize: 13,
                   color: fm.color.textPrimary,
                   marginBottom: 16,
-                  opacity: (!notif.dailyMaster || isSavingNotif) ? 0.5 : 1,
+                  opacity: notif.dailyMaster ? 1 : 0.5,
                 }}
               />
               <Eyebrow style={{ marginBottom: 8 }}>Time Zone</Eyebrow>
-              <div
-                style={{
-                  padding: "10px 14px",
-                  borderRadius: fm.radius.sm,
-                  border: `1px solid ${fm.color.border}`,
-                  background: fm.color.surfaceMuted,
-                  fontSize: 12.5,
-                  color: fm.color.textSecondary,
-                }}
-                onClick={() => {
-                  // For simplicity, we'll just prompt; in a real app, you'd use a timezone picker
-                  const tz = prompt("Enter timezone (e.g., America/New_York):", notif.timezone);
-                  if (tz) handleNotifToggle("timezone", tz);
-                }}
-                style={{ cursor: isSavingNotif ? "not-allowed" : "pointer" }}
-              >
+              <div style={{ padding: "10px 14px", borderRadius: fm.radius.sm, border: `1px solid ${fm.color.border}`, background: fm.color.surfaceMuted, fontSize: 12.5, color: fm.color.textSecondary }}>
                 {notif.timezone}
               </div>
             </Card>
@@ -652,23 +249,11 @@ export default function FocusModeSettings({ uid, onDeleteAccount, onNavigate, on
               <SectionLabel n={2} title="Notifications" sub="Manage your recovery reminders and updates." />
               <div style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: 14 }}>
                 {NOTIF_ITEMS.map((n) => (
-                  <div
-                    key={n.key}
-                    style={{
-                      padding: 16,
-                      borderRadius: fm.radius.md,
-                      border: `1px solid ${fm.color.border}`,
-                      background: fm.color.surfaceMuted,
-                    }}
-                  >
+                  <div key={n.key} style={{ padding: 16, borderRadius: fm.radius.md, border: `1px solid ${fm.color.border}`, background: fm.color.surfaceMuted }}>
                     <div style={{ fontSize: 18, marginBottom: 8 }}>{n.icon}</div>
                     <div style={{ fontSize: 12, fontWeight: 700, color: fm.color.textPrimary, marginBottom: 3 }}>{n.title}</div>
                     <div style={{ fontSize: 10, color: fm.color.textTertiary, marginBottom: 12, lineHeight: 1.4 }}>{n.desc}</div>
-                    <Toggle
-                      checked={notif[n.key]}
-                      onChange={(v) => handleNotifToggle(n.key, v)}
-                      disabled={isSavingNotif}
-                    />
+                    <Toggle checked={notif[n.key]} onChange={(v) => handleNotifToggle(n.key, v)} />
                   </div>
                 ))}
               </div>
@@ -699,13 +284,7 @@ export default function FocusModeSettings({ uid, onDeleteAccount, onNavigate, on
                 <Button variant="ghost" size="sm" onClick={exportAllSynapseData} style={{ flex: 1, justifyContent: "center" }}>
                   ↓ Export Recovery Data
                 </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setConfirmAction("deleteRecovery")}
-                  style={{ flex: 1, justifyContent: "center", color: fm.color.danger, borderColor: fm.color.dangerBorder }}
-                  disabled={false}
-                >
+                <Button variant="ghost" size="sm" onClick={() => setConfirmAction("deleteRecovery")} style={{ flex: 1, justifyContent: "center", color: fm.color.danger, borderColor: fm.color.dangerBorder }}>
                   🗑 Delete My Recovery Data
                 </Button>
               </div>
@@ -714,22 +293,8 @@ export default function FocusModeSettings({ uid, onDeleteAccount, onNavigate, on
             <Card padding={26}>
               <SectionLabel n={5} title="Appearance" sub="Choose your preferred experience." />
               <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 14 }}>
-                <RadioCard
-                  icon="☀️"
-                  title="Focus Mode"
-                  description="Clean, light and distraction-free."
-                  selected={uiMode === "focus"}
-                  onSelect={() => handleUiMode("focus")}
-                  disabled={isSavingUiMode}
-                />
-                <RadioCard
-                  icon="🌙"
-                  title="Command Mode"
-                  description="High contrast for deep focus."
-                  selected={uiMode === "command"}
-                  onSelect={() => handleUiMode("command")}
-                  disabled={isSavingUiMode}
-                />
+                <RadioCard icon="☀️" title="Focus Mode" description="Clean, light and distraction-free." selected={uiMode === "focus"} onSelect={() => handleUiMode("focus")} />
+                <RadioCard icon="🌙" title="Command Mode" description="High contrast for deep focus." selected={uiMode === "command"} onSelect={() => handleUiMode("command")} />
               </div>
               <div style={{ fontSize: 10.5, color: fm.color.textTertiary }}>
                 Current Theme: <strong style={{ color: fm.color.accent }}>{uiMode === "focus" ? "Focus Mode (Active)" : "Command Mode (Active)"}</strong>
@@ -744,25 +309,11 @@ export default function FocusModeSettings({ uid, onDeleteAccount, onNavigate, on
             <SectionLabel n={6} title="Connected Features" sub="Core features that power your recovery." />
             <div style={{ display: "grid", gridTemplateColumns: "repeat(5,1fr)", gap: 14 }}>
               {FEATURE_ITEMS.map((f) => (
-                <div
-                  key={f.key}
-                  style={{
-                    padding: 18,
-                    borderRadius: fm.radius.md,
-                    border: `1px solid ${fm.color.border}`,
-                    textAlign: "center",
-                  }}
-                >
+                <div key={f.key} style={{ padding: 18, borderRadius: fm.radius.md, border: `1px solid ${fm.color.border}`, textAlign: "center" }}>
                   <div style={{ fontSize: 20, marginBottom: 10 }}>{f.icon}</div>
                   <div style={{ fontSize: 12, fontWeight: 700, color: fm.color.textPrimary, marginBottom: 3 }}>{f.label}</div>
                   <div style={{ fontSize: 10, color: fm.color.textTertiary, marginBottom: 10 }}>{f.caption}</div>
-                  <div
-                    style={{
-                      fontSize: 10,
-                      fontWeight: 700,
-                      color: features[f.key] ? fm.color.success : fm.color.textTertiary,
-                    }}
-                  >
+                  <div style={{ fontSize: 10, fontWeight: 700, color: features[f.key] ? fm.color.success : fm.color.textTertiary }}>
                     {features[f.key] ? "● Connected" : "○ Ready"}
                   </div>
                 </div>
@@ -777,7 +328,7 @@ export default function FocusModeSettings({ uid, onDeleteAccount, onNavigate, on
             <SectionLabel n={7} title="About SYNAPSE" sub="Built with purpose. Backed by science." />
             <div style={{ display: "grid", gridTemplateColumns: "repeat(6,1fr)", gap: 14 }}>
               <AboutTile icon="ℹ️" label="Version" value="v1.0" />
-              <AboutTile icon="👤" label="Built By" value="Parth Goyal & Sandali Tiwari" />
+              <AboutTile icon="👤" label="Built By" value="Parth Goyal" />
               <AboutTile icon="{ }" label="Build" value="Focus Mode" />
               <AboutTile icon="🔒" label="Privacy Policy" value="Read Policy" link onClick={() => onNavigate?.("about")} />
               <AboutTile icon="📄" label="Terms of Use" value="Read Terms" link onClick={() => onNavigate?.("about")} />
@@ -792,21 +343,27 @@ export default function FocusModeSettings({ uid, onDeleteAccount, onNavigate, on
             <div style={{ fontSize: 11, fontWeight: 700, color: fm.color.danger, letterSpacing: 1, marginBottom: 4 }}>DANGER ZONE</div>
             <div style={{ fontSize: 11.5, color: fm.color.textTertiary, marginBottom: 16 }}>These actions are permanent and cannot be undone.</div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-              <DangerAction
-                icon="↺"
-                title="Reset Progress"
-                description="This will reset your streak and progress. Journal, account, and chats are kept."
-                onClick={() => setConfirmAction("resetProgress")}
-              />
-              <DangerAction
-                icon="🗑"
-                title="Delete Account Data"
-                description="This will delete everything forever."
-                onClick={() => setConfirmAction("deleteAccount")}
-              />
+              <DangerAction icon="↺" title="Reset Progress" description="This will reset your streak and progress. Journal, account, and chats are kept." onClick={() => setConfirmAction("resetProgress")} />
+              <DangerAction icon="🗑" title="Delete Account Data" description="This will delete everything forever." onClick={() => setConfirmAction("deleteAccount")} />
             </div>
           </Card>
         </Section>
+
+        {saveError && (
+          <Section>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 18px", borderRadius: fm.radius.sm, background: fm.color.dangerSoft, border: `1px solid ${fm.color.dangerBorder}` }}>
+              <span style={{ fontSize: 12, color: fm.color.danger }}>Couldn't save changes. Trying again…</span>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => handleNotifToggle(saveError.key, saveError.value, { isRetry: true })}
+                style={{ borderColor: fm.color.dangerBorder, color: fm.color.danger }}
+              >
+                Retry
+              </Button>
+            </div>
+          </Section>
+        )}
       </main>
 
       {confirmAction && (
@@ -814,6 +371,7 @@ export default function FocusModeSettings({ uid, onDeleteAccount, onNavigate, on
           title={confirmMap[confirmAction].title}
           description={confirmMap[confirmAction].description}
           confirmLabel={confirmMap[confirmAction].confirmLabel}
+          requireTypedConfirm={confirmMap[confirmAction].requireTypedConfirm}
           onConfirm={confirmMap[confirmAction].onConfirm}
           onCancel={() => setConfirmAction(null)}
         />
@@ -838,3 +396,15 @@ function AboutTile({ icon, label, value, link, onClick }) {
     <div style={{ textAlign: "center", padding: "16px 8px", borderRadius: fm.radius.md, border: `1px solid ${fm.color.border}` }}>{content}</div>
   );
 }
+
+/* ─────────────────────────────────────────────────────────────────────────
+   INTEGRATION NOTE
+   ─────────────────────────────────────────────────────────────────────────
+   Mount with:
+     <FocusModeSettings onDeleteAccount={handleReset} onNavigate={goTo} onOpenProfile={...}/>
+
+   `handleReset` is App.jsx's real, existing full-wipe function (clears
+   syn_streak/syn_history/syn_plan/syn_user/syn_archetype/syn_confess/
+   syn_trigger_log/syn_chat_history, signs out, returns to onboarding) —
+   reused as-is for "Delete Account Data," not reimplemented.
+──────────────────────────────────────────────────────────────────────── */

@@ -319,4 +319,3 @@ export default function FocusModeUrgeLog({ rescue, streak, onNavigate, onOpenPro
    vice versa) mid-session shows the identical running timer — there is
    only one timer, one task generator, and one syn_urge_log writer.
 ──────────────────────────────────────────────────────────────────────── */
-

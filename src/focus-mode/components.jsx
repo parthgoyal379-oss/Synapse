@@ -2179,12 +2179,42 @@ export function DangerAction({ icon = "🗑", title, description, onClick }) {
 
 /* ── Confirm modal — generic confirm-before-destroy dialog. Reusable for
    any irreversible action across Focus Mode. ── */
-export function ConfirmModal({ title, description, confirmLabel = "Confirm", danger = true, onConfirm, onCancel }) {
+export function ConfirmModal({ title, description, confirmLabel = "Confirm", danger = true, onConfirm, onCancel, requireTypedConfirm = null }) {
+  const [typed, setTyped] = useState("");
+  const [focused, setFocused] = useState(false);
+  const locked = requireTypedConfirm && typed !== requireTypedConfirm;
   return (
-    <div onClick={onCancel} style={{ position: "fixed", inset: 0, background: "rgba(42,32,20,0.35)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 60 }}>
+    <div onClick={onCancel} style={{ position: "fixed", inset: 0, background: "rgba(42,32,20,0.35)", backdropFilter: "blur(3px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 60 }}>
       <div onClick={(e) => e.stopPropagation()} className="fm-fade-up" style={{ background: fm.color.surface, borderRadius: fm.radius.lg, padding: 28, maxWidth: 380, width: "90%", boxShadow: fm.shadow.cardHover }}>
         <div style={{ fontFamily: fm.font.display, fontSize: 17, fontWeight: 700, color: fm.color.textPrimary, marginBottom: 10 }}>{title}</div>
-        <p style={{ fontSize: 12.5, color: fm.color.textSecondary, lineHeight: 1.6, marginBottom: 22 }}>{description}</p>
+        <p style={{ fontSize: 12.5, color: fm.color.textSecondary, lineHeight: 1.6, marginBottom: requireTypedConfirm ? 16 : 22 }}>{description}</p>
+        {requireTypedConfirm && (
+          <div style={{ marginBottom: 22 }}>
+            <div style={{ fontSize: 11, color: fm.color.textTertiary, marginBottom: 8 }}>
+              Type <strong style={{ color: fm.color.danger }}>{requireTypedConfirm}</strong> to continue.
+            </div>
+            <input
+              value={typed}
+              onChange={(e) => setTyped(e.target.value)}
+              onFocus={() => setFocused(true)}
+              onBlur={() => setFocused(false)}
+              placeholder={requireTypedConfirm}
+              autoFocus
+              style={{
+                width: "100%",
+                padding: "10px 14px",
+                borderRadius: fm.radius.sm,
+                border: `1px solid ${focused ? fm.color.dangerBorder : fm.color.border}`,
+                boxShadow: focused ? `0 0 0 3px ${fm.color.dangerSoft}` : "none",
+                outline: "none",
+                fontSize: 13,
+                fontFamily: fm.font.body,
+                color: fm.color.textPrimary,
+                transition: "box-shadow .2s ease, border-color .2s ease",
+              }}
+            />
+          </div>
+        )}
         <div style={{ display: "flex", gap: 10 }}>
           <Button variant="ghost" onClick={onCancel} style={{ flex: 1, justifyContent: "center" }}>
             Cancel
@@ -2192,7 +2222,8 @@ export function ConfirmModal({ title, description, confirmLabel = "Confirm", dan
           <Button
             variant="primary"
             onClick={onConfirm}
-            style={{ flex: 1, justifyContent: "center", background: danger ? fm.color.danger : fm.color.accent }}
+            disabled={locked}
+            style={{ flex: 1, justifyContent: "center", background: danger ? fm.color.danger : fm.color.accent, opacity: locked ? 0.45 : 1, cursor: locked ? "not-allowed" : "pointer" }}
           >
             {confirmLabel}
           </Button>

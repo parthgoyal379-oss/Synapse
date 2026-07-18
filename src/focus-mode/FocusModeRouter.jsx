@@ -1,4 +1,3 @@
-import { AnimatePresence, motion } from "framer-motion";
 import FocusModeHome from "./FocusModeHome";
 import FocusModeCheckIn from "./FocusModeCheckIn";
 import FocusModePlan from "./FocusModePlan";
@@ -43,85 +42,41 @@ export default function FocusModeRouter({
   onDeleteAccount,
   uid,
 }) {
-  // Page transition variants: fade in/out with slight vertical movement and scale
-  const pageVariants = {
-    initial: { opacity: 0, y: 20, scale: 0.98 },
-    animate: { opacity: 1, y: 0, scale: 1, transition: { duration: 0.2, ease: "easeOut" } },
-    exit: { opacity: 0, y: -20, scale: 0.98, transition: { duration: 0.2, ease: "easeOut" } },
-  };
-
-  return (
-    <AnimatePresence>
-      <motion.div
-        initial="initial"
-        animate="animate"
-        exit="exit"
-        variants={pageVariants}
-      >
-        {screen === "checkin" && <FocusModeCheckIn
+  switch (screen) {
+    case "checkin":
+      return <FocusModeCheckIn streak={streak} savedPlan={savedPlan} lastCheckin={lastCheckin} onCheckin={onCheckin} onGoChat={onGoChat} onNavigate={onNavigate} onOpenProfile={onOpenProfile} />;
+    case "plan":
+      return <FocusModePlan savedPlan={savedPlan} onNavigate={onNavigate} onOpenProfile={onOpenProfile} />;
+    case "progress":
+      return <FocusModeProgress onNavigate={onNavigate} onOpenProfile={onOpenProfile} />;
+    case "chat":
+      return (
+        <FocusModeCoach
+          messages={coach?.msgs}
+          loading={coach?.loading}
+          mode={coach?.mode}
+          tones={tones}
+          onModeChange={coach?.switchMode}
+          onSend={coach?.send}
           streak={streak}
           savedPlan={savedPlan}
-          lastCheckin={lastCheckin}
-          onCheckin={onCheckin}
-          onGoChat={onGoChat}
+          renderMessage={renderMessage}
           onNavigate={onNavigate}
           onOpenProfile={onOpenProfile}
-        />}
-        {screen === "plan" && <FocusModePlan
-          savedPlan={savedPlan}
-          onNavigate={onNavigate}
-          onOpenProfile={onOpenProfile}
-        />}
-        {screen === "progress" && <FocusModeProgress
-          onNavigate={onNavigate}
-          onOpenProfile={onOpenProfile}
-        />}
-        {screen === "chat" && (
-          <FocusModeCoach
-            messages={coach?.msgs}
-            loading={coach?.loading}
-            mode={coach?.mode}
-            tones={tones}
-            onModeChange={coach?.switchMode}
-            onSend={coach?.send}
-            streak={streak}
-            savedPlan={savedPlan}
-            renderMessage={renderMessage}
-            onNavigate={onNavigate}
-            onOpenProfile={onOpenProfile}
-          />
-        )}
-        {screen === "journal" && <FocusModeJournal
-          uid={uid}
-          onNavigate={onNavigate}
-          onOpenProfile={onOpenProfile}
-        />}
-        {screen === "urge" && <FocusModeUrgeLog
-          rescue={rescue}
-          streak={streak}
-          onNavigate={onNavigate}
-          onOpenProfile={onOpenProfile}
-        />}
-        {screen === "report" && <FocusModeReport
-          onNavigate={onNavigate}
-          onOpenProfile={onOpenProfile}
-        />}
-        {screen === "about" && <FocusModeAbout
-          onNavigate={onNavigate}
-          onOpenProfile={onOpenProfile}
-          onBeginJourney={() => onNavigate("home")}
-        />}
-        {screen === "settings" && <FocusModeSettings
-          onDeleteAccount={onDeleteAccount}
-          onNavigate={onNavigate}
-          onOpenProfile={onOpenProfile}
-        />}
-        {/* Default to home for unknown screens */}
-        {(screen === "home" || !(screen in FOCUS_SUPPORTED_SCREENS)) && <FocusModeHome
-          onNavigate={onNavigate}
-          onOpenProfile={onOpenProfile}
-        />}
-      </motion.div>
-    </AnimatePresence>
-  );
+        />
+      );
+    case "journal":
+      return <FocusModeJournal uid={uid} onNavigate={onNavigate} onOpenProfile={onOpenProfile} />;
+    case "urge":
+      return <FocusModeUrgeLog rescue={rescue} streak={streak} onNavigate={onNavigate} onOpenProfile={onOpenProfile} />;
+    case "report":
+      return <FocusModeReport onNavigate={onNavigate} onOpenProfile={onOpenProfile} />;
+    case "about":
+      return <FocusModeAbout onNavigate={onNavigate} onOpenProfile={onOpenProfile} onBeginJourney={() => onNavigate("home")} />;
+    case "settings":
+      return <FocusModeSettings uid={uid} coach={coach} onDeleteAccount={onDeleteAccount} onNavigate={onNavigate} onOpenProfile={onOpenProfile} />;
+    case "home":
+    default:
+      return <FocusModeHome onNavigate={onNavigate} onOpenProfile={onOpenProfile} />;
+  }
 }

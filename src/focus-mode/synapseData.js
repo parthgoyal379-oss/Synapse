@@ -11,26 +11,12 @@
    app logic (nothing here writes to storage or Firestore).
 ──────────────────────────────────────────────────────────────────────── */
 
-export const ls = {
+const ls = {
   get: (key, fallback = null) => {
     try {
       return localStorage.getItem(key) ?? fallback;
     } catch {
       return fallback;
-    }
-  },
-  set: (key, value) => {
-    try {
-      localStorage.setItem(key, value);
-    } catch {
-      // Ignore quota errors
-    }
-  },
-  remove: (key) => {
-    try {
-      localStorage.removeItem(key);
-    } catch {
-      // Ignore
     }
   },
 };
@@ -108,19 +94,6 @@ export const TIME_SLOTS = [
   { id: "evening", label: "🌆 Evening" },
   { id: "late_night", label: "🌙 Late Night" },
 ];
-
-// Maps notification preference keys to localStorage keys
-export const NOTIF_KEYS = {
-  dailyMaster: "syn_notif_daily_master",
-  checkin: "syn_notif_checkin",
-  journal: "syn_notif_journal",
-  urge: "syn_notif_urge",
-  weekly: "syn_notif_weekly",
-  milestones: "syn_notif_milestones",
-  silentMode: "syn_notif_silent",
-  reminderTime: "syn_reminder_time",
-  timezone: "syn_timezone"
-};
 
 // Mirrors App.jsx's CheckinCountdown (midnight-diff) logic exactly.
 export function getCheckinCountdownLabel() {
@@ -401,57 +374,6 @@ export async function syncJournalEntryToCloud(uid, entry) {
   }
 }
 
-  /**
-   * Returns mood data for the last N days (default 30) for a timeline view.
-   * Each day object contains: date, hasEntry boolean, mood string (if entry exists)
-   * Returns array ordered from oldest to newest (left to right in UI)
-   */
-  export function journalMoodTimeline(entries, days = 30) {
-    if (entries.length === 0) {
-      // Return empty days array if no entries
-      const result = [];
-      for (let i = 0; i < days; i++) {
-        const date = new Date();
-        date.setDate(date.getDate() - (days - 1 - i)); // Distribute evenly from past to today
-        date.setHours(0, 0, 0, 0);
-        result.push({
-          date,
-          hasEntry: false,
-          mood: null
-        });
-      }
-      return result;
-    }
-
-    // Create a map of date strings to entries for quick lookup
-    const entriesByDate = new Map();
-    entries.forEach(entry => {
-      const dateStr = new Date(entry.createdAt).toDateString();
-      entriesByDate.set(dateStr, entry);
-    });
-
-    // Generate array for the last N days
-    const result = [];
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    for (let i = 0; i < days; i++) {
-      const date = new Date(today);
-      date.setDate(date.getDate() - (days - 1 - i)); // i=0 is oldest day, i=days-1 is today
-
-      const dateStr = date.toDateString();
-      const entry = entriesByDate.get(dateStr);
-
-      result.push({
-        date: new Date(date), // Clone the date object
-        hasEntry: !!entry,
-        mood: entry ? entry.mood : null
-      });
-    }
-
-    return result;
-  }
-
 // Separate from the recovery streak — consecutive days (ending today or
 // yesterday, so a not-yet-written today doesn't zero it out) with at least
 // one journal entry.
@@ -478,6 +400,26 @@ export function journalMoodDistribution(entries) {
   return Object.entries(counts)
     .map(([mood, count]) => ({ mood, count }))
     .sort((a, b) => b.count - a.count);
+}
+
+// Last N days, oldest -> newest; each day is either a real entry's
+// {date, title, mood} or null if nothing was written that day.
+export function journalMoodTimeline(entries, days = 14) {
+  const byDate = new Map(entries.map((e) => [new Date(e.createdAt).toDateString(), e]));
+  const out = [];
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  for (let i = days - 1; i >= 0; i--) {
+    const d = new Date(today);
+    d.setDate(today.getDate() - i);
+    const entry = byDate.get(d.toDateString());
+    out.push({
+      date: d,
+      isToday: i === 0,
+      entry: entry ? { title: entry.title, mood: entry.mood, preview: entry.content.slice(0, 80) } : null,
+    });
+  }
+  return out;
 }
 
 // Word-count depth buckets for the calendar's shading — a real derivation
@@ -522,17 +464,7 @@ export function extractMemoryCards(entries, max = 6) {
   for (const e of entries) {
     const matches = e.content.match(MEMORY_PATTERNS);
     if (matches) {
-      matches.forEach((m) => {
-        if (m.trim()) {
-          const text = m.trim();
-          const date = e.createdAt;
-          const entryId = e.id;
-          // Avoid duplicates
-          if (!cards.some((c) => c.text === text && c.date === date && c.entryId === entryId)) {
-            cards.push({ text, date, entryId });
-          }
-        }
-      });
+      matches.forEach((m) => cards.push({ text: m.trim(), date: e.createdAt, entryId: e.id }));
     }
     if (cards.length >= max * 2) break;
   }
@@ -557,7 +489,7 @@ export function generateGrowthInsights(entries) {
 
   if (last7.length >= 3) {
     const avgRecent = last7.slice(0, 3).reduce((s, e) => s + e.wordCount, 0) / 3;
-    const compare = last7.slice(3, 6);
+    const compare = entries.slice(3, 6);
     if (compare.length === 3) {
       const avgPrior = compare.reduce((s, e) => s + e.wordCount, 0) / 3;
       if (avgRecent > avgPrior * 1.15) insights.push("Your entries are becoming longer.");
@@ -690,13 +622,13 @@ export function missionDailySeries(addictionId, history, triggerLog, days = 14) 
     const status = byDate.get(h.date);
     if (status === "slip") return 0;
     if (status === "partial") return 0.5;
-    return 1; // no trigger_log entry that day for this addiction = clean
+    return 1; // no trigger_log entry that day for this mission = clean
   });
 }
 
 export function missionTrendLabel(series) {
   if (series.length < 4) return "New";
-  const mid = Math.floor(sequence.length / 2);
+  const mid = Math.floor(series.length / 2);
   const first = series.slice(0, mid).reduce((s, v) => s + v, 0) / mid;
   const second = series.slice(mid).reduce((s, v) => s + v, 0) / (series.length - mid);
   if (second > first + 0.08) return "Improving";
@@ -772,45 +704,58 @@ export const MODES = {
   warlord: { id: "warlord", label: "WARLORD", icon: "🔥", desc: "Brutal & unfiltered", accent: "#ef4444" },
 };
 
-// Writes the exact same key App.jsx's switchMode() writes — the next AI
-// Coach message (Command Mode or Focus Mode) picks this up immediately,
-// since both read from the same getMode()/syn_mode source.
 export function getTone() {
   return MODES[ls.get("syn_mode", "commander")] || MODES.commander;
 }
+
+// Writes the exact same key App.jsx's switchMode() writes — the next AI
+// Coach message (Command Mode or Focus Mode) picks this up immediately,
+// since both read from the same getMode()/syn_mode source.
 export function setTone(toneId) {
   if (!MODES[toneId]) return getTone();
   ls.set("syn_mode", toneId);
   return MODES[toneId];
 }
 
+const NOTIF_KEYS = {
+  dailyMaster: "syn_notif_daily_master",
+  checkin: "syn_notif_checkin",
+  journal: "syn_notif_journal",
+  urge: "syn_notif_urge",
+  weekly: "syn_notif_weekly",
+  milestones: "syn_notif_milestones",
+  silentMode: "syn_notif_silent",
+  reminderTime: "syn_reminder_time",
+  timezone: "syn_timezone",
+};
+
 // Local cache read — instant, works offline. Firestore (below) is the
 // cross-device source of truth per this feature's requirement; this stays
 // as the fast local fallback shown before the cloud read resolves.
 export function readNotificationPrefs() {
   return {
-    dailyMaster: ls.get("syn_notif_daily_master", "true") === "true",
-    checkin: ls.get("syn_notif_checkin", "true") === "true",
-    journal: ls.get("syn_notif_journal", "true") === "true",
-    urge: ls.get("syn_notif_urge", "true") === "true",
-    weekly: ls.get("syn_notif_weekly", "true") === "true",
-    milestones: ls.get("syn_notif_milestones", "true") === "true",
-    silentMode: ls.get("syn_notif_silent", "false") === "true",
-    reminderTime: ls.get("syn_reminder_time", "20:00"),
-    timezone: ls.get("syn_timezone", Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC"),
+    dailyMaster: ls.get(NOTIF_KEYS.dailyMaster, "true") === "true",
+    checkin: ls.get(NOTIF_KEYS.checkin, "true") === "true",
+    journal: ls.get(NOTIF_KEYS.journal, "true") === "true",
+    urge: ls.get(NOTIF_KEYS.urge, "true") === "true",
+    weekly: ls.get(NOTIF_KEYS.weekly, "true") === "true",
+    milestones: ls.get(NOTIF_KEYS.milestones, "true") === "true",
+    silentMode: ls.get(NOTIF_KEYS.silentMode, "false") === "true",
+    reminderTime: ls.get(NOTIF_KEYS.reminderTime, "20:00"),
+    timezone: ls.get(NOTIF_KEYS.timezone, Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC"),
   };
 }
 
-export function writeLocalNotifCache(prefs) {
-  ls.set("syn_notif_daily_master", String(prefs.dailyMaster));
-  ls.set("syn_notif_checkin", String(prefs.checkin));
-  ls.set("syn_notif_journal", String(prefs.journal));
-  ls.set("syn_notif_urge", String(prefs.urge));
-  ls.set("syn_notif_weekly", String(prefs.weekly));
-  ls.set("syn_notif_milestones", String(prefs.milestones));
-  ls.set("syn_notif_silent", String(prefs.silentMode));
-  ls.set("syn_reminder_time", prefs.reminderTime);
-  ls.set("syn_timezone", prefs.timezone);
+function writeLocalNotifCache(prefs) {
+  ls.set(NOTIF_KEYS.dailyMaster, String(prefs.dailyMaster));
+  ls.set(NOTIF_KEYS.checkin, String(prefs.checkin));
+  ls.set(NOTIF_KEYS.journal, String(prefs.journal));
+  ls.set(NOTIF_KEYS.urge, String(prefs.urge));
+  ls.set(NOTIF_KEYS.weekly, String(prefs.weekly));
+  ls.set(NOTIF_KEYS.milestones, String(prefs.milestones));
+  ls.set(NOTIF_KEYS.silentMode, String(prefs.silentMode));
+  ls.set(NOTIF_KEYS.reminderTime, prefs.reminderTime);
+  ls.set(NOTIF_KEYS.timezone, prefs.timezone);
 }
 
 // Maps this app's local pref shape <-> the `notifications` map Cloud
@@ -852,14 +797,60 @@ export async function setNotificationPrefCloud(uid, key, value) {
   const current = readNotificationPrefs();
   const next = { ...current, [key]: value };
   writeLocalNotifCache(next);
-  if (!uid) return next;
+  if (!uid) return { prefs: next, synced: true }; // no account — local is the only source of truth
   try {
     const { db } = await import("../firebase");
     const { doc, setDoc } = await import("firebase/firestore");
     await setDoc(doc(db, "users", uid), { notifications: toCloudShape(next) }, { merge: true });
+    return { prefs: next, synced: true };
   } catch {
-    // Offline — local cache already updated, will reconcile on next
-    // successful read/write.
+    // Offline / write failed — local cache already updated (so the toggle
+    // itself doesn't visually revert), but the caller should show a
+    // "couldn't save" state and retry.
+    return { prefs: next, synced: false };
+  }
+}
+
+const SILENT_SNAPSHOT_KEY = "syn_notif_silent_snapshot";
+const SILENCEABLE_KEYS = ["checkin", "journal", "urge", "weekly", "milestones"];
+
+/**
+ * Turning Silent Mode ON snapshots the current per-type toggle states and
+ * forces them all off (so no reminder fires while silenced). Turning it
+ * OFF restores exactly the snapshot taken — never guesses or defaults
+ * toggles back on that were already off before silencing.
+ */
+export async function toggleSilentMode(uid, enabling) {
+  const current = readNotificationPrefs();
+  if (enabling) {
+    const snapshot = Object.fromEntries(SILENCEABLE_KEYS.map((k) => [k, current[k]]));
+    ls.set(SILENT_SNAPSHOT_KEY, JSON.stringify(snapshot));
+    const next = { ...current, silentMode: true, ...Object.fromEntries(SILENCEABLE_KEYS.map((k) => [k, false])) };
+    writeLocalNotifCache(next);
+    if (uid) {
+      try {
+        const { db } = await import("../firebase");
+        const { doc, setDoc } = await import("firebase/firestore");
+        await setDoc(doc(db, "users", uid), { notifications: toCloudShape(next) }, { merge: true });
+      } catch {}
+    }
+    return next;
+  }
+  // Disabling — restore exactly what was snapshotted, or leave as-is if
+  // there's no snapshot (e.g. silent mode was toggled on another device).
+  let snapshot = {};
+  try {
+    snapshot = JSON.parse(ls.get(SILENT_SNAPSHOT_KEY, "{}"));
+  } catch {}
+  const next = { ...current, silentMode: false, ...snapshot };
+  writeLocalNotifCache(next);
+  ls.remove(SILENT_SNAPSHOT_KEY);
+  if (uid) {
+    try {
+      const { db } = await import("../firebase");
+      const { doc, setDoc } = await import("firebase/firestore");
+      await setDoc(doc(db, "users", uid), { notifications: toCloudShape(next) }, { merge: true });
+    } catch {}
   }
   return next;
 }
@@ -956,8 +947,8 @@ export function exportAllSynapseData() {
     "syn_user", "syn_confess", "syn_archetype", "syn_streak", "syn_last", "syn_history",
     "syn_urge_log", "syn_trigger_log", "syn_plan", "syn_plan_history", "syn_milestones",
     "syn_chat_history", "syn_journal", "syn_mode", "syn_theme", "syn_ui_mode",
-    "syn_notif_dailyMaster", "syn_notif_checkin", "syn_notif_journal", "syn_notif_urge", "syn_notif_weekly",
-    "syn_notif_milestones", "syn_notif_silent", "syn_reminderTime", "syn_timezone",
+    NOTIF_KEYS.dailyMaster, NOTIF_KEYS.checkin, NOTIF_KEYS.journal, NOTIF_KEYS.urge, NOTIF_KEYS.weekly,
+    NOTIF_KEYS.reminderTime, NOTIF_KEYS.timezone,
   ];
   const dump = {};
   keys.forEach((k) => {
@@ -975,7 +966,7 @@ export function exportAllSynapseData() {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = `synapse-data-export-${new Date().toISOString().slice(0, 10)}.json`;
+  a.download = `Synapse-Recovery-Data-${new Date().toISOString().slice(0, 10)}.json`;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
@@ -1102,14 +1093,12 @@ export function computeAchievements({ history, streak, longest, urgeLog, consist
   ];
 }
 
-/* ─────────────────────────────────────────────────────────────────────────
-   HOME SCREEN — snapshot for Focus Mode
-   ─────────────────────────────────────────────────────────────────────────
-   Reads every piece of state Focus Mode's Home screen needs, straight from
-   the same localStorage keys App.jsx maintains. No new fields are invented;
-   anything not tracked by the app today (e.g. "focus time") is simply not
-   returned here.
-───────────────────────────────────────────────────────────────────────── */
+/**
+ * Reads every piece of state Focus Mode's Home screen needs, straight from
+ * the same localStorage keys App.jsx maintains. No new fields are invented;
+ * anything not tracked by the app today (e.g. "focus time") is simply not
+ * returned here.
+ */
 export function readSynapseSnapshot() {
   const streak = parseInt(ls.get("syn_streak", "0"), 10) || 0;
   const lastCheckin = ls.get("syn_last", null);
@@ -1162,130 +1151,4 @@ export function readSynapseSnapshot() {
       activeMissions: addictions.length,
     },
   };
-}
-
-// Firestore settings update helper
-export async function updateUserSettings(uid, patch) {
-  if (!uid) return;
-  try {
-    const { db } = await import("../firebase");
-    const { doc, updateDoc } = await import("firebase/firestore");
-    await updateDoc(doc(db, "users", uid), patch);
-  } catch (error) {
-    console.error("Failed to update user settings:", error);
-    throw error;
-  }
-}
-
-// Tone
-export function setToneInSettings(uid, toneId) {
-  if (!uid) return;
-  return updateUserSettings(uid, { "settings.tone": toneId });
-}
-
-// UI Mode
-export function setUiModeInSettings(uid, mode) {
-  if (!uid) return;
-  return updateUserSettings(uid, { "settings.uiMode": mode });
-}
-
-// Notification preference (single key)
-export function setNotificationPrefInSettings(uid, key, value) {
-  if (!uid) return;
-  return updateUserSettings(uid, { [`settings.notifications.${key}`]: value });
-}
-
-// Export all Synapse data, merging Firestore settings with localStorage
-export async function exportAllSynapseDataWithSync(uid) {
-  const keys = [
-    "syn_user", "syn_confess", "syn_archetype", "syn_streak", "syn_last", "syn_history",
-    "syn_urge_log", "syn_trigger_log", "syn_plan", "syn_plan_history", "syn_milestones",
-    "syn_chat_history", "syn_journal", "syn_mode", "syn_theme", "syn_ui_mode",
-    "syn_notif_daily_master", "syn_notif_checkin", "syn_notif_journal", "syn_notif_urge",
-    "syn_notif_weekly", "syn_notif_milestones", "syn_notif_silent",
-    "syn_reminder_time", "syn_timezone",
-  ];
-  const dump = {};
-  keys.forEach((k) => {
-    const raw = ls.get(k, null);
-    if (raw === null) return;
-    try {
-      dump[k] = JSON.parse(raw);
-    } catch {
-      dump[k] = raw;
-    }
-  });
-
-  // If we have a user, fetch the latest settings from Firestore and merge
-  if (uid && db) {
-    try {
-      const { doc, getDoc } = await import("firebase/firestore");
-      const docSnap = await getDoc(doc(db, "users", uid));
-      if (docSnap.exists()) {
-        const data = docSnap.data();
-        const settings = data?.settings || {};
-        // Override localStorage settings with Firestore values
-        if (settings.tone) {
-          dump.syn_mode = settings.tone;
-          ls.set("syn_mode", settings.tone);
-        }
-        if (settings.uiMode) {
-          dump.syn_ui_mode = settings.uiMode;
-          ls.set("syn_ui_mode", settings.uiMode);
-        }
-        if (settings.notifications) {
-          Object.entries(settings.notifications).forEach(([key, value]) => {
-            const lsKey = NOTIF_KEYS[key];
-            if (lsKey) {
-              dump[lsKey] = String(value);
-              ls.set(lsKey, String(value));
-            }
-          });
-        }
-      }
-    } catch (error) {
-      console.error("Failed to fetch settings for export:", error);
-      // Continue with localStorage only
-    }
-  }
-
-  dump._exportedAt = new Date().toISOString();
-
-  const blob = new Blob([JSON.stringify(dump, null, 2)], { type: "application/json" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `synapse-data-export-${new Date().toISOString().slice(0, 10)}.json`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-}
-
-// Delete recovery data from localStorage and Firestore
-export async function deleteRecoveryData(uid) {
-  // Clear localStorage recovery keys
-  resetRecoveryProgress();
-
-  if (!uid || !db) {
-    return;
-  }
-
-  try {
-    const { doc, updateDoc } = await import("firebase/firestore");
-    const userRef = doc(db, "users", uid);
-    await updateDoc(userRef, {
-      syn_streak: deleteField(),
-      syn_last: deleteField(),
-      syn_history: deleteField(),
-      syn_urge_log: deleteField(),
-      syn_trigger_log: deleteField(),
-      syn_plan: deleteField(),
-      syn_plan_history: deleteField(),
-      syn_milestones: deleteField(),
-    });
-  } catch (error) {
-    console.error("Failed to delete recovery data from Firestore:", error);
-    throw error;
-  }
 }

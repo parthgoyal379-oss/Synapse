@@ -118,42 +118,17 @@ export default function FocusModeCheckIn({
 
   const submit = async () => {
     if (!canSubmit) return;
-    console.log("CHECKIN_SUBMITTED");
     setLoading(true);
     const report = buildReport();
-    console.log("GENERATE_COACH_STARTED");
     const computedStatus = computeVerdict(addictions, adStatus);
     logTriggerData();
-    try {
-      const result = await Promise.race([
-        onCheckin(report, computedStatus),
-        new Promise((_, reject) => setTimeout(() => reject(new Error('AI request timeout')), 15000))
-      ]);
-      console.log("RESPONSE_RECEIVED", result);
-      setLoading(false);
-      console.log("LOADING_FALSE");
-      setJustSucceeded(true);
-      setTimeout(() => {
-        let reply = result.reply;
-        if (!reply || typeof reply !== 'string' || !reply.trim()) {
-          console.log("AI returned empty reply, using fallback");
-          reply = "I'm here with you. Your check-in has been saved successfully. AI coaching is temporarily unavailable.";
-        }
-        setReply(reply);
-        setStatus(result.status);
-        console.log("STATE_UPDATED");
-      }, 700);
-    } catch (err) {
-      console.error("AI_GENERATION_FAILED", err);
-      setLoading(false);
-      console.log("LOADING_FALSE");
-      setJustSucceeded(true);
-      setTimeout(() => {
-        setReply("I'm here with you. Your check-in has been saved successfully. AI coaching is temporarily unavailable.");
-        setStatus("MID");
-        console.log("STATE_UPDATED");
-      }, 700);
-    }
+    const result = await onCheckin(report, computedStatus);
+    setLoading(false);
+    setJustSucceeded(true);
+    setTimeout(() => {
+      setReply(result.reply);
+      setStatus(result.status);
+    }, 700); // let the success glow read before the AI section mounts
   };
 
   const sendChat = async () => {

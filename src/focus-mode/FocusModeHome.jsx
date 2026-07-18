@@ -3,26 +3,7 @@ import { motion, useReducedMotion } from "framer-motion";
 import { Heart, ClipboardCheck, Target, ArrowRight, Sparkles, Headphones, Flag, TrendingUp, Smile, Meh, Frown } from "lucide-react";
 import { fm } from "./theme";
 import { readSynapseSnapshot } from "./synapseData";
-
-import {
-  FocusModeShell,
-  Sidebar,
-  TopBar,
-  Card,
-  Eyebrow,
-  Button,
-  VerdictBadge,
-  StatTile,
-  TaskRow,
-  WeeklyTrendChart,
-  RecoveryPhaseCard,
-  RecoveryTimeline,
-  NeuralOrb,
-  AmbientBackground,
-  EASE,
-  GLASS_CARD,
-  CountUp
-} from "./components";
+import { FocusModeShell, Sidebar, TopBar, Card, Eyebrow, Button, VerdictBadge, StatTile, TaskRow, WeeklyTrendChart, RecoveryPhaseCard, RecoveryTimeline, NeuralOrb, AmbientBackground, EASE, GLASS_CARD, CountUp } from "./components";
 
 const MILESTONES = [
   { label: "Awakening", days: 3 },
@@ -51,10 +32,11 @@ const MOOD_OPTIONS = [
  *   onOpenProfile()       — opens the existing ProfileSheet.
  * Reads all data live from the same localStorage keys App.jsx writes.
  * Animation-only pass on top of the existing visual design — no data,
-// hooks (besides local UI state), routing, or shared-component *behavior* changed. RecoveryPhaseCard/ProgressBar/NeuralOrb gained small opt-in
-// props (animateOnMount / floatEnabled) that default to their previous
-// behavior, so every other screen using them is unaffected.
-*/
+ * hooks (besides local UI state), routing, or shared-component *behavior*
+ * changed. RecoveryPhaseCard/ProgressBar/NeuralOrb gained small opt-in
+ * props (animateOnMount / floatEnabled) that default to their previous
+ * behavior, so every other screen using them is unaffected.
+ */
 export default function FocusModeHome({ onNavigate, onOpenProfile }) {
   const data = useMemo(() => readSynapseSnapshot(), []);
   const {
@@ -150,21 +132,6 @@ export default function FocusModeHome({ onNavigate, onOpenProfile }) {
   // Cards lift on hover — same 200ms transform-only interaction everywhere.
   const hoverLift = { whileHover: { y: -4, transition: { duration: 0.2, ease: EASE } } };
 
-  // Stagger variants for card groups
-  const staggerContainer = {
-    hidden: {},
-    visible: {
-      transition: {
-        staggerChildren: 0.08,
-        delayChildren: 0.2,
-      },
-    },
-  };
-  const staggerItem = {
-    hidden: { opacity: 0, y: 10 },
-    visible: { opacity: 1, y: 0, transition: { duration: 0.3, ease: EASE } },
-  };
-
   return (
     <FocusModeShell>
       <motion.div initial="hidden" animate="visible" variants={fadeIn} style={{ position: "fixed", inset: 0, zIndex: 0 }}>
@@ -237,29 +204,21 @@ export default function FocusModeHome({ onNavigate, onOpenProfile }) {
                     <EmptyState text="No missions set up yet." cta="Set Up Your Missions" onClick={() => onNavigate?.("confess")} />
                   ) : (
                     <div>
-                      <motion.div
-                        initial={playIntro ? { opacity: 0, y: 8 } : false}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.3, ease: EASE, delay: 0 }}
-                        variants={staggerContainer}
-                      >
-                        {addictions.map((a, i) => (
-                          <motion.div
-                            key={a.id}
-                            initial={playIntro ? { opacity: 0, y: 8 } : false}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ duration: 0.3, ease: EASE, delay: playIntro ? 0.7 + i * 0.06 : 0 }}
-                            variants={staggerItem}
-                          >
-                            <TaskRow
-                              label={`${a.emoji || "•"} ${a.label}`}
-                              meta={checkedInToday ? statusLabel(todayEntry?.status) : "Pending"}
-                              done={checkedInToday}
-                              onToggle={() => onNavigate?.("checkin")}
-                            />
-                          </motion.div>
-                        ))}
-                      </motion.div>
+                      {addictions.map((a, i) => (
+                        <motion.div
+                          key={a.id}
+                          initial={playIntro ? { opacity: 0, y: 8 } : false}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ duration: 0.3, ease: EASE, delay: playIntro ? 0.7 + i * 0.06 : 0 }}
+                        >
+                          <TaskRow
+                            label={`${a.emoji || "•"} ${a.label}`}
+                            meta={checkedInToday ? statusLabel(todayEntry?.status) : "Pending"}
+                            done={checkedInToday}
+                            onToggle={() => onNavigate?.("checkin")}
+                          />
+                        </motion.div>
+                      ))}
                     </div>
                   )}
 
@@ -305,69 +264,64 @@ export default function FocusModeHome({ onNavigate, onOpenProfile }) {
                   </div>
                 )}
               </Card>
-              </motion.div>
+            </motion.div>
 
-              <motion.div initial="hidden" animate="visible" variants={statsCard} {...hoverLift}>
-                <Card padding={22} style={{ ...GLASS_CARD, display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 14 }}>
-                  <motion.div variants={staggerContainer}>
-                    <motion.div variants={staggerItem}>
-                      <StatTile icon={<Heart size={14} strokeWidth={2.2} color={fm.color.success} />} label="Urges Managed" value={stats.urgesManaged} tint={fm.color.success} tintSoft={fm.color.successSoft} />
-                    </motion.div>
-                    <motion.div variants={staggerItem}>
-                      <StatTile icon={<ClipboardCheck size={14} strokeWidth={2.2} color={fm.color.info} />} label="Check-Ins" value={stats.checkinsCount} tint={fm.color.info} tintSoft={fm.color.infoSoft} />
-                    </motion.div>
-                    <motion.div variants={staggerItem}>
-                      <StatTile icon={<Target size={14} strokeWidth={2.2} color={fm.color.accent} />} label="Active Missions" value={stats.activeMissions} tint={fm.color.accent} tintSoft={fm.color.accentSoft} />
-                    </motion.div>
-                  </motion.div>
-                </Card>
-              </motion.div>
+            <motion.div initial="hidden" animate="visible" variants={statsCard} {...hoverLift}>
+              <Card padding={22} style={{ ...GLASS_CARD, display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 14 }}>
+                <motion.div variants={statItem}>
+                  <StatTile icon={<Heart size={14} strokeWidth={2.2} color={fm.color.success} />} label="Urges Managed" value={stats.urgesManaged} tint={fm.color.success} tintSoft={fm.color.successSoft} />
+                </motion.div>
+                <motion.div variants={statItem}>
+                  <StatTile icon={<ClipboardCheck size={14} strokeWidth={2.2} color={fm.color.info} />} label="Check-Ins" value={stats.checkinsCount} tint={fm.color.info} tintSoft={fm.color.infoSoft} />
+                </motion.div>
+                <motion.div variants={statItem}>
+                  <StatTile icon={<Target size={14} strokeWidth={2.2} color={fm.color.accent} />} label="Active Missions" value={stats.activeMissions} tint={fm.color.accent} tintSoft={fm.color.accentSoft} />
+                </motion.div>
+              </Card>
+            </motion.div>
 
-              {/* Check-In preview — real verdict if already logged today,
-                  otherwise a shortcut into the real Check-In screen. */}
-              <motion.div initial="hidden" animate="visible" variants={checkinCard} {...hoverLift} style={{ flex: 1 }}>
-                <Card padding={24} style={{ ...GLASS_CARD, height: "100%" }}>
-                  <Eyebrow style={{ marginBottom: 4 }}>Check-In</Eyebrow>
-                  <div style={{ fontFamily: fm.font.display, fontSize: 17, fontWeight: 600, color: fm.color.textPrimary, marginBottom: 4 }}>How was your day?</div>
-                  <div style={{ fontSize: 11, color: fm.color.textTertiary, marginBottom: 16, lineHeight: 1.5 }}>Your honesty builds your transformation.</div>
+            {/* Check-In preview — real verdict if already logged today,
+                otherwise a shortcut into the real Check-In screen. */}
+            <motion.div initial="hidden" animate="visible" variants={checkinCard} {...hoverLift} style={{ flex: 1 }}>
+              <Card padding={24} style={{ ...GLASS_CARD, height: "100%" }}>
+                <Eyebrow style={{ marginBottom: 4 }}>Check-In</Eyebrow>
+                <div style={{ fontFamily: fm.font.display, fontSize: 17, fontWeight: 600, color: fm.color.textPrimary, marginBottom: 4 }}>How was your day?</div>
+                <div style={{ fontSize: 11, color: fm.color.textTertiary, marginBottom: 16, lineHeight: 1.5 }}>Your honesty builds your transformation.</div>
 
-                  {checkedInToday && todayEntry ? (
-                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                      <VerdictBadge verdict={(todayEntry.status || "mid").toUpperCase()} />
-                      <span style={{ fontSize: 11, color: fm.color.textTertiary }}>Logged for today.</span>
+                {checkedInToday && todayEntry ? (
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <VerdictBadge verdict={(todayEntry.status || "mid").toUpperCase()} />
+                    <span style={{ fontSize: 11, color: fm.color.textTertiary }}>Logged for today.</span>
+                  </div>
+                ) : (
+                  <>
+                    <motion.div variants={moodStagger} initial="hidden" animate="visible" style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 8 }}>
+                      {MOOD_OPTIONS.map((m) => {
+                        const Icon = m.icon;
+                        const tintColor = fm.color[m.tint];
+                        const tintSoft = fm.color[`${m.tint}Soft`];
+                        return (
+                          <motion.button
+                            key={m.id}
+                            variants={moodItem}
+                            whileHover={{ y: -4, scale: 1.02, transition: { duration: 0.2, ease: EASE } }}
+                            onClick={() => onNavigate?.("checkin")}
+                            style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, padding: "14px 8px", borderRadius: fm.radius.md, border: `1px solid ${tintColor}30`, background: tintSoft }}
+                          >
+                            <Icon size={18} strokeWidth={2} color={tintColor} />
+                            <span style={{ fontSize: 10.5, fontWeight: 700, color: tintColor }}>{m.label}</span>
+                          </motion.button>
+                        );
+                      })}
+                    </motion.div>
+                    <div style={{ fontSize: 10, color: fm.color.textTertiary, textAlign: "center", marginTop: 14, lineHeight: 1.5 }}>
+                      Every check-in is a step towards a stronger you.
                     </div>
-                  ) : (
-                    <>
-                      <motion.div variants={staggerContainer}>
-                        {MOOD_OPTIONS.map((m) => {
-                          const Icon = m.icon;
-                          const tintColor = fm.color[m.tint];
-                          const tintSoft = fm.color[`${m.tint}Soft`];
-                          return (
-                            <motion.button
-                              key={m.id}
-                              initial={playIntro ? { opacity: 0, y: 8 } : false}
-                              animate={{ opacity: 1, y: 0 }}
-                              transition={{ duration: 0.3, ease: EASE, delay: playIntro ? 0.7 + MOOD_OPTIONS.indexOf(m) * 0.06 : 0 }}
-                              variants={staggerItem}
-                              whileHover={{ y: -4, scale: 1.02, transition: { duration: 0.2, ease: EASE } }}
-                              onClick={() => onNavigate?.("checkin")}
-                              style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, padding: "14px 8px", borderRadius: fm.radius.md, border: `1px solid ${tintColor}30`, background: tintSoft }}
-                            >
-                              <Icon size={18} strokeWidth={2} color={tintColor} />
-                              <span style={{ fontSize: 10.5, fontWeight: 700, color: tintColor }}>{m.label}</span>
-                            </motion.button>
-                          );
-                        })}
-                      </motion.div>
-                      <div style={{ fontSize: 10, color: fm.color.textTertiary, textAlign: "center", marginTop: 14, lineHeight: 1.5 }}>
-                        Every check-in is a step towards a stronger you.
-                      </div>
-                    </>
-                  )}
-                </Card>
-              </motion.div>
-            </div>
+                  </>
+                )}
+              </Card>
+            </motion.div>
+          </div>
         </div>
 
         {/* ── Next Milestone strip ──────────────────────────────── */}
