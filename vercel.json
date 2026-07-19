@@ -1,4 +1,13 @@
 {
+  "redirects": [
+    { "source": "/reels", "destination": "/quit/reels", "permanent": true },
+    { "source": "/porn", "destination": "/quit/porn", "permanent": true },
+    { "source": "/social-media", "destination": "/quit/social-media", "permanent": true },
+    { "source": "/gaming", "destination": "/quit/gaming", "permanent": true },
+    { "source": "/gambling", "destination": "/quit/gambling", "permanent": true },
+    { "source": "/junk-food", "destination": "/quit/junk-food", "permanent": true },
+    { "source": "/doomscrolling", "destination": "/quit/doomscrolling", "permanent": true }
+  ],
   "rewrites": [
     {
       "source": "/__/auth/:path*",
