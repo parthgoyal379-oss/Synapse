@@ -119,7 +119,7 @@ export default function FocusModeJournal({ uid, onNavigate, onOpenProfile }) {
       <main style={{ flex: 1, minWidth: 0, paddingBottom: 60, position: "relative", zIndex: 1 }}>
         <TopBar userInitial="S" onOpenProfile={onOpenProfile} />
 
-        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, ease: EASE }} style={{ padding: "24px 44px 0" }}>
+        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, ease: EASE }} style={{ padding: "clamp(14px,4vw,24px) clamp(14px,4vw,44px) 0" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <BookHeart size={22} color={fm.color.accent} strokeWidth={1.8} />
             <div style={{ fontFamily: fm.font.display, fontSize: 30, fontWeight: 600, color: fm.color.textPrimary }}>Journal</div>
@@ -131,8 +131,8 @@ export default function FocusModeJournal({ uid, onNavigate, onOpenProfile }) {
           </div>
         </motion.div>
 
-        <div style={{ padding: "20px 44px 0", display: "grid", gridTemplateColumns: "1.5fr 0.8fr 0.7fr", gap: 20, alignItems: "start" }}>
-          <motion.div {...cv(0.05)}>
+        <div style={{ padding: "clamp(14px,4vw,20px) clamp(14px,4vw,44px) 0", display: "flex", flexWrap: "wrap", gap: 20, alignItems: "start" }}>
+          <motion.div {...cv(0.05)} style={{ flex: "1.5 1 300px", minWidth: 0, width: "100%" }}>
             <Card padding={28} style={GLASS_CARD}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
                 <Eyebrow>Today's Reflection</Eyebrow>
@@ -152,11 +152,11 @@ export default function FocusModeJournal({ uid, onNavigate, onOpenProfile }) {
             </Card>
           </motion.div>
 
-          <motion.div {...cv(0.11)}>
+          <motion.div {...cv(0.11)} style={{ flex: "0.8 1 220px", minWidth: 0 }}>
             <PromptCard prompt={PROMPTS[promptIdx]} dotCount={PROMPTS.length} dotIndex={promptIdx} onRefresh={() => setPromptIdx((i) => (i + 1) % PROMPTS.length)} />
           </motion.div>
 
-          <motion.div {...cv(0.17)} {...HOVER_LIFT}>
+          <motion.div {...cv(0.17)} {...HOVER_LIFT} style={{ flex: "0.7 1 200px", minWidth: 0 }}>
             <Card padding={22} style={{ ...GLASS_CARD, textAlign: "center" }}>
               <Eyebrow style={{ marginBottom: 12 }}>Writing Streak</Eyebrow>
               <div style={{ width: 84, height: 84, borderRadius: "50%", border: `6px solid ${fm.color.accentSoft}`, borderTopColor: fm.color.accent, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", margin: "0 auto 12px" }}>
@@ -168,8 +168,8 @@ export default function FocusModeJournal({ uid, onNavigate, onOpenProfile }) {
           </motion.div>
         </div>
 
-        <motion.div {...cv(0.2)} style={{ padding: "20px 44px 0", display: "flex", gap: 14, alignItems: "center" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10, flex: 1, maxWidth: 320, background: fm.color.surface, borderRadius: fm.radius.pill, padding: "9px 16px", border: `1px solid ${searchFocused ? fm.color.accentSoftBorder : fm.color.border}`, boxShadow: searchFocused ? `0 0 0 3px ${fm.color.accentSoft}` : fm.shadow.card, transition: "box-shadow .25s ease, border-color .25s ease" }}>
+        <motion.div {...cv(0.2)} style={{ padding: "clamp(14px,4vw,20px) clamp(14px,4vw,44px) 0", display: "flex", flexWrap: "wrap", gap: 14, alignItems: "center" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, flex: "1 1 220px", maxWidth: 320, background: fm.color.surface, borderRadius: fm.radius.pill, padding: "9px 16px", border: `1px solid ${searchFocused ? fm.color.accentSoftBorder : fm.color.border}`, boxShadow: searchFocused ? `0 0 0 3px ${fm.color.accentSoft}` : fm.shadow.card, transition: "box-shadow .25s ease, border-color .25s ease" }}>
             <motion.span animate={{ x: searchFocused ? 2 : 0 }}><Search size={14} color={fm.color.textTertiary} /></motion.span>
             <input value={search} onChange={(e) => setSearch(e.target.value)} onFocus={() => setSearchFocused(true)} onBlur={() => setSearchFocused(false)} placeholder="Search entries…" style={{ flex: 1, border: "none", outline: "none", background: "transparent", fontSize: 12.5, color: fm.color.textPrimary }} />
           </div>
@@ -183,14 +183,14 @@ export default function FocusModeJournal({ uid, onNavigate, onOpenProfile }) {
           </div>
         </motion.div>
 
-        <motion.div {...cv(0.24)} style={{ padding: "20px 44px 0" }} {...HOVER_LIFT}>
+        <motion.div {...cv(0.24)} style={{ padding: "clamp(14px,4vw,20px) clamp(14px,4vw,44px) 0" }} {...HOVER_LIFT}>
           <Card padding={26} style={GLASS_CARD}>
             <Eyebrow>Mood Timeline (Last 14 Days)</Eyebrow>
             <MoodTimeline days={timeline} moodColors={MOOD_COLOR_MAP} onHoverDay={() => {}} />
           </Card>
         </motion.div>
 
-        <div style={{ padding: "20px 44px 0", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, alignItems: "start" }}>
+        <div style={{ padding: "clamp(14px,4vw,20px) clamp(14px,4vw,44px) 0", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 20, alignItems: "start" }}>
           <motion.div {...cv(0.28)} {...HOVER_LIFT}>
             <Card padding={26} style={GLASS_CARD}>
               <Eyebrow style={{ marginBottom: 14 }}>Reflection Calendar</Eyebrow>
@@ -231,12 +231,12 @@ export default function FocusModeJournal({ uid, onNavigate, onOpenProfile }) {
           </div>
         </div>
 
-        <div style={{ padding: "20px 44px 0", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
+        <div style={{ padding: "clamp(14px,4vw,20px) clamp(14px,4vw,44px) 0", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 20 }}>
           <motion.div {...cv(0.4)} {...HOVER_LIFT}>
             <Card padding={22} style={GLASS_CARD}>
               <Eyebrow style={{ marginBottom: 14 }}>Emotion Distribution</Eyebrow>
               {moodDist.length > 0 ? (
-                <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
+                <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 20 }}>
                   <DonutChart size={100} thickness={14} centerValue={entries.length} centerLabel="Entries" segments={moodDist.map((m) => ({ value: m.count, color: MOOD_COLOR_MAP[m.mood] || fm.color.textTertiary }))} />
                   <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                     {moodDist.map((m) => {
@@ -263,7 +263,7 @@ export default function FocusModeJournal({ uid, onNavigate, onOpenProfile }) {
           </motion.div>
         </div>
 
-        <motion.div {...cv(0.48)} style={{ padding: "20px 44px 0" }}>
+        <motion.div {...cv(0.48)} style={{ padding: "clamp(14px,4vw,20px) clamp(14px,4vw,44px) 0" }}>
           <Card padding={26} style={GLASS_CARD}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
               <Eyebrow>{filter === "All" ? "Recent Entries" : `${filter} Entries`}</Eyebrow>
@@ -303,7 +303,7 @@ export default function FocusModeJournal({ uid, onNavigate, onOpenProfile }) {
           </Card>
         </motion.div>
 
-        <motion.div {...cv(0.52)} style={{ padding: "20px 44px 0" }}>
+        <motion.div {...cv(0.52)} style={{ padding: "clamp(14px,4vw,20px) clamp(14px,4vw,44px) 0" }}>
           <motion.div whileHover={{ y: -4 }} transition={{ duration: 0.2, ease: EASE }}>
             <Card padding={26} style={{ ...GLASS_CARD, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
               <div>

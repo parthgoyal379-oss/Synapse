@@ -41,12 +41,13 @@ export default function FocusModeCheckIn({
   const [adTimeOfDay, setAdTimeOfDay] = useState(() => Object.fromEntries(addictions.map((a) => [a.id, []])));
   const [mood, setMood] = useState(null);
   const [notes, setNotes] = useState("");
-const [reply, setReply] = useState(() => {
-  const today = new Date().toDateString();
-  if (lastCheckin !== today) return "";
-  const e = history.find((h) => h.date === today);
-  return e?.reply || (e ? "Logged. (Coach response wasn't saved for this check-in.)" : "");
-});
+
+  const [reply, setReply] = useState(() => {
+    const today = new Date().toDateString();
+    if (lastCheckin !== today) return "";
+    const e = history.find((h) => h.date === today);
+    return e?.reply || (e ? "Logged. (Coach response wasn't saved for this check-in.)" : "");
+  });
   const [status, setStatus] = useState(() => {
     const today = new Date().toDateString();
     if (lastCheckin !== today) return null;
@@ -163,14 +164,14 @@ const [reply, setReply] = useState(() => {
       <main style={{ flex: 1, minWidth: 0, paddingBottom: 60, position: "relative", zIndex: 1 }}>
         <TopBar userInitial="S" onOpenProfile={onOpenProfile} />
 
-        <div style={{ padding: "26px 48px 0" }}>
+        <div style={{ padding: "clamp(14px,4vw,26px) clamp(14px,4vw,48px) 0" }}>
           <div style={{ fontFamily: fm.font.display, fontSize: 30, fontWeight: 600, color: fm.color.textPrimary, marginBottom: 6 }}>Check-In</div>
           <div style={{ fontFamily: fm.font.display, fontSize: 15, color: fm.color.textSecondary, fontStyle: "italic", marginBottom: 2 }}>How was your day?</div>
           <div style={{ fontSize: 12, color: fm.color.textTertiary }}>Your honesty builds your transformation.</div>
         </div>
 
-        <div style={{ padding: "22px 48px 0", display: "grid", gridTemplateColumns: "1.4fr 0.6fr", gap: 22, alignItems: "start" }}>
-          <div style={{ display: "flex", flexDirection: "column", gap: 22 }}>
+        <div style={{ padding: "clamp(14px,4vw,22px) clamp(14px,4vw,48px) 0", display: "flex", flexWrap: "wrap", gap: 22, alignItems: "start" }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 22, flex: "1.4 1 320px", minWidth: 0 }}>
             {!done ? (
               <>
                 <motion.div {...cardVariant(0)}>
@@ -334,7 +335,7 @@ const [reply, setReply] = useState(() => {
           </div>
 
           {/* Right rail */}
-          <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 20, flex: "1 1 260px", minWidth: 0 }}>
             <motion.div {...cardVariant(0.02)} {...HOVER_LIFT}>
               <Card padding={22} style={GLASS_CARD}>
                 <Eyebrow style={{ marginBottom: 10 }}>Today's Progress</Eyebrow>

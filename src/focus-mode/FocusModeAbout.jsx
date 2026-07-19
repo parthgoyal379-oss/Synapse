@@ -71,7 +71,7 @@ const DIFF_ROWS = [
 
 // Section wrapper — single source of vertical rhythm for this page.
 function Section({ children, first = false }) {
-  return <div style={{ padding: `${first ? 24 : 56}px 40px 0` }}>{children}</div>;
+  return <div style={{ padding: `clamp(14px,4vw,${first ? 24 : 56}px) clamp(14px,4vw,40px) 0` }}>{children}</div>;
 }
 
 function SectionHeading({ eyebrow, title, style = {} }) {
@@ -96,9 +96,9 @@ export default function FocusModeAbout({ onNavigate, onOpenProfile, onBeginJourn
 
         {/* ── Hero ─────────────────────────────────────────────── */}
         <Section first>
-          <Card padding={48} hover className="fm-fade-up">
-            <div style={{ display: "grid", gridTemplateColumns: "1.1fr 1fr", gap: 32, alignItems: "center" }}>
-              <div>
+          <Card padding="clamp(20px,6vw,48px)" hover className="fm-fade-up">
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 32, alignItems: "center" }}>
+              <div style={{ flex: "1.1 1 280px", minWidth: 0 }}>
                 <Eyebrow style={{ marginBottom: 18 }}>✦ Our Mission</Eyebrow>
                 <div style={{ fontFamily: fm.font.display, fontSize: 40, fontWeight: 600, color: fm.color.textPrimary, lineHeight: 1.12, marginBottom: 20, letterSpacing: -0.5 }}>
                   Why <span style={{ color: fm.color.accent }}>SYNAPSE</span> exists.
@@ -113,7 +113,7 @@ export default function FocusModeAbout({ onNavigate, onOpenProfile, onBeginJourn
                   <ChipStat icon="🔒" label="Data never sold" />
                 </div>
               </div>
-              <div style={{ display: "flex", justifyContent: "center" }}>
+              <div style={{ display: "flex", justifyContent: "center", flex: "1 1 220px", minWidth: 0 }}>
                 <NeuronArt size={280} color={fm.color.accent} />
               </div>
             </div>
@@ -123,7 +123,7 @@ export default function FocusModeAbout({ onNavigate, onOpenProfile, onBeginJourn
         {/* ── The problem ────────────────────────────────────────── */}
         <Section>
           <SectionHeading eyebrow="The Problem" title="Habits are built quietly." />
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 20 }}>
             <div className="fm-fade-up" style={{ animationDelay: "0.05s" }}>
               <BulletCard title="Why It Exists" points={WHY_IT_EXISTS} />
             </div>
@@ -136,7 +136,7 @@ export default function FocusModeAbout({ onNavigate, onOpenProfile, onBeginJourn
         {/* ── Philosophy: Reset → Rewire → Reconquer ─────────────── */}
         <Section>
           <SectionHeading eyebrow="The SYNAPSE Philosophy" />
-          <Card padding={36} hover>
+          <Card padding="clamp(18px,5vw,36px)" hover>
             <JourneyStepper stops={PHILOSOPHY_STOPS} currentIndex={2} />
           </Card>
         </Section>
@@ -144,7 +144,7 @@ export default function FocusModeAbout({ onNavigate, onOpenProfile, onBeginJourn
         {/* ── Founders ──────────────────────────────────────────── */}
         <Section>
           <SectionHeading eyebrow="Meet the Founders" />
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 20 }}>
             {FOUNDERS.map((f, i) => (
               <div key={f.initials} className="fm-fade-up" style={{ animationDelay: `${i * 0.08}s` }}>
                 <FounderCard {...f} />
@@ -156,7 +156,7 @@ export default function FocusModeAbout({ onNavigate, onOpenProfile, onBeginJourn
         {/* ── Journey ──────────────────────────────────────────── */}
         <Section>
           <SectionHeading eyebrow="The Journey" title="Where we've been." />
-          <Card padding={36} hover>
+          <Card padding="clamp(18px,5vw,36px)" hover>
             <VerticalTimeline items={JOURNEY} color={fm.color.accent} />
           </Card>
         </Section>
@@ -164,7 +164,7 @@ export default function FocusModeAbout({ onNavigate, onOpenProfile, onBeginJourn
         {/* ── Core values ─────────────────────────────────────────── */}
         <Section>
           <SectionHeading eyebrow="Our Values" />
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 16 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 16 }}>
             {VALUES.map((v, i) => (
               <div key={v.title} className="fm-fade-up" style={{ animationDelay: `${i * 0.06}s` }}>
                 <IdentityCard icon={v.icon} title={v.title} caption={v.caption} />
@@ -176,7 +176,7 @@ export default function FocusModeAbout({ onNavigate, onOpenProfile, onBeginJourn
         {/* ── Your Synapse impact (real per-user data) ──────────── */}
         <Section>
           <SectionHeading eyebrow="Your SYNAPSE Impact" />
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(5,1fr)", gap: 14 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(110px, 1fr))", gap: 14 }}>
             <MetricCard icon="🔥" value={streak} label="Day Streak" tint={fm.color.accent} tintSoft={fm.color.accentSoft} />
             <MetricCard icon="🛡️" value={stats.urgesManaged} label="Urges Resisted" tint={fm.color.success} tintSoft={fm.color.successSoft} />
             <MetricCard icon="📖" value={journalEntries.length} label="Journal Entries" tint={fm.color.info} tintSoft={fm.color.infoSoft} />
@@ -187,7 +187,7 @@ export default function FocusModeAbout({ onNavigate, onOpenProfile, onBeginJourn
 
         {/* ── Privacy ─────────────────────────────────────────────── */}
         <Section>
-          <Card padding={30} hover style={{ display: "flex", alignItems: "center", gap: 20 }}>
+          <Card padding="clamp(18px,5vw,30px)" hover style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 20 }}>
             <span style={{ fontSize: 28, flexShrink: 0 }}>🔒</span>
             <div>
               <Eyebrow style={{ marginBottom: 8 }}>Your Privacy, Our Promise</Eyebrow>
@@ -206,7 +206,7 @@ export default function FocusModeAbout({ onNavigate, onOpenProfile, onBeginJourn
 
         {/* ── Bottom CTA ─────────────────────────────────────────── */}
         <Section>
-          <Card padding={56} hover style={{ textAlign: "center", background: fm.color.surfaceMuted }}>
+          <Card padding="clamp(24px,7vw,56px)" hover style={{ textAlign: "center", background: fm.color.surfaceMuted }}>
             <p style={{ fontSize: 14.5, color: fm.color.textSecondary, lineHeight: 1.75, maxWidth: 460, margin: "0 auto 22px" }}>
               Every habit begins with a choice. Every meaningful change begins with the next one.
             </p>

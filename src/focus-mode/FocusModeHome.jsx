@@ -147,18 +147,18 @@ export default function FocusModeHome({ onNavigate, onOpenProfile }) {
           <TopBar userInitial={firstName[0]?.toUpperCase() || "S"} onOpenProfile={onOpenProfile} />
         </motion.div>
 
-        <div style={{ padding: "26px 48px 0", display: "flex", gap: 24, alignItems: "flex-start" }}>
+        <div style={{ padding: "clamp(16px,4vw,26px) clamp(14px,4vw,48px) 0", display: "flex", flexWrap: "wrap", gap: 24, alignItems: "flex-start" }}>
           {/* ── LEFT COLUMN ────────────────────────────────────── */}
-          <div style={{ flex: "1.55 1 0%", display: "flex", flexDirection: "column", gap: 24, minWidth: 0 }}>
+          <div style={{ flex: "1.55 1 320px", display: "flex", flexDirection: "column", gap: 24, minWidth: 0 }}>
             {/* Hero */}
             <motion.div initial="hidden" animate="visible" variants={heroCard} {...hoverLift}>
               <Card padding={0} style={{ ...GLASS_CARD, overflow: "hidden" }}>
-                <div style={{ display: "grid", gridTemplateColumns: "1.05fr 1fr", alignItems: "center", minHeight: 320 }}>
-                  <motion.div variants={heroTextContainer} initial="hidden" animate="visible" style={{ padding: "40px 8px 40px 40px" }}>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", alignItems: "center", minHeight: 320 }}>
+                  <motion.div variants={heroTextContainer} initial="hidden" animate="visible" style={{ padding: "clamp(24px,6vw,40px) clamp(8px,3vw,8px) clamp(24px,6vw,40px) clamp(20px,6vw,40px)" }}>
                     <motion.div variants={heroTextItem} style={{ fontFamily: fm.font.display, fontSize: 15, color: fm.color.textSecondary, marginBottom: 4, letterSpacing: 0.2 }}>
                       {greeting},
                     </motion.div>
-                    <motion.div variants={heroTextItem} style={{ fontFamily: fm.font.display, fontSize: 48, fontWeight: 600, color: fm.color.textPrimary, lineHeight: 1.02, letterSpacing: -0.8, marginBottom: 20 }}>
+                    <motion.div variants={heroTextItem} style={{ fontFamily: fm.font.display, fontSize: "clamp(32px,7vw,48px)", fontWeight: 600, color: fm.color.textPrimary, lineHeight: 1.02, letterSpacing: -0.8, marginBottom: 20, wordBreak: "break-word" }}>
                       {firstName}
                     </motion.div>
                     <motion.p variants={heroTextItem} style={{ fontSize: 14, color: fm.color.textSecondary, maxWidth: 270, lineHeight: 1.75, marginBottom: 26 }}>
@@ -172,7 +172,7 @@ export default function FocusModeHome({ onNavigate, onOpenProfile }) {
                     </motion.div>
                   </motion.div>
                   <div style={{ position: "relative", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100%", padding: "18px 18px 22px" }}>
-                    <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%,-50%)", width: 320, height: 320, borderRadius: "50%", background: `radial-gradient(circle, ${pColor}30, transparent 70%)`, filter: "blur(6px)", pointerEvents: "none" }} />
+                    <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%,-50%)", width: "min(320px,80%)", height: "min(320px,80%)", borderRadius: "50%", background: `radial-gradient(circle, ${pColor}30, transparent 70%)`, filter: "blur(6px)", pointerEvents: "none" }} />
                     <motion.div variants={orbIn} initial="hidden" animate="visible">
                       <FloatingOrb size={236} color={pColor} disabled={prefersReducedMotion} />
                     </motion.div>
@@ -192,8 +192,8 @@ export default function FocusModeHome({ onNavigate, onOpenProfile }) {
             </motion.div>
 
             {/* Today's Focus + Recovery Phase */}
-            <div style={{ display: "flex", gap: 24 }}>
-              <motion.div initial="hidden" animate="visible" variants={todayFocus} {...hoverLift} style={{ flex: "1.15 1 0%" }}>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 24 }}>
+              <motion.div initial="hidden" animate="visible" variants={todayFocus} {...hoverLift} style={{ flex: "1.15 1 260px" }}>
                 <Card padding={30} style={GLASS_CARD}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 22 }}>
                     <Eyebrow>Today's Focus</Eyebrow>
@@ -238,14 +238,14 @@ export default function FocusModeHome({ onNavigate, onOpenProfile }) {
                 </Card>
               </motion.div>
 
-              <motion.div initial="hidden" animate="visible" variants={recoveryPhase} {...hoverLift} style={{ flex: "0.85 1 0%" }}>
+              <motion.div initial="hidden" animate="visible" variants={recoveryPhase} {...hoverLift} style={{ flex: "0.85 1 220px" }}>
                 <RecoveryPhaseCard level={level} nextLevel={nextLevel} streak={streak} xpPct={xpPct} daysToNext={daysToNext} color={pColor} animateOnMount={playIntro} />
               </motion.div>
             </div>
           </div>
 
           {/* ── RIGHT COLUMN — Streak / Stats / Check-in, stacked ── */}
-          <div style={{ flex: "1 1 0%", display: "flex", flexDirection: "column", gap: 22, minWidth: 0 }}>
+          <div style={{ flex: "1 1 280px", display: "flex", flexDirection: "column", gap: 22, minWidth: 0 }}>
             <motion.div initial="hidden" animate="visible" variants={streakCard} {...hoverLift}>
               <Card padding={24} style={GLASS_CARD}>
                 <Eyebrow style={{ marginBottom: 14 }}>Your Streak</Eyebrow>
@@ -267,7 +267,7 @@ export default function FocusModeHome({ onNavigate, onOpenProfile }) {
             </motion.div>
 
             <motion.div initial="hidden" animate="visible" variants={statsCard} {...hoverLift}>
-              <Card padding={22} style={{ ...GLASS_CARD, display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 14 }}>
+              <Card padding={22} style={{ ...GLASS_CARD, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(84px, 1fr))", gap: 14 }}>
                 <motion.div variants={statItem}>
                   <StatTile icon={<Heart size={14} strokeWidth={2.2} color={fm.color.success} />} label="Urges Managed" value={stats.urgesManaged} tint={fm.color.success} tintSoft={fm.color.successSoft} />
                 </motion.div>
@@ -325,7 +325,7 @@ export default function FocusModeHome({ onNavigate, onOpenProfile }) {
         </div>
 
         {/* ── Next Milestone strip ──────────────────────────────── */}
-        <motion.div initial="hidden" animate="visible" variants={bottomRow(playIntro ? 1.35 : 0)} {...hoverLift} style={{ padding: "24px 48px 0" }}>
+        <motion.div initial="hidden" animate="visible" variants={bottomRow(playIntro ? 1.35 : 0)} {...hoverLift} style={{ padding: "24px clamp(14px,4vw,48px) 0" }}>
           <Card padding={26} style={GLASS_CARD}>
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 18 }}>
               <Flag size={13} strokeWidth={2.4} color={fm.color.accent} />
@@ -341,7 +341,7 @@ export default function FocusModeHome({ onNavigate, onOpenProfile }) {
         </motion.div>
 
         {/* ── Insight / Weekly Progress / Recent check-in / Support ── */}
-        <div style={{ padding: "24px 48px 0", display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 20 }}>
+        <div style={{ padding: "24px clamp(14px,4vw,48px) 0", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 20 }}>
           <motion.div initial="hidden" animate="visible" variants={bottomRow(playIntro ? 1.45 : 0)} {...hoverLift}>
             <Card padding={24} style={GLASS_CARD}>
               <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>

@@ -62,13 +62,13 @@ export default function FocusModePlan({ savedPlan, onNavigate, onOpenProfile }) 
       <main style={{ flex: 1, minWidth: 0, paddingBottom: 60, position: "relative", zIndex: 1 }}>
         <TopBar userInitial="S" onOpenProfile={onOpenProfile} />
 
-        <div style={{ padding: "26px 48px 0" }}>
+        <div style={{ padding: "clamp(14px,4vw,26px) clamp(14px,4vw,48px) 0" }}>
           <div style={{ fontFamily: fm.font.display, fontSize: 30, fontWeight: 600, color: fm.color.textPrimary }}>My Plan</div>
           <div style={{ fontSize: 12.5, color: fm.color.textSecondary, marginTop: 4 }}>Your recovery battle plan. Follow it. Trust it. Win.</div>
         </div>
 
         {/* Quote banner — subtle one-time shimmer sweep, no constant motion */}
-        <motion.div {...cardVariant(0)} style={{ padding: "18px 48px 0" }}>
+        <motion.div {...cardVariant(0)} style={{ padding: "clamp(14px,4vw,18px) clamp(14px,4vw,48px) 0" }}>
           <Card padding={18} style={{ ...GLASS_CARD, display: "flex", alignItems: "center", gap: 12, position: "relative", overflow: "hidden" }}>
             <motion.div
               initial={{ x: "-120%" }}
@@ -82,8 +82,8 @@ export default function FocusModePlan({ savedPlan, onNavigate, onOpenProfile }) 
           </Card>
         </motion.div>
 
-        <div style={{ padding: "20px 48px 0", display: "grid", gridTemplateColumns: "1.4fr 0.6fr", gap: 20, alignItems: "start" }}>
-          <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+        <div style={{ padding: "clamp(14px,4vw,20px) clamp(14px,4vw,48px) 0", display: "flex", flexWrap: "wrap", gap: 20, alignItems: "start" }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 20, flex: "1.4 1 320px", minWidth: 0 }}>
             {/* Archetype — visual centerpiece */}
             <motion.div {...cardVariant(0.05)} {...HOVER_LIFT}>
               <Card padding={30} style={GLASS_CARD}>
@@ -107,7 +107,7 @@ export default function FocusModePlan({ savedPlan, onNavigate, onOpenProfile }) 
                 ) : (
                   <p style={{ fontSize: 12.5, color: fm.color.textTertiary, marginBottom: 20 }}>No archetype chosen yet.</p>
                 )}
-                <div style={{ display: "flex", gap: 32, paddingTop: 18, borderTop: `1px solid ${fm.color.border}` }}>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 32, paddingTop: 18, borderTop: `1px solid ${fm.color.border}` }}>
                   <div>
                     <div style={{ fontSize: 10, color: fm.color.textTertiary, marginBottom: 3 }}>Current Streak</div>
                     <div style={{ fontFamily: fm.font.display, fontSize: 20, fontWeight: 700, color: fm.color.textPrimary }}><CountUp to={streak} /> days</div>
@@ -203,7 +203,7 @@ export default function FocusModePlan({ savedPlan, onNavigate, onOpenProfile }) 
           </div>
 
           {/* Right rail */}
-          <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 20, flex: "1 1 260px", minWidth: 0 }}>
             <motion.div {...cardVariant(0.08)} {...HOVER_LIFT}>
               <RecoveryPhaseCard level={level} nextLevel={nextLevel} streak={streak} xpPct={xpPct} daysToNext={daysToNext} color={pColor} animateOnMount />
             </motion.div>

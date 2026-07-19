@@ -127,16 +127,16 @@ export default function FocusModeReport({ onNavigate, onOpenProfile }) {
         <TopBar userInitial="S" onOpenProfile={onOpenProfile} />
 
         {/* Header — centered */}
-        <Reveal style={{ padding: "24px 40px 0", textAlign: "center" }}>
+        <Reveal style={{ padding: "clamp(14px,4vw,24px) clamp(14px,4vw,40px) 0", textAlign: "center" }}>
           <div style={{ fontFamily: fm.font.display, fontSize: 32, fontWeight: 600, color: fm.color.textPrimary }}>Report</div>
           <div style={{ fontSize: 13, color: fm.color.textSecondary, marginTop: 4 }}>Your complete recovery intelligence.</div>
         </Reveal>
 
         {/* Hero — recovery score */}
-        <Reveal delay={80} style={{ padding: "24px 40px 0" }}>
+        <Reveal delay={80} style={{ padding: "clamp(14px,4vw,24px) clamp(14px,4vw,40px) 0" }}>
           <Card padding={40} style={{ boxShadow: SHADOW.primary }} className={hoverClass("primary")}>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 30, alignItems: "center" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 32 }}>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 30, alignItems: "center" }}>
+              <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 32, flex: "1 1 280px", minWidth: 0 }}>
                 <ScoreRing score={score} color={pColor} />
                 <div>
                   <Eyebrow style={{ marginBottom: 6 }}>Your Recovery Score</Eyebrow>
@@ -152,7 +152,7 @@ export default function FocusModeReport({ onNavigate, onOpenProfile }) {
                   )}
                 </div>
               </div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(110px, 1fr))", gap: 16, flex: "1 1 260px", minWidth: 0 }}>
                 <MiniScore label="Recovery Score" value={score} color={pColor} />
                 <MiniScore label="Consistency" value={consistencyPct} color={fm.color.info} />
                 <MiniScore label="Urge Resistance" value={urgePct} color={fm.color.success} />
@@ -163,10 +163,10 @@ export default function FocusModeReport({ onNavigate, onOpenProfile }) {
         </Reveal>
 
         {/* Monthly summary timeline */}
-        <Reveal delay={160} style={{ padding: "24px 40px 0" }}>
+        <Reveal delay={160} style={{ padding: "clamp(14px,4vw,24px) clamp(14px,4vw,40px) 0" }}>
           <Card padding={30} style={{ boxShadow: SHADOW.secondary }} className={hoverClass("secondary")}>
             <Eyebrow style={{ marginBottom: 20 }}>Monthly Summary</Eyebrow>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 16 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: 16 }}>
               {weeks.map((w, i) => (
                 <div key={w.label} style={{ padding: "16px 14px", borderRadius: fm.radius.md, background: fm.color.surfaceMuted, border: `1px solid ${fm.color.border}` }}>
                   <div style={{ fontSize: 10.5, fontWeight: 700, color: fm.color.textTertiary, marginBottom: 10 }}>{w.label.toUpperCase()}</div>
@@ -184,7 +184,7 @@ export default function FocusModeReport({ onNavigate, onOpenProfile }) {
         </Reveal>
 
         {/* Big chart */}
-        <Reveal delay={240} style={{ padding: "24px 40px 0" }}>
+        <Reveal delay={240} style={{ padding: "clamp(14px,4vw,24px) clamp(14px,4vw,40px) 0" }}>
           <Card padding={30} style={{ boxShadow: SHADOW.primary }} className={hoverClass("primary")}>
             <Eyebrow style={{ marginBottom: 4 }}>Recovery Progress</Eyebrow>
             <div style={{ fontSize: 11, color: fm.color.textTertiary, marginBottom: 18 }}>Your streak trajectory over time</div>
@@ -197,8 +197,8 @@ export default function FocusModeReport({ onNavigate, onOpenProfile }) {
         </Reveal>
 
         {/* Heatmap + Verdict donut */}
-        <div style={{ padding: "24px 40px 0", display: "grid", gridTemplateColumns: "1.2fr 1fr", gap: 20, alignItems: "start" }}>
-          <Reveal delay={300}>
+        <div style={{ padding: "clamp(14px,4vw,24px) clamp(14px,4vw,40px) 0", display: "flex", flexWrap: "wrap", gap: 20, alignItems: "start" }}>
+          <Reveal delay={300} style={{ flex: "1.2 1 300px", minWidth: 0 }}>
             <Card padding={26} style={{ boxShadow: SHADOW.secondary }} className={hoverClass("secondary")}>
               <Eyebrow style={{ marginBottom: 16 }}>Check-In Calendar</Eyebrow>
               <ReflectionCalendar
@@ -224,11 +224,11 @@ export default function FocusModeReport({ onNavigate, onOpenProfile }) {
             </Card>
           </Reveal>
 
-          <Reveal delay={360}>
+          <Reveal delay={360} style={{ flex: "1 1 260px", minWidth: 0 }}>
             <Card padding={26} style={{ boxShadow: SHADOW.secondary }} className={hoverClass("secondary")}>
               <Eyebrow style={{ marginBottom: 16 }}>Verdict Analytics</Eyebrow>
               {verdicts.total > 0 ? (
-                <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
+                <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 20 }}>
                   <DonutChart size={104} thickness={15} centerValue={verdicts.total} centerLabel="Total" drawIn segments={[{ value: verdicts.win, color: fm.color.success }, { value: verdicts.mid, color: fm.color.warning }, { value: verdicts.slip, color: fm.color.danger }]} />
                   <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                     <LegendRow color={fm.color.success} label="Win" value={verdicts.win} total={verdicts.total} />
@@ -244,11 +244,11 @@ export default function FocusModeReport({ onNavigate, onOpenProfile }) {
         </div>
 
         {/* Streak + Urge analytics */}
-        <div style={{ padding: "24px 40px 0", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
+        <div style={{ padding: "clamp(14px,4vw,24px) clamp(14px,4vw,40px) 0", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 20 }}>
           <Reveal delay={420}>
             <Card padding={26} style={{ boxShadow: SHADOW.secondary }} className={hoverClass("secondary")}>
               <Eyebrow style={{ marginBottom: 16 }}>Streak Analytics</Eyebrow>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 12 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(85px, 1fr))", gap: 12 }}>
                 <MetricCard icon={<Flame size={15} color={pColor} />} value={<CountUp to={streak} />} label="Current" tint={pColor} tintSoft={`${pColor}1a`} />
                 <MetricCard icon={<TrendingUp size={15} color={fm.color.accent} />} value={<CountUp to={longest} />} label="Longest" tint={fm.color.accent} tintSoft={fm.color.accentSoft} />
                 <MetricCard icon={<Target size={15} color={fm.color.info} />} value={<CountUp to={avgRun} />} label="Average" tint={fm.color.info} tintSoft={fm.color.infoSoft} />
@@ -261,7 +261,7 @@ export default function FocusModeReport({ onNavigate, onOpenProfile }) {
           <Reveal delay={480}>
             <Card padding={26} style={{ boxShadow: SHADOW.secondary }} className={hoverClass("secondary")}>
               <Eyebrow style={{ marginBottom: 16 }}>Urge Analytics</Eyebrow>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 12 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(85px, 1fr))", gap: 12 }}>
                 <MetricCard icon={<Target size={15} color={fm.color.accent} />} value={urgeLog.length} label="Total Urges" tint={fm.color.accent} tintSoft={fm.color.accentSoft} />
                 <MetricCard icon={<Shield size={15} color={fm.color.success} />} value={urgeLog.filter((u) => u.survived).length} label="Managed" tint={fm.color.success} tintSoft={fm.color.successSoft} />
                 <MetricCard icon={<Flame size={15} color={fm.color.danger} />} value={urgeLog.filter((u) => !u.survived).length} label="Failed" tint={fm.color.danger} tintSoft={fm.color.dangerSoft} />
@@ -277,7 +277,7 @@ export default function FocusModeReport({ onNavigate, onOpenProfile }) {
 
         {/* Trigger intelligence */}
         {triggers.length > 0 && (
-          <Reveal delay={540} style={{ padding: "24px 40px 0" }}>
+          <Reveal delay={540} style={{ padding: "clamp(14px,4vw,24px) clamp(14px,4vw,40px) 0" }}>
             <Card padding={26} style={{ boxShadow: SHADOW.secondary }} className={hoverClass("secondary")}>
               <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
                 <Sparkles size={13} color={fm.color.accent} />
@@ -297,10 +297,10 @@ export default function FocusModeReport({ onNavigate, onOpenProfile }) {
 
         {/* Mission performance table */}
         {missionPerf.length > 0 && (
-          <Reveal delay={600} style={{ padding: "24px 40px 0" }}>
+          <Reveal delay={600} style={{ padding: "clamp(14px,4vw,24px) clamp(14px,4vw,40px) 0" }}>
             <Card padding={26} style={{ boxShadow: SHADOW.secondary }} className={hoverClass("secondary")}>
               <Eyebrow style={{ marginBottom: 16 }}>Mission Performance</Eyebrow>
-              <div style={{ display: "grid", gridTemplateColumns: "28px 1fr 2.5fr 60px 60px", gap: 12, marginBottom: 8, fontSize: 9.5, color: fm.color.textTertiary, fontWeight: 700 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "clamp(18px,5vw,28px) 1fr 2.5fr clamp(36px,10vw,60px) clamp(36px,10vw,60px)", gap: 12, marginBottom: 8, fontSize: 9.5, color: fm.color.textTertiary, fontWeight: 700 }}>
                 <span /><span>MISSION</span><span>SUCCESS</span><span style={{ textAlign: "center" }}>LONGEST</span><span style={{ textAlign: "center" }}>CURRENT</span>
               </div>
               {missionPerf.map((m) => {
@@ -309,7 +309,7 @@ export default function FocusModeReport({ onNavigate, onOpenProfile }) {
                 const total = m.clean + m.partial + m.slip || 1;
                 const successPct = Math.round((m.clean / total) * 100);
                 return (
-                  <div key={m.id} style={{ display: "grid", gridTemplateColumns: "28px 1fr 2.5fr 60px 60px", gap: 12, alignItems: "center", padding: "10px 0", borderTop: `1px solid ${fm.color.border}` }}>
+                  <div key={m.id} style={{ display: "grid", gridTemplateColumns: "clamp(18px,5vw,28px) 1fr 2.5fr clamp(36px,10vw,60px) clamp(36px,10vw,60px)", gap: 12, alignItems: "center", padding: "10px 0", borderTop: `1px solid ${fm.color.border}` }}>
                     <span style={{ fontSize: 16 }}>{m.emoji}</span>
                     <span style={{ fontSize: 12, fontWeight: 700, color: fm.color.textPrimary }}>{m.label}</span>
                     <div style={{ height: 8, borderRadius: 4, overflow: "hidden", background: fm.color.surfaceSunken }}>
@@ -325,7 +325,7 @@ export default function FocusModeReport({ onNavigate, onOpenProfile }) {
         )}
 
         {/* Recovery timeline */}
-        <Reveal delay={660} style={{ padding: "24px 40px 0" }}>
+        <Reveal delay={660} style={{ padding: "clamp(14px,4vw,24px) clamp(14px,4vw,40px) 0" }}>
           <Card padding={30} style={{ boxShadow: SHADOW.secondary }} className={hoverClass("secondary")}>
             <Eyebrow style={{ marginBottom: 20 }}>Recovery Timeline</Eyebrow>
             <RecoveryTimeline milestones={MILESTONES} streak={streak} color={pColor} />
@@ -333,7 +333,7 @@ export default function FocusModeReport({ onNavigate, onOpenProfile }) {
         </Reveal>
 
         {/* AI-style insights */}
-        <Reveal delay={720} style={{ padding: "24px 40px 0" }}>
+        <Reveal delay={720} style={{ padding: "clamp(14px,4vw,24px) clamp(14px,4vw,40px) 0" }}>
           <Card padding={30} style={{ boxShadow: SHADOW.primary, background: fm.color.textPrimary }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
               <Sparkles size={14} color={fm.color.accent} />
@@ -352,7 +352,7 @@ export default function FocusModeReport({ onNavigate, onOpenProfile }) {
         </Reveal>
 
         {/* Strengths + Growth */}
-        <div style={{ padding: "24px 40px 0", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
+        <div style={{ padding: "clamp(14px,4vw,24px) clamp(14px,4vw,40px) 0", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 20 }}>
           <Reveal delay={780}>
             <Card padding={24} style={{ boxShadow: SHADOW.small }} className={hoverClass("small")}>
               <Eyebrow style={{ marginBottom: 12 }}>Personal Strengths</Eyebrow>
@@ -378,10 +378,10 @@ export default function FocusModeReport({ onNavigate, onOpenProfile }) {
         </div>
 
         {/* Achievements */}
-        <Reveal delay={860} style={{ padding: "24px 40px 0" }}>
+        <Reveal delay={860} style={{ padding: "clamp(14px,4vw,24px) clamp(14px,4vw,40px) 0" }}>
           <Card padding={26} style={{ boxShadow: SHADOW.secondary }} className={hoverClass("secondary")}>
             <Eyebrow style={{ marginBottom: 16 }}>Achievements</Eyebrow>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(5,1fr)", gap: 14 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(80px, 1fr))", gap: 14 }}>
               {achievements.map((a) => (
                 <div key={a.id} className="fm-hover-card fm-hover-card--small" style={{ textAlign: "center", padding: "18px 10px", borderRadius: fm.radius.md, background: a.unlocked ? fm.color.accentSoft : fm.color.surfaceMuted, border: `1px solid ${a.unlocked ? fm.color.accentSoftBorder : fm.color.border}`, opacity: a.unlocked ? 1 : 0.5 }}>
                   <div style={{ fontSize: 24, marginBottom: 8, filter: a.unlocked ? "none" : "grayscale(1)" }}>{a.unlocked ? a.icon : <Lock size={20} color={fm.color.textTertiary} style={{ margin: "0 auto" }} />}</div>
@@ -394,7 +394,7 @@ export default function FocusModeReport({ onNavigate, onOpenProfile }) {
         </Reveal>
 
         {/* Export */}
-        <Reveal delay={900} style={{ padding: "24px 40px 0", display: "flex", gap: 12 }}>
+        <Reveal delay={900} style={{ padding: "clamp(14px,4vw,24px) clamp(14px,4vw,40px) 0", display: "flex", flexWrap: "wrap", gap: 12 }}>
           <Button variant="primary" onClick={exportAllSynapseData} style={{ background: fm.color.accent, gap: 8 }}>
             <Download size={14} /> Export Recovery Data
           </Button>
@@ -411,7 +411,7 @@ export default function FocusModeReport({ onNavigate, onOpenProfile }) {
         </Reveal>
 
         {/* Motivational end card */}
-        <Reveal delay={960} style={{ padding: "24px 40px 0" }}>
+        <Reveal delay={960} style={{ padding: "clamp(14px,4vw,24px) clamp(14px,4vw,40px) 0" }}>
           <Card padding={56} style={{ textAlign: "center", background: fm.color.surfaceMuted, boxShadow: SHADOW.small }}>
             <p style={{ fontFamily: fm.font.display, fontSize: 24, fontStyle: "italic", color: fm.color.textPrimary, marginBottom: 8 }}>
               "Every disciplined day rewires your future."

@@ -50,7 +50,7 @@ const FEATURE_ITEMS = [
 ];
 
 function Section({ children, first = false }) {
-  return <div style={{ padding: `${first ? 24 : 40}px 40px 0` }}>{children}</div>;
+  return <div style={{ padding: `clamp(14px,4vw,${first ? 24 : 40}px) clamp(14px,4vw,40px) 0` }}>{children}</div>;
 }
 
 function SectionLabel({ n, title, sub }) {
@@ -162,12 +162,12 @@ export default function FocusModeSettings({ uid, coach, onDeleteAccount, onNavig
         {/* ── Hero ─────────────────────────────────────────────── */}
         <Section first>
           <Card padding={36}>
-            <div style={{ display: "grid", gridTemplateColumns: "1.3fr 0.7fr", gap: 20, alignItems: "center" }}>
-              <div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 20, alignItems: "center" }}>
+              <div style={{ flex: "1.3 1 220px", minWidth: 0 }}>
                 <div style={{ fontFamily: fm.font.display, fontSize: 30, fontWeight: 600, color: fm.color.textPrimary, marginBottom: 8 }}>Settings</div>
                 <p style={{ fontSize: 13, color: fm.color.textSecondary, lineHeight: 1.6 }}>Customize how SYNAPSE supports your recovery journey.</p>
               </div>
-              <div style={{ display: "flex", justifyContent: "center" }}>
+              <div style={{ display: "flex", justifyContent: "center", flex: "0.7 1 120px", minWidth: 0 }}>
                 <NeuronArt size={130} color={fm.color.accent} />
               </div>
             </div>
@@ -177,7 +177,7 @@ export default function FocusModeSettings({ uid, coach, onDeleteAccount, onNavig
         {/* ── 1. Recovery Preferences ────────────────────────────── */}
         <Section>
           <SectionLabel n={1} title="Recovery Preferences" />
-          <div style={{ display: "grid", gridTemplateColumns: "1.1fr 0.8fr 0.9fr", gap: 20, alignItems: "start" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 20, alignItems: "start" }}>
             <Card padding={24}>
               <Eyebrow style={{ marginBottom: 2 }}>Recovery Tone</Eyebrow>
               <div style={{ fontSize: 10.5, color: fm.color.textTertiary, marginBottom: 14 }}>Choose how your AI Coach talks to you.</div>
@@ -244,10 +244,10 @@ export default function FocusModeSettings({ uid, coach, onDeleteAccount, onNavig
 
         {/* ── 2 & 3. Notifications + Recovery Overview ───────────── */}
         <Section>
-          <div style={{ display: "grid", gridTemplateColumns: "1.4fr 1fr", gap: 20, alignItems: "start" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 20, alignItems: "start" }}>
             <Card padding={26}>
               <SectionLabel n={2} title="Notifications" sub="Manage your recovery reminders and updates." />
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: 14 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 14 }}>
                 {NOTIF_ITEMS.map((n) => (
                   <div key={n.key} style={{ padding: 16, borderRadius: fm.radius.md, border: `1px solid ${fm.color.border}`, background: fm.color.surfaceMuted }}>
                     <div style={{ fontSize: 18, marginBottom: 8 }}>{n.icon}</div>
@@ -261,7 +261,7 @@ export default function FocusModeSettings({ uid, coach, onDeleteAccount, onNavig
 
             <Card padding={26}>
               <SectionLabel n={3} title="Recovery Overview" sub="Your current recovery status." />
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(110px, 1fr))", gap: 12 }}>
                 <MetricCard icon="🔥" value={snapshot.streak} label="Current Streak" tint={fm.color.accent} tintSoft={fm.color.accentSoft} />
                 <MetricCard icon="🏆" value={longest} label="Longest Streak" tint={fm.color.warning} tintSoft={fm.color.warningSoft} />
                 <MetricCard icon="🌀" value={snapshot.level.title.charAt(0) + snapshot.level.title.slice(1).toLowerCase()} label="Current Phase" tint={fm.color.info} tintSoft={fm.color.infoSoft} />
@@ -273,14 +273,14 @@ export default function FocusModeSettings({ uid, coach, onDeleteAccount, onNavig
 
         {/* ── 4 & 5. Privacy + Appearance ─────────────────────────── */}
         <Section>
-          <div style={{ display: "grid", gridTemplateColumns: "1.4fr 1fr", gap: 20, alignItems: "start" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 20, alignItems: "start" }}>
             <Card padding={26}>
               <SectionLabel n={4} title="Privacy & Security" sub="Your data is yours. Always." />
               <SettingsRow icon="📍" title="Local Data Status" description="All your data is stored locally on this device." meta={<span style={{ color: fm.color.success, fontWeight: 700 }}>Secure</span>} />
               <SettingsRow icon="⚡" title="Chat History" description="AI conversations and coach interactions." meta={`${privacy.chatCount} items`} />
               <SettingsRow icon="📖" title="Journal Entries" description="Your thoughts, reflections and breakthroughs." meta={`${privacy.journalCount} entries`} />
               <SettingsRow icon="📊" title="Recovery Logs" description="Check-ins, urges, wins and slips." meta={`${privacy.recoveryLogCount} logs`} />
-              <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginTop: 16 }}>
                 <Button variant="ghost" size="sm" onClick={exportAllSynapseData} style={{ flex: 1, justifyContent: "center" }}>
                   ↓ Export Recovery Data
                 </Button>
@@ -307,7 +307,7 @@ export default function FocusModeSettings({ uid, coach, onDeleteAccount, onNavig
         <Section>
           <Card padding={26}>
             <SectionLabel n={6} title="Connected Features" sub="Core features that power your recovery." />
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(5,1fr)", gap: 14 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(110px, 1fr))", gap: 14 }}>
               {FEATURE_ITEMS.map((f) => (
                 <div key={f.key} style={{ padding: 18, borderRadius: fm.radius.md, border: `1px solid ${fm.color.border}`, textAlign: "center" }}>
                   <div style={{ fontSize: 20, marginBottom: 10 }}>{f.icon}</div>
@@ -326,9 +326,10 @@ export default function FocusModeSettings({ uid, coach, onDeleteAccount, onNavig
         <Section>
           <Card padding={26}>
             <SectionLabel n={7} title="About SYNAPSE" sub="Built with purpose. Backed by science." />
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(6,1fr)", gap: 14 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: 14 }}>
               <AboutTile icon="ℹ️" label="Version" value="v1.0" />
-<AboutTile icon="👤" label="Built By" value="Parth Goyal & Sandali Tiwari" />              <AboutTile icon="{ }" label="Build" value="Focus Mode" />
+              <AboutTile icon="👤" label="Built By" value="Parth Goyal & Sandali Tiwari" />
+              <AboutTile icon="{ }" label="Build" value="Focus Mode" />
               <AboutTile icon="🔒" label="Privacy Policy" value="Read Policy" link onClick={() => onNavigate?.("about")} />
               <AboutTile icon="📄" label="Terms of Use" value="Read Terms" link onClick={() => onNavigate?.("about")} />
               <AboutTile icon="💬" label="Feedback" value="Send Feedback" link onClick={() => window.open("mailto:parthgoyal379@gmail.com?subject=SYNAPSE Feedback", "_blank")} />
@@ -341,7 +342,7 @@ export default function FocusModeSettings({ uid, coach, onDeleteAccount, onNavig
           <Card padding={26} style={{ border: `1px solid ${fm.color.dangerBorder}` }}>
             <div style={{ fontSize: 11, fontWeight: 700, color: fm.color.danger, letterSpacing: 1, marginBottom: 4 }}>DANGER ZONE</div>
             <div style={{ fontSize: 11.5, color: fm.color.textTertiary, marginBottom: 16 }}>These actions are permanent and cannot be undone.</div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12 }}>
               <DangerAction icon="↺" title="Reset Progress" description="This will reset your streak and progress. Journal, account, and chats are kept." onClick={() => setConfirmAction("resetProgress")} />
               <DangerAction icon="🗑" title="Delete Account Data" description="This will delete everything forever." onClick={() => setConfirmAction("deleteAccount")} />
             </div>
@@ -350,7 +351,7 @@ export default function FocusModeSettings({ uid, coach, onDeleteAccount, onNavig
 
         {saveError && (
           <Section>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 18px", borderRadius: fm.radius.sm, background: fm.color.dangerSoft, border: `1px solid ${fm.color.dangerBorder}` }}>
+            <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: 10, padding: "12px 18px", borderRadius: fm.radius.sm, background: fm.color.dangerSoft, border: `1px solid ${fm.color.dangerBorder}` }}>
               <span style={{ fontSize: 12, color: fm.color.danger }}>Couldn't save changes. Trying again…</span>
               <Button
                 variant="ghost"

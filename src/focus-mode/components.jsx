@@ -116,8 +116,7 @@ export function Sidebar({ active, onNavigate, streakSubtitle = "Reset · Rewire 
         })}
       </nav>
 
-      <div style={{ marginTop: "auto", display: "flex", flexDirection: "column", gap: 10 }}>
-        <Card padding={14} style={{ display: "flex", alignItems: "center", gap: 10 }}>
+<div data-fm-role="sidebar-footer" style={{ marginTop: "auto", display: "flex", flexDirection: "column", gap: 10 }}>        <Card padding={14} style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <span style={{ fontSize: 16 }}>🛡️</span>
           <div>
             <div style={{ fontSize: 11, fontWeight: 700, color: fm.color.textPrimary }}>Streak Protector</div>
@@ -178,7 +177,7 @@ function NavIcon({ name, active }) {
 /* ── Top bar : notifications + avatar, reused on every screen ── */
 export function TopBar({ userInitial = "S", onOpenProfile }) {
   return (
-    <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 14, padding: "28px 40px 0" }}>
+    <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 14, padding: "clamp(16px,4vw,28px) clamp(14px,4vw,40px) 0" }}>
       <button
         aria-label="Notifications"
         style={{
@@ -447,8 +446,8 @@ export function WeeklyTrendChart({
   }, [drawIn, path]);
 
   return (
-    <div style={{ position: "relative" }}>
-      <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none" style={{ display: "block", overflow: "visible" }}>
+    <div style={{ position: "relative", width: "100%", maxWidth: width }}>
+      <svg width="100%" height={height} viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none" style={{ display: "block", overflow: "visible" }}>
         {grid &&
           [0, 0.25, 0.5, 0.75, 1].map((f) => (
             <line key={f} x1="0" x2={width} y1={height * f} y2={height * f} stroke={fm.color.border} strokeWidth="1" />
@@ -498,7 +497,7 @@ export function WeeklyTrendChart({
         </div>
       )}
       {labels && (
-        <div style={{ display: "flex", justifyContent: "space-between", width, marginTop: 6 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", width: "100%", marginTop: 6 }}>
           {labels.map((l, i) => (
             <span key={i} style={{ fontSize: 9, color: fm.color.textTertiary }}>
               {l}
@@ -1835,7 +1834,7 @@ export function NeuronArt({ size = 260, color = fm.color.accent }) {
     return { x: 50 + Math.cos(rad) * 34, y: 50 + Math.sin(rad) * 34 };
   });
   return (
-    <div style={{ position: "relative", width: size, height: size, animation: "fmFloat 8s ease-in-out infinite", willChange: "transform" }}>
+    <div style={{ position: "relative", width: "100%", maxWidth: size, aspectRatio: "1 / 1", animation: "fmFloat 8s ease-in-out infinite", willChange: "transform" }}>
       <div
         style={{
           position: "absolute",
@@ -1846,7 +1845,7 @@ export function NeuronArt({ size = 260, color = fm.color.accent }) {
           willChange: "opacity",
         }}
       />
-      <svg width={size} height={size} viewBox="0 0 100 100" style={{ position: "relative" }}>
+      <svg width="100%" height="100%" viewBox="0 0 100 100" style={{ position: "relative", display: "block" }}>
         {[14, 24, 34].map((r, i) => (
           <circle
             key={i}
@@ -1934,12 +1933,12 @@ export function CompareTable({ leftLabel, rightLabel, rows }) {
   return (
     <div style={{ border: `1px solid ${fm.color.border}`, borderRadius: fm.radius.lg, overflow: "hidden" }}>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr" }}>
-        <div style={{ padding: "16px 24px", fontSize: 12, fontWeight: 700, color: fm.color.textTertiary, background: fm.color.surfaceMuted, borderBottom: `1px solid ${fm.color.border}`, letterSpacing: 0.3 }}>
+        <div style={{ padding: "clamp(10px,3vw,16px) clamp(10px,4vw,24px)", fontSize: 12, fontWeight: 700, color: fm.color.textTertiary, background: fm.color.surfaceMuted, borderBottom: `1px solid ${fm.color.border}`, letterSpacing: 0.3 }}>
           {leftLabel}
         </div>
         <div
           style={{
-            padding: "16px 24px",
+            padding: "clamp(10px,3vw,16px) clamp(10px,4vw,24px)",
             fontSize: 12,
             fontWeight: 700,
             color: fm.color.accentDeep,
@@ -1958,7 +1957,7 @@ export function CompareTable({ leftLabel, rightLabel, rows }) {
           className="fm-fade-up"
           style={{ display: "grid", gridTemplateColumns: "1fr 1fr", borderTop: i ? `1px solid ${fm.color.border}` : "none", animationDelay: `${Math.min(i * 0.05, 0.5)}s` }}
         >
-          <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "16px 24px", fontSize: 12.5, color: fm.color.textSecondary, lineHeight: 1.6 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "clamp(10px,3vw,16px) clamp(10px,4vw,24px)", fontSize: 12.5, color: fm.color.textSecondary, lineHeight: 1.6 }}>
             <span style={{ color: fm.color.textTertiary, fontSize: 11, flexShrink: 0 }}>✕</span>
             {a}
           </div>
@@ -1967,7 +1966,7 @@ export function CompareTable({ leftLabel, rightLabel, rows }) {
               display: "flex",
               alignItems: "center",
               gap: 10,
-              padding: "16px 24px",
+              padding: "clamp(10px,3vw,16px) clamp(10px,4vw,24px)",
               fontSize: 12.5,
               color: fm.color.textPrimary,
               fontWeight: 500,

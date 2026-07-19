@@ -84,12 +84,12 @@ export default function FocusModeProgress({ onNavigate, onOpenProfile }) {
       <main style={{ flex: 1, minWidth: 0, paddingBottom: 60 }}>
         <TopBar userInitial="S" onOpenProfile={onOpenProfile} />
 
-        <Reveal style={{ padding: "20px 40px 0" }}>
+        <Reveal style={{ padding: "clamp(14px,4vw,20px) clamp(14px,4vw,40px) 0" }}>
           <div style={{ fontFamily: fm.font.display, fontSize: 30, fontWeight: 600, color: fm.color.textPrimary }}>Progress</div>
           <div style={{ fontSize: 12.5, color: fm.color.textSecondary, marginTop: 4 }}>See how far you've come. Track what matters.</div>
         </Reveal>
 
-        <div style={{ padding: "20px 40px 0", display: "grid", gridTemplateColumns: "repeat(5,1fr)", gap: 14 }}>
+        <div style={{ padding: "clamp(14px,4vw,20px) clamp(14px,4vw,40px) 0", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: 14 }}>
           {[
             { icon: "🔥", value: streak, label: "Current Streak (days)", tint: pColor, tintSoft: `${pColor}1a` },
             { icon: "📈", value: longest, label: "Longest Streak (days)", tint: fm.color.accent, tintSoft: fm.color.accentSoft },
@@ -105,14 +105,14 @@ export default function FocusModeProgress({ onNavigate, onOpenProfile }) {
           ))}
         </div>
 
-        <div style={{ padding: "20px 40px 0", display: "grid", gridTemplateColumns: "0.9fr 1.6fr", gap: 20, alignItems: "stretch" }}>
-          <Reveal delay={150}>
+        <div style={{ padding: "clamp(14px,4vw,20px) clamp(14px,4vw,40px) 0", display: "flex", flexWrap: "wrap", gap: 20, alignItems: "stretch" }}>
+          <Reveal delay={150} style={{ flex: "0.9 1 260px", minWidth: 0 }}>
             <div className={hoverClass("primary")} style={{ borderRadius: fm.radius.lg, height: "100%" }}>
               <RecoveryPhaseCard level={level} nextLevel={nextLevel} streak={streak} xpPct={xpPct} daysToNext={daysToNext} color={pColor} animateOnMount />
             </div>
           </Reveal>
 
-          <Reveal delay={150}>
+          <Reveal delay={150} style={{ flex: "1.6 1 300px", minWidth: 0 }}>
             <Card padding={24} style={{ boxShadow: SHADOW.primary }} className={hoverClass("primary")}>
               <Eyebrow style={{ marginBottom: 16 }}>Streak Over Time</Eyebrow>
               {streakSeries.length > 1 ? (
@@ -129,14 +129,14 @@ export default function FocusModeProgress({ onNavigate, onOpenProfile }) {
           </Reveal>
         </div>
 
-        <Reveal delay={250} style={{ padding: "20px 40px 0" }}>
+        <Reveal delay={250} style={{ padding: "clamp(14px,4vw,20px) clamp(14px,4vw,40px) 0" }}>
           <Card padding={26} style={{ boxShadow: SHADOW.secondary }} className={hoverClass("secondary")}>
             <Eyebrow style={{ marginBottom: 18 }}>Your Recovery Timeline</Eyebrow>
             <RecoveryTimeline milestones={MILESTONES} streak={streak} color={pColor} />
           </Card>
         </Reveal>
 
-        <div style={{ padding: "20px 40px 0", display: "grid", gridTemplateColumns: "1.1fr 1fr 1.1fr", gap: 20 }}>
+        <div style={{ padding: "clamp(14px,4vw,20px) clamp(14px,4vw,40px) 0", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 20 }}>
           <Reveal delay={320}>
             <Card padding={22} style={{ boxShadow: SHADOW.secondary }} className={hoverClass("secondary")}>
               <Eyebrow style={{ marginBottom: 14 }}>Check-In Consistency</Eyebrow>
@@ -153,7 +153,7 @@ export default function FocusModeProgress({ onNavigate, onOpenProfile }) {
             <Card padding={22} style={{ display: "flex", flexDirection: "column", boxShadow: SHADOW.secondary }} className={hoverClass("secondary")}>
               <Eyebrow style={{ marginBottom: 14 }}>Daily Verdict Distribution</Eyebrow>
               {verdicts.total > 0 ? (
-                <div style={{ display: "flex", alignItems: "center", gap: 18 }}>
+                <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 18 }}>
                   <DonutChart
                     size={104}
                     thickness={14}
@@ -204,8 +204,8 @@ export default function FocusModeProgress({ onNavigate, onOpenProfile }) {
           </Reveal>
         </div>
 
-        <div style={{ padding: "20px 40px 0", display: "grid", gridTemplateColumns: "1.3fr 1fr", gap: 20, alignItems: "start" }}>
-          <Reveal delay={500}>
+        <div style={{ padding: "clamp(14px,4vw,20px) clamp(14px,4vw,40px) 0", display: "flex", flexWrap: "wrap", gap: 20, alignItems: "start" }}>
+          <Reveal delay={500} style={{ flex: "1.3 1 300px", minWidth: 0 }}>
             <Card padding={26} style={{ boxShadow: SHADOW.secondary }} className={hoverClass("secondary")}>
               <Eyebrow style={{ marginBottom: 8 }}>Mission Performance</Eyebrow>
               {missionPerf.length > 0 ? (
@@ -235,7 +235,7 @@ export default function FocusModeProgress({ onNavigate, onOpenProfile }) {
             </Card>
           </Reveal>
 
-          <Reveal delay={560}>
+          <Reveal delay={560} style={{ flex: "1 1 260px", minWidth: 0 }}>
             <Card padding={22} style={{ boxShadow: SHADOW.secondary }} className={hoverClass("secondary")}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
                 <Eyebrow>Recent Check-Ins</Eyebrow>
@@ -265,7 +265,7 @@ export default function FocusModeProgress({ onNavigate, onOpenProfile }) {
           </Reveal>
         </div>
 
-        <div style={{ padding: "20px 40px 0", display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 20 }}>
+        <div style={{ padding: "clamp(14px,4vw,20px) clamp(14px,4vw,40px) 0", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 20 }}>
           <Reveal delay={620}>
             <Card padding={22} style={{ boxShadow: SHADOW.small }} className={hoverClass("small")}>
               <Eyebrow style={{ marginBottom: 12 }}>Strengths This Month</Eyebrow>
@@ -305,7 +305,7 @@ export default function FocusModeProgress({ onNavigate, onOpenProfile }) {
           </Reveal>
         </div>
 
-        <Reveal delay={900} style={{ padding: "20px 40px 0" }}>
+        <Reveal delay={900} style={{ padding: "clamp(14px,4vw,20px) clamp(14px,4vw,40px) 0" }}>
           <Card padding={24} style={{ boxShadow: SHADOW.small }} className={hoverClass("small")}>
             <Eyebrow style={{ marginBottom: 10 }}>Today's Neural Insight</Eyebrow>
             <p style={{ fontFamily: fm.font.display, fontSize: 15, fontStyle: "italic", color: fm.color.textPrimary, lineHeight: 1.6 }}>"{quote.q}"</p>

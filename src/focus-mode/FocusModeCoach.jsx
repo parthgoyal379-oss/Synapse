@@ -82,14 +82,14 @@ export default function FocusModeCoach({
       <main style={{ flex: 1, minWidth: 0, paddingBottom: 40, position: "relative", zIndex: 1 }}>
         <TopBar userInitial="S" onOpenProfile={onOpenProfile} />
 
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.35, ease: EASE }} style={{ padding: "24px 44px 0" }}>
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.35, ease: EASE }} style={{ padding: "clamp(14px,4vw,24px) clamp(14px,4vw,44px) 0" }}>
           <div style={{ fontFamily: fm.font.display, fontSize: 30, fontWeight: 600, color: fm.color.textPrimary }}>AI Coach</div>
           <div style={{ fontSize: 12.5, color: fm.color.textSecondary, marginTop: 4 }}>Personalized guidance based on today's recovery.</div>
           <div style={{ width: 40, height: 2, background: fm.color.accent, borderRadius: 2, marginTop: 12 }} />
         </motion.div>
 
         {/* Coach Identity — hero card */}
-        <motion.div {...cardVariant(0.05)} style={{ padding: "20px 44px 0" }}>
+        <motion.div {...cardVariant(0.05)} style={{ padding: "clamp(14px,4vw,20px) clamp(14px,4vw,44px) 0" }}>
           <Card padding={26} style={GLASS_CARD}>
             <div style={{ display: "flex", alignItems: "center", gap: 18 }}>
               <div style={{ position: "relative", width: 58, height: 58, flexShrink: 0 }}>
@@ -119,7 +119,7 @@ export default function FocusModeCoach({
 
         {/* Tone selector */}
         {toneList.length > 0 && (
-          <motion.div {...cardVariant(0.1)} style={{ padding: "18px 44px 0", display: "grid", gridTemplateColumns: `repeat(${toneList.length},1fr)`, gap: 14 }}>
+          <motion.div {...cardVariant(0.1)} style={{ padding: "clamp(14px,4vw,18px) clamp(14px,4vw,44px) 0", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 14 }}>
             {toneList.map((t) => (
               <ToneCard
                 key={t.id}
@@ -136,11 +136,11 @@ export default function FocusModeCoach({
           </motion.div>
         )}
 
-        <div style={{ padding: "20px 44px 0", display: "grid", gridTemplateColumns: "1.7fr 0.9fr", gap: 20, alignItems: "start" }}>
+        <div style={{ padding: "clamp(14px,4vw,20px) clamp(14px,4vw,44px) 0", display: "flex", flexWrap: "wrap", gap: 20, alignItems: "start" }}>
           {/* Chat container */}
-          <motion.div {...cardVariant(0.16)}>
+          <motion.div {...cardVariant(0.16)} style={{ flex: "1.7 1 320px", minWidth: 0, width: "100%" }}>
             <Card padding={0} style={{ ...GLASS_CARD, display: "flex", flexDirection: "column", height: 620, overflow: "hidden" }}>
-              <div style={{ flex: 1, overflowY: "auto", padding: "26px 28px" }}>
+              <div style={{ flex: 1, overflowY: "auto", padding: "26px clamp(14px,4vw,28px)" }}>
                 {messages.length === 0 ? (
                   <EmptyChatState streak={effectiveStreak} />
                 ) : (
@@ -214,7 +214,7 @@ export default function FocusModeCoach({
           </motion.div>
 
           {/* Right rail */}
-          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 16, flex: "1 1 260px", minWidth: 0 }}>
             <motion.div {...cardVariant(0.1)} {...HOVER_LIFT}>
               <RecoveryPhaseCard level={level} nextLevel={nextLevel} streak={effectiveStreak} xpPct={xpPct} daysToNext={daysToNext} color={pColor} compact animateOnMount />
             </motion.div>

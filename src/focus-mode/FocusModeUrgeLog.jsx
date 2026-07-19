@@ -81,7 +81,7 @@ export default function FocusModeUrgeLog({ rescue, streak, onNavigate, onOpenPro
       <main style={{ flex: 1, minWidth: 0, paddingBottom: 60 }}>
         <TopBar userInitial="S" onOpenProfile={onOpenProfile} />
 
-        <div style={{ padding: "20px 40px 0" }}>
+        <div style={{ padding: "clamp(14px,4vw,20px) clamp(14px,4vw,40px) 0" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <span style={{ fontSize: 22 }}>🔥</span>
             <div style={{ fontFamily: fm.font.display, fontSize: 30, fontWeight: 600, color: fm.color.textPrimary }}>Urge Log</div>
@@ -90,9 +90,9 @@ export default function FocusModeUrgeLog({ rescue, streak, onNavigate, onOpenPro
         </div>
 
         {/* ── Hero / active rescue + Today's Overview ──────────── */}
-        <div style={{ padding: "20px 40px 0", display: "grid", gridTemplateColumns: "1.7fr 0.9fr", gap: 20, alignItems: "start" }}>
+        <div style={{ padding: "clamp(14px,4vw,20px) clamp(14px,4vw,40px) 0", display: "flex", flexWrap: "wrap", gap: 20, alignItems: "start" }}>
           {!active && !done && (
-            <Card padding={36}>
+            <Card padding={36} style={{ flex: "1.7 1 320px", minWidth: 0 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
                 <div style={{ width: 44, height: 44, borderRadius: fm.radius.sm, background: fm.color.accentSoft, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20 }}>
                   ⚡
@@ -118,20 +118,22 @@ export default function FocusModeUrgeLog({ rescue, streak, onNavigate, onOpenPro
           )}
 
           {active && (
-            <RescueActiveCard
-              timeLabel={`${mins}:${secs}`}
-              phaseLabel={phase.label}
-              phaseSub={phase.sub}
-              progressPct={progress}
-              task={task}
-              onNewTask={newTask}
-              onLogSlip={() => logUrge(false)}
-              color={pColor}
-            />
+            <div style={{ flex: "1.7 1 320px", minWidth: 0 }}>
+              <RescueActiveCard
+                timeLabel={`${mins}:${secs}`}
+                phaseLabel={phase.label}
+                phaseSub={phase.sub}
+                progressPct={progress}
+                task={task}
+                onNewTask={newTask}
+                onLogSlip={() => logUrge(false)}
+                color={pColor}
+              />
+            </div>
           )}
 
           {done && (
-            <Card padding={36} style={{ textAlign: "center" }}>
+            <Card padding={36} style={{ textAlign: "center", flex: "1.7 1 320px", minWidth: 0 }}>
               <div style={{ fontSize: 44, marginBottom: 12 }}>✦</div>
               <div style={{ fontFamily: fm.font.display, fontSize: 24, fontWeight: 700, color: fm.color.success, marginBottom: 10 }}>You Held the Line</div>
               <p style={{ fontSize: 13, color: fm.color.textSecondary, lineHeight: 1.7, marginBottom: 22, maxWidth: 420, marginInline: "auto" }}>
@@ -148,7 +150,7 @@ export default function FocusModeUrgeLog({ rescue, streak, onNavigate, onOpenPro
             </Card>
           )}
 
-          <Card padding={22}>
+          <Card padding={22} style={{ flex: "0.9 1 260px", minWidth: 0 }}>
             <Eyebrow style={{ marginBottom: 16 }}>Today's Overview</Eyebrow>
             <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
               <StatTile icon="🔥" label="Current Streak (days)" value={streak ?? 0} tint={pColor} tintSoft={`${pColor}1a`} />
@@ -160,7 +162,7 @@ export default function FocusModeUrgeLog({ rescue, streak, onNavigate, onOpenPro
         </div>
 
         {/* ── Success rate trend + Peak hours ──────────────────── */}
-        <div style={{ padding: "20px 40px 0", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
+        <div style={{ padding: "clamp(14px,4vw,20px) clamp(14px,4vw,40px) 0", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 20 }}>
           <Card padding={22}>
             <Eyebrow style={{ marginBottom: 14 }}>Success Rate Over Time</Eyebrow>
             {urgeLog.length > 0 ? (
@@ -188,12 +190,12 @@ export default function FocusModeUrgeLog({ rescue, streak, onNavigate, onOpenPro
         </div>
 
         {/* ── Triggers + Urge survival rate ─────────────────────── */}
-        <div style={{ padding: "20px 40px 0", display: "grid", gridTemplateColumns: "1.1fr 0.9fr", gap: 20 }}>
-          <Card padding={22}>
+        <div style={{ padding: "clamp(14px,4vw,20px) clamp(14px,4vw,40px) 0", display: "flex", flexWrap: "wrap", gap: 20 }}>
+          <Card padding={22} style={{ flex: "1.1 1 280px", minWidth: 0 }}>
             <Eyebrow style={{ marginBottom: 4 }}>Most Common Triggers</Eyebrow>
             <div style={{ fontSize: 10.5, color: fm.color.textTertiary, marginBottom: 14 }}>From your logged check-ins</div>
             {triggers.length > 0 ? (
-              <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
+              <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 20 }}>
                 <DonutChart
                   size={100}
                   thickness={14}
@@ -216,7 +218,7 @@ export default function FocusModeUrgeLog({ rescue, streak, onNavigate, onOpenPro
             )}
           </Card>
 
-          <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 20, flex: "0.9 1 240px", minWidth: 0 }}>
             <Card padding={22}>
               <Eyebrow style={{ marginBottom: 6 }}>Average Urge Duration</Eyebrow>
               <div style={{ fontFamily: fm.font.display, fontSize: 26, fontWeight: 700, color: fm.color.textPrimary }}>{fmtDuration(duration?.avgSec)}</div>
@@ -239,8 +241,8 @@ export default function FocusModeUrgeLog({ rescue, streak, onNavigate, onOpenPro
         </div>
 
         {/* ── Recent sessions + Insight + Quick actions ────────── */}
-        <div style={{ padding: "20px 40px 0", display: "grid", gridTemplateColumns: "1.3fr 0.9fr 0.8fr", gap: 20, alignItems: "start" }}>
-          <Card padding={26}>
+        <div style={{ padding: "clamp(14px,4vw,20px) clamp(14px,4vw,40px) 0", display: "flex", flexWrap: "wrap", gap: 20, alignItems: "start" }}>
+          <Card padding={26} style={{ flex: "1.3 1 280px", minWidth: 0 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
               <Eyebrow>Recent Rescue Sessions</Eyebrow>
               {urgeLog.length > 5 && (
