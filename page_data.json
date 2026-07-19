@@ -1,0 +1,46 @@
+{
+  "url": "https://www.synapserewire.site/",
+  "status_code": 200,
+  "content": "\ufeff<!doctype html>\n<html lang=\"en\">\n  <head>\n    <meta charset=\"UTF-8\" />\n    <!-- Google tag (gtag.js) -->\n    <script async src=\"https://www.googletagmanager.com/gtag/js?id=G-SMVKNN4TK3\"></script>\n    <script>\n      window.dataLayer = window.dataLayer || [];\n      function gtag(){dataLayer.push(arguments);}\n      gtag('js', new Date());\n      gtag('config', 'G-SMVKNN4TK3');\n    </script>\n<link rel=\"manifest\" href=\"/manifest.json\">\n<meta name=\"google-site-verification\" content=\"D7KGqVMKLymM5UHJHZ...",
+  "raw_content": "\ufeff<!doctype html>\n<html lang=\"en\">\n  <head>\n    <meta charset=\"UTF-8\" />\n    <!-- Google tag (gtag.js) -->\n    <script async src=\"https://www.googletagmanager.com/gtag/js?id=G-SMVKNN4TK3\"></script>\n   ...",
+  "is_spa": false,
+  "extracted_text": null,
+  "publication_date": null,
+  "accessibility_tree": null,
+  "headers": {
+    "Access-Control-Allow-Origin": "*",
+    "Age": "9761",
+    "Cache-Control": "public, max-age=0, must-revalidate",
+    "Content-Disposition": "inline",
+    "Content-Encoding": "br",
+    "Content-Security-Policy": "default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://apis.google.com https://www.googletagmanager.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://firebasestorage.googleapis.com https://lh3.googleusercontent.com https://www.google-analytics.com; connect-src 'self' https://*.googleapis.com https://*.google.com https://api.groq.com https://fcm.googleapis.com https://www.gstatic.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://firestore.googleapis.com https://www.google-analytics.com; frame-src https://classpredictor.firebaseapp.com https://accounts.google.com; frame-ancestors 'none'; object-src 'none'; base-uri 'self'; form-action 'self'; worker-src 'self' blob:; manifest-src 'self';",
+    "Content-Type": "text/html; charset=utf-8",
+    "Cross-Origin-Opener-Policy": "same-origin-allow-popups",
+    "Cross-Origin-Resource-Policy": "same-site",
+    "Date": "Sun, 19 Jul 2026 22:26:32 GMT",
+    "Etag": "W/\"e7c502fb449479caff870f6f949786e4\"",
+    "Last-Modified": "Sun, 19 Jul 2026 19:43:51 GMT",
+    "Permissions-Policy": "camera=(), microphone=(), geolocation=(), payment=(), usb=(), bluetooth=()",
+    "Referrer-Policy": "strict-origin-when-cross-origin",
+    "Server": "Vercel",
+    "Strict-Transport-Security": "max-age=31536000; includeSubDomains; preload",
+    "X-Content-Type-Options": "nosniff",
+    "X-Dns-Prefetch-Control": "off",
+    "X-Frame-Options": "DENY",
+    "X-Vercel-Cache": "HIT",
+    "X-Vercel-Id": "bom1::qcj77-1784499992919-6dafdb0616e9",
+    "X-Xss-Protection": "1; mode=block",
+    "Transfer-Encoding": "chunked"
+  },
+  "redirect_chain": [
+    {
+      "url": "https://synapserewire.site/",
+      "status_code": 308
+    }
+  ],
+  "console_errors": [],
+  "render_engine": null,
+  "render_ms": null,
+  "mode_used": "raw",
+  "error": null
+}
