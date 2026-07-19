@@ -15,6 +15,9 @@ REPLACEMENTS = [
     ("\u00e2\u20ac\u00a6", "..."),  # â€¦  (ellipsis)
     ("\u00c2\u00b7", " · "),        # Â·   (middle dot)
     ("\u00c2\u00a0", " "),          # Â    (nbsp)
+    ("\u00e2\u2020\u2019", "\u2192"),  # right arrow mojibake -> →
+    ("\u00e2\u2020\u0090", "\u2190"),  # left arrow mojibake -> ←
+    ("\u00c3\u00a6", "\u00e6"),        # æ mojibake
 ]
 
 
