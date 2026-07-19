@@ -1622,7 +1622,7 @@ export function QuickActionCard({ icon, label, sublabel, onClick, tint = fm.colo
       }}
     >
       <span style={{ fontSize: 16 }}>{icon}</span>
-      <div style={{ flex: 1 }}>
+      <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontSize: 12.5, fontWeight: 700, color: fm.color.textPrimary }}>{label}</div>
         {sublabel && <div style={{ fontSize: 10.5, color: fm.color.textTertiary }}>{sublabel}</div>}
       </div>
@@ -2102,7 +2102,7 @@ export function RadioCard({ icon, title, description, selected, onSelect, tint =
       }}
     >
       {icon && <span style={{ fontSize: 18, flexShrink: 0 }}>{icon}</span>}
-      <div style={{ flex: 1 }}>
+      <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <span style={{ fontSize: 13, fontWeight: 700, color: fm.color.textPrimary }}>{title}</span>
         </div>
@@ -2360,7 +2360,7 @@ export function TaskRow({ label, meta, done, onToggle }) {
           </svg>
         )}
       </button>
-      <div style={{ flex: 1 }}>
+      <div style={{ flex: 1, minWidth: 0 }}>
         <div
           style={{
             fontSize: 13,

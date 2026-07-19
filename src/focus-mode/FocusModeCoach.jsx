@@ -91,14 +91,14 @@ export default function FocusModeCoach({
         {/* Coach Identity — hero card */}
         <motion.div {...cardVariant(0.05)} style={{ padding: "clamp(14px,4vw,20px) clamp(14px,4vw,44px) 0" }}>
           <Card padding={26} style={GLASS_CARD}>
-            <div style={{ display: "flex", alignItems: "center", gap: 18 }}>
+            <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 18 }}>
               <div style={{ position: "relative", width: 58, height: 58, flexShrink: 0 }}>
                 <div style={{ position: "absolute", inset: -10, borderRadius: "50%", background: `radial-gradient(circle, ${fm.color.accent}28, transparent 70%)` }} />
                 <div style={{ position: "relative", width: 58, height: 58, borderRadius: "50%", background: fm.color.textPrimary, display: "flex", alignItems: "center", justifyContent: "center" }}>
                   <Brain size={24} color="#fff" strokeWidth={1.8} />
                 </div>
               </div>
-              <div style={{ flex: 1 }}>
+              <div style={{ flex: "1 1 140px", minWidth: 0 }}>
                 <div style={{ fontFamily: fm.font.display, fontSize: 19, fontWeight: 700, color: fm.color.textPrimary }}>{mode?.label || "Coach"}</div>
                 <div style={{ fontSize: 11.5, color: fm.color.textSecondary, marginTop: 2 }}>
                   {level.title.charAt(0) + level.title.slice(1).toLowerCase()} · Phase {level.level}

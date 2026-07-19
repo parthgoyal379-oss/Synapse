@@ -140,7 +140,7 @@ export default function FocusModePlan({ savedPlan, onNavigate, onOpenProfile }) 
                         style={{ display: "flex", alignItems: "center", gap: 14, padding: "14px 0", borderBottom: `1px solid ${fm.color.border}` }}
                       >
                         <span style={{ fontSize: 26 }}>{a.emoji}</span>
-                        <div style={{ flex: 1 }}>
+                        <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ fontSize: 14, fontWeight: 700, color: fm.color.textPrimary }}>{a.label}</div>
                           <div style={{ fontSize: 10.5, color: fm.color.textTertiary, marginTop: 2 }}>
                             {a.isFreq ? `Baseline: ${a.value}x/week` : `Baseline: ${a.value}h/day`}
@@ -290,7 +290,7 @@ function ToolRow({ icon, label, desc, onClick, last }) {
       style={{ display: "flex", alignItems: "center", gap: 12, width: "100%", padding: "10px 6px", borderRadius: fm.radius.sm, borderBottom: last ? "none" : `1px solid ${fm.color.border}`, background: "none", border: "none", textAlign: "left", cursor: "pointer" }}
     >
       <motion.span variants={{ hover: { scale: 1.1, filter: `drop-shadow(0 0 6px ${fm.color.accent}60)` } }} style={{ fontSize: 18 }}>{icon}</motion.span>
-      <div style={{ flex: 1 }}>
+      <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontSize: 12.5, fontWeight: 600, color: fm.color.textPrimary }}>{label}</div>
         <div style={{ fontSize: 10.5, color: fm.color.textTertiary }}>{desc}</div>
       </div>

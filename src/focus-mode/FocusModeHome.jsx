@@ -282,7 +282,7 @@ export default function FocusModeHome({ onNavigate, onOpenProfile }) {
 
             {/* Check-In preview — real verdict if already logged today,
                 otherwise a shortcut into the real Check-In screen. */}
-            <motion.div initial="hidden" animate="visible" variants={checkinCard} {...hoverLift} style={{ flex: 1 }}>
+            <motion.div initial="hidden" animate="visible" variants={checkinCard} {...hoverLift} style={{ flex: 1, minWidth: 0 }}>
               <Card padding={24} style={{ ...GLASS_CARD, height: "100%" }}>
                 <Eyebrow style={{ marginBottom: 4 }}>Check-In</Eyebrow>
                 <div style={{ fontFamily: fm.font.display, fontSize: 17, fontWeight: 600, color: fm.color.textPrimary, marginBottom: 4 }}>How was your day?</div>

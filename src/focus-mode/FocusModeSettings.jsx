@@ -247,7 +247,7 @@ export default function FocusModeSettings({ uid, coach, onDeleteAccount, onNavig
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(280px,100%), 1fr))", gap: 20, alignItems: "start" }}>
             <Card padding={26}>
               <SectionLabel n={2} title="Notifications" sub="Manage your recovery reminders and updates." />
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(140px,100%), 1fr))", gap: 14 }}>
+              <div data-fm-grid="2" style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: 14 }}>
                 {NOTIF_ITEMS.map((n) => (
                   <div key={n.key} style={{ padding: 16, borderRadius: fm.radius.md, border: `1px solid ${fm.color.border}`, background: fm.color.surfaceMuted }}>
                     <div style={{ fontSize: 18, marginBottom: 8 }}>{n.icon}</div>
@@ -261,7 +261,7 @@ export default function FocusModeSettings({ uid, coach, onDeleteAccount, onNavig
 
             <Card padding={26}>
               <SectionLabel n={3} title="Recovery Overview" sub="Your current recovery status." />
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(110px,100%), 1fr))", gap: 12 }}>
+              <div data-fm-grid="2" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                 <MetricCard icon="🔥" value={snapshot.streak} label="Current Streak" tint={fm.color.accent} tintSoft={fm.color.accentSoft} />
                 <MetricCard icon="🏆" value={longest} label="Longest Streak" tint={fm.color.warning} tintSoft={fm.color.warningSoft} />
                 <MetricCard icon="🌀" value={snapshot.level.title.charAt(0) + snapshot.level.title.slice(1).toLowerCase()} label="Current Phase" tint={fm.color.info} tintSoft={fm.color.infoSoft} />
