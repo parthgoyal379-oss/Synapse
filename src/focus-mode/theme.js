@@ -127,8 +127,9 @@ export function injectFocusModeStyles() {
       padding: 0 !important;
     }
     .focus-mode {
-      width: 100vw;
-      max-width: 100vw;
+      width: 100%;
+      max-width: 100%;
+      overflow-x: hidden;
       --fm-bg: ${fm.color.bg};
       --fm-surface: ${fm.color.surface};
       --fm-surface-muted: ${fm.color.surfaceMuted};
@@ -228,13 +229,33 @@ export function injectFocusModeStyles() {
       .focus-mode aside nav button {
         font-size: 11px !important;
       }
-.focus-mode aside > div[data-fm-role="sidebar-footer"] {        display: none !important;
+      .focus-mode aside > div[data-fm-role="sidebar-footer"] {
+        display: none !important;
+      }
+      .focus-mode main {
+        padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px)) !important;
       }
     }
 
     @media (max-width: 480px) {
       .focus-mode aside nav button {
         padding: 7px 8px !important;
+      }
+    }
+
+    /* ── Multi-column (3+) grids that must stay pixel-identical to their
+       exact original desktop value at every desktop/tablet width — CSS
+       Grid's auto-fit track-collapse math cannot guarantee that safely at
+       borderline widths, so these keep their literal original
+       gridTemplateColumns inline and only get force-collapsed to a single
+       column here, strictly below the mobile breakpoint. */
+    @media (max-width: 768px) {
+      .focus-mode [data-fm-grid] {
+        grid-template-columns: 1fr !important;
+      }
+      .focus-mode [data-fm-center-mobile] {
+        text-align: center !important;
+        justify-content: center !important;
       }
     }
   `;

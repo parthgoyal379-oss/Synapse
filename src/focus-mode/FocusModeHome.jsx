@@ -153,7 +153,7 @@ export default function FocusModeHome({ onNavigate, onOpenProfile }) {
             {/* Hero */}
             <motion.div initial="hidden" animate="visible" variants={heroCard} {...hoverLift}>
               <Card padding={0} style={{ ...GLASS_CARD, overflow: "hidden" }}>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", alignItems: "center", minHeight: 320 }}>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(240px,100%), 1fr))", alignItems: "center", minHeight: 320 }}>
                   <motion.div variants={heroTextContainer} initial="hidden" animate="visible" style={{ padding: "clamp(24px,6vw,40px) clamp(8px,3vw,8px) clamp(24px,6vw,40px) clamp(20px,6vw,40px)" }}>
                     <motion.div variants={heroTextItem} style={{ fontFamily: fm.font.display, fontSize: 15, color: fm.color.textSecondary, marginBottom: 4, letterSpacing: 0.2 }}>
                       {greeting},
@@ -267,7 +267,7 @@ export default function FocusModeHome({ onNavigate, onOpenProfile }) {
             </motion.div>
 
             <motion.div initial="hidden" animate="visible" variants={statsCard} {...hoverLift}>
-              <Card padding={22} style={{ ...GLASS_CARD, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(84px, 1fr))", gap: 14 }}>
+              <Card padding={22} style={{ ...GLASS_CARD, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(84px,100%), 1fr))", gap: 14 }}>
                 <motion.div variants={statItem}>
                   <StatTile icon={<Heart size={14} strokeWidth={2.2} color={fm.color.success} />} label="Urges Managed" value={stats.urgesManaged} tint={fm.color.success} tintSoft={fm.color.successSoft} />
                 </motion.div>
@@ -341,7 +341,7 @@ export default function FocusModeHome({ onNavigate, onOpenProfile }) {
         </motion.div>
 
         {/* ── Insight / Weekly Progress / Recent check-in / Support ── */}
-        <div style={{ padding: "24px clamp(14px,4vw,48px) 0", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 20 }}>
+        <div data-fm-grid="4" style={{ padding: "24px clamp(14px,4vw,48px) 0", display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 20 }}>
           <motion.div initial="hidden" animate="visible" variants={bottomRow(playIntro ? 1.45 : 0)} {...hoverLift}>
             <Card padding={24} style={GLASS_CARD}>
               <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
@@ -415,12 +415,12 @@ export default function FocusModeHome({ onNavigate, onOpenProfile }) {
 // per spec, replacing NeuralOrb's default built-in timing for this screen
 // only (About screen keeps NeuralOrb's own default float/glow).
 function FloatingOrb({ size, color, disabled }) {
-  if (disabled) return <NeuralOrb size={size} color={color} floatEnabled={false} />;
+  if (disabled) return <div style={{ width: "100%", maxWidth: size }}><NeuralOrb size={size} color={color} floatEnabled={false} /></div>;
   return (
     <motion.div
       animate={{ y: [-6, 6, -6] }}
       transition={{ duration: 7, repeat: Infinity, ease: "easeInOut" }}
-      style={{ position: "relative" }}
+      style={{ position: "relative", width: "100%", maxWidth: size }}
     >
       <motion.div
         animate={{ opacity: [0.18, 0.32, 0.18] }}

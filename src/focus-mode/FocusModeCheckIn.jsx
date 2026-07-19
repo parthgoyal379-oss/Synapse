@@ -188,7 +188,7 @@ export default function FocusModeCheckIn({
                   <Card padding={26} style={GLASS_CARD}>
                     <Eyebrow style={{ marginBottom: 4 }}>How do you feel right now?</Eyebrow>
                     <div style={{ fontSize: 11.5, color: fm.color.textTertiary, marginBottom: 16 }}>Be honest with yourself. There's no right or wrong.</div>
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(150px,1fr))", gap: 10 }}>
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(min(150px,100%),1fr))", gap: 10 }}>
                       {MOODS.map((m, i) => {
                         const Icon = MOOD_ICONS[m.id];
                         const t = MOOD_TINTS[m.id];

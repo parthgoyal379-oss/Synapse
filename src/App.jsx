@@ -6606,7 +6606,10 @@ function AppRoot() {
       const ns=streak+1;
       setStreak(ns); setLastCI(today);
       ls.set("syn_streak",ns); ls.set("syn_last",today);
-const nh=[{date:today,msg,streak:ns,status:status.toLowerCase(),reply},...history];      if([7,21,30,90].includes(ns)){
+      const nh=[{date:today,msg,streak:ns,status:status.toLowerCase(),reply},...history];
+      setHistory(nh); ls.set("syn_history",JSON.stringify(nh));
+      // Milestone celebration
+      if([7,21,30,90].includes(ns)){
         const seen=(()=>{try{return JSON.parse(ls.get("syn_milestones","[]"));}catch{return[];}})();
         if(!seen.includes(ns)){
           ls.set("syn_milestones",JSON.stringify([...seen,ns]));
@@ -6786,7 +6789,7 @@ const nh=[{date:today,msg,streak:ns,status:status.toLowerCase(),reply},...histor
             <button
               onClick={toggleUiMode}
               title="Switch to Command Mode"
-              style={{position:"fixed",bottom:20,right:20,zIndex:1000,background:"#1a1410",color:"#fff",border:"1px solid rgba(255,140,0,0.35)",borderRadius:999,padding:"10px 18px",fontSize:12,fontWeight:600,letterSpacing:.3,cursor:"pointer",boxShadow:"0 6px 20px rgba(0,0,0,0.25)"}}
+              style={{position:"fixed",bottom:"calc(20px + env(safe-area-inset-bottom, 0px))",right:"calc(20px + env(safe-area-inset-right, 0px))",zIndex:1000,background:"#1a1410",color:"#fff",border:"1px solid rgba(255,140,0,0.35)",borderRadius:999,padding:"10px 18px",fontSize:12,fontWeight:600,letterSpacing:.3,cursor:"pointer",boxShadow:"0 6px 20px rgba(0,0,0,0.25)"}}
             >
               ⚡ Command Mode
             </button>

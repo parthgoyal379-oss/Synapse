@@ -116,7 +116,8 @@ export function Sidebar({ active, onNavigate, streakSubtitle = "Reset · Rewire 
         })}
       </nav>
 
-<div data-fm-role="sidebar-footer" style={{ marginTop: "auto", display: "flex", flexDirection: "column", gap: 10 }}>        <Card padding={14} style={{ display: "flex", alignItems: "center", gap: 10 }}>
+      <div data-fm-role="sidebar-footer" style={{ marginTop: "auto", display: "flex", flexDirection: "column", gap: 10 }}>
+        <Card padding={14} style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <span style={{ fontSize: 16 }}>🛡️</span>
           <div>
             <div style={{ fontSize: 11, fontWeight: 700, color: fm.color.textPrimary }}>Streak Protector</div>
@@ -1666,10 +1667,10 @@ export function NeuralOrb({ size = 260, color = fm.color.accent, floatEnabled = 
   ];
 
   return (
-    <div style={{ position: "relative", width: size, height: size, animation: floatEnabled ? "fmFloat 9s ease-in-out infinite" : "none", willChange: "transform" }}>
+    <div style={{ position: "relative", width: "100%", maxWidth: size, aspectRatio: "1 / 1", animation: floatEnabled ? "fmFloat 9s ease-in-out infinite" : "none", willChange: "transform" }}>
       {/* ambient bloom behind the sphere */}
       <div style={{ position: "absolute", inset: "-28%", borderRadius: "50%", background: `radial-gradient(circle, ${color}38, transparent 65%)`, animation: floatEnabled ? "fmPulseGlow 5s ease-in-out infinite" : "none", willChange: "opacity" }} />
-      <svg width={size} height={size} viewBox="0 0 100 100" style={{ position: "relative" }}>
+      <svg width="100%" height="100%" viewBox="0 0 100 100" style={{ position: "relative", display: "block" }}>
         <defs>
           <radialGradient id="fm-orb-glass" cx="35%" cy="28%" r="78%">
             <stop offset="0%" stopColor="#fff" stopOpacity="0.6" />

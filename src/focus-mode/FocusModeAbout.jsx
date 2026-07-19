@@ -123,7 +123,7 @@ export default function FocusModeAbout({ onNavigate, onOpenProfile, onBeginJourn
         {/* ── The problem ────────────────────────────────────────── */}
         <Section>
           <SectionHeading eyebrow="The Problem" title="Habits are built quietly." />
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 20 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(240px,100%), 1fr))", gap: 20 }}>
             <div className="fm-fade-up" style={{ animationDelay: "0.05s" }}>
               <BulletCard title="Why It Exists" points={WHY_IT_EXISTS} />
             </div>
@@ -144,7 +144,7 @@ export default function FocusModeAbout({ onNavigate, onOpenProfile, onBeginJourn
         {/* ── Founders ──────────────────────────────────────────── */}
         <Section>
           <SectionHeading eyebrow="Meet the Founders" />
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 20 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(260px,100%), 1fr))", gap: 20 }}>
             {FOUNDERS.map((f, i) => (
               <div key={f.initials} className="fm-fade-up" style={{ animationDelay: `${i * 0.08}s` }}>
                 <FounderCard {...f} />
@@ -164,7 +164,7 @@ export default function FocusModeAbout({ onNavigate, onOpenProfile, onBeginJourn
         {/* ── Core values ─────────────────────────────────────────── */}
         <Section>
           <SectionHeading eyebrow="Our Values" />
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 16 }}>
+          <div data-fm-grid="4" style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 16 }}>
             {VALUES.map((v, i) => (
               <div key={v.title} className="fm-fade-up" style={{ animationDelay: `${i * 0.06}s` }}>
                 <IdentityCard icon={v.icon} title={v.title} caption={v.caption} />
@@ -176,7 +176,7 @@ export default function FocusModeAbout({ onNavigate, onOpenProfile, onBeginJourn
         {/* ── Your Synapse impact (real per-user data) ──────────── */}
         <Section>
           <SectionHeading eyebrow="Your SYNAPSE Impact" />
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(110px, 1fr))", gap: 14 }}>
+          <div data-fm-grid="5" style={{ display: "grid", gridTemplateColumns: "repeat(5,1fr)", gap: 14 }}>
             <MetricCard icon="🔥" value={streak} label="Day Streak" tint={fm.color.accent} tintSoft={fm.color.accentSoft} />
             <MetricCard icon="🛡️" value={stats.urgesManaged} label="Urges Resisted" tint={fm.color.success} tintSoft={fm.color.successSoft} />
             <MetricCard icon="📖" value={journalEntries.length} label="Journal Entries" tint={fm.color.info} tintSoft={fm.color.infoSoft} />

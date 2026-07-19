@@ -190,7 +190,7 @@ export default function FocusModeJournal({ uid, onNavigate, onOpenProfile }) {
           </Card>
         </motion.div>
 
-        <div style={{ padding: "clamp(14px,4vw,20px) clamp(14px,4vw,44px) 0", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 20, alignItems: "start" }}>
+        <div style={{ padding: "clamp(14px,4vw,20px) clamp(14px,4vw,44px) 0", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(280px,100%), 1fr))", gap: 20, alignItems: "start" }}>
           <motion.div {...cv(0.28)} {...HOVER_LIFT}>
             <Card padding={26} style={GLASS_CARD}>
               <Eyebrow style={{ marginBottom: 14 }}>Reflection Calendar</Eyebrow>
@@ -231,7 +231,7 @@ export default function FocusModeJournal({ uid, onNavigate, onOpenProfile }) {
           </div>
         </div>
 
-        <div style={{ padding: "clamp(14px,4vw,20px) clamp(14px,4vw,44px) 0", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 20 }}>
+        <div style={{ padding: "clamp(14px,4vw,20px) clamp(14px,4vw,44px) 0", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(260px,100%), 1fr))", gap: 20 }}>
           <motion.div {...cv(0.4)} {...HOVER_LIFT}>
             <Card padding={22} style={GLASS_CARD}>
               <Eyebrow style={{ marginBottom: 14 }}>Emotion Distribution</Eyebrow>

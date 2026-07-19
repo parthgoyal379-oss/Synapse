@@ -119,7 +119,7 @@ export default function FocusModeCoach({
 
         {/* Tone selector */}
         {toneList.length > 0 && (
-          <motion.div {...cardVariant(0.1)} style={{ padding: "clamp(14px,4vw,18px) clamp(14px,4vw,44px) 0", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 14 }}>
+          <motion.div {...cardVariant(0.1)} data-fm-grid="tone" style={{ padding: "clamp(14px,4vw,18px) clamp(14px,4vw,44px) 0", display: "grid", gridTemplateColumns: `repeat(${toneList.length},1fr)`, gap: 14 }}>
             {toneList.map((t) => (
               <ToneCard
                 key={t.id}

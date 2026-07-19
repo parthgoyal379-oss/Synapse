@@ -162,7 +162,7 @@ export default function FocusModeUrgeLog({ rescue, streak, onNavigate, onOpenPro
         </div>
 
         {/* ── Success rate trend + Peak hours ──────────────────── */}
-        <div style={{ padding: "clamp(14px,4vw,20px) clamp(14px,4vw,40px) 0", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 20 }}>
+        <div style={{ padding: "clamp(14px,4vw,20px) clamp(14px,4vw,40px) 0", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(260px,100%), 1fr))", gap: 20 }}>
           <Card padding={22}>
             <Eyebrow style={{ marginBottom: 14 }}>Success Rate Over Time</Eyebrow>
             {urgeLog.length > 0 ? (
