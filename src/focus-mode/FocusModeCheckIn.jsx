@@ -41,8 +41,12 @@ export default function FocusModeCheckIn({
   const [adTimeOfDay, setAdTimeOfDay] = useState(() => Object.fromEntries(addictions.map((a) => [a.id, []])));
   const [mood, setMood] = useState(null);
   const [notes, setNotes] = useState("");
-
-  const [reply, setReply] = useState("");
+const [reply, setReply] = useState(() => {
+  const today = new Date().toDateString();
+  if (lastCheckin !== today) return "";
+  const e = history.find((h) => h.date === today);
+  return e?.reply || (e ? "Logged. (Coach response wasn't saved for this check-in.)" : "");
+});
   const [status, setStatus] = useState(() => {
     const today = new Date().toDateString();
     if (lastCheckin !== today) return null;

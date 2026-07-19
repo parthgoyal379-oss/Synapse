@@ -328,8 +328,7 @@ export default function FocusModeSettings({ uid, coach, onDeleteAccount, onNavig
             <SectionLabel n={7} title="About SYNAPSE" sub="Built with purpose. Backed by science." />
             <div style={{ display: "grid", gridTemplateColumns: "repeat(6,1fr)", gap: 14 }}>
               <AboutTile icon="ℹ️" label="Version" value="v1.0" />
-              <AboutTile icon="👤" label="Built By" value="Parth Goyal" />
-              <AboutTile icon="{ }" label="Build" value="Focus Mode" />
+<AboutTile icon="👤" label="Built By" value="Parth Goyal & Sandali Tiwari" />              <AboutTile icon="{ }" label="Build" value="Focus Mode" />
               <AboutTile icon="🔒" label="Privacy Policy" value="Read Policy" link onClick={() => onNavigate?.("about")} />
               <AboutTile icon="📄" label="Terms of Use" value="Read Terms" link onClick={() => onNavigate?.("about")} />
               <AboutTile icon="💬" label="Feedback" value="Send Feedback" link onClick={() => window.open("mailto:parthgoyal379@gmail.com?subject=SYNAPSE Feedback", "_blank")} />

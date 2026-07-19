@@ -6600,16 +6600,13 @@ function AppRoot() {
     if(status === "SLIP"){
       setStreak(0); setLastCI(today);
       ls.set("syn_streak","0"); ls.set("syn_last",today);
-      const nh=[{date:today,msg,streak:0,status:"slip"},...history];
+      const nh=[{date:today,msg,streak:0,status:"slip",reply},...history];
       setHistory(nh); ls.set("syn_history",JSON.stringify(nh));
     } else {
       const ns=streak+1;
       setStreak(ns); setLastCI(today);
       ls.set("syn_streak",ns); ls.set("syn_last",today);
-      const nh=[{date:today,msg,streak:ns,status:status.toLowerCase()},...history];
-      setHistory(nh); ls.set("syn_history",JSON.stringify(nh));
-      // Milestone celebration
-      if([7,21,30,90].includes(ns)){
+const nh=[{date:today,msg,streak:ns,status:status.toLowerCase(),reply},...history];      if([7,21,30,90].includes(ns)){
         const seen=(()=>{try{return JSON.parse(ls.get("syn_milestones","[]"));}catch{return[];}})();
         if(!seen.includes(ns)){
           ls.set("syn_milestones",JSON.stringify([...seen,ns]));
