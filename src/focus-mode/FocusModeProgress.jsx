@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { fm, phaseColor, useResponsive } from "./theme";
+import { DebugOverflow } from "./DebugOverflow";
 import {
   readSynapseSnapshot,
   monthlyCheckinsCount,
@@ -81,8 +82,9 @@ export default function FocusModeProgress({ onNavigate, onOpenProfile }) {
 
   return (
     <FocusModeShell>
+      <DebugOverflow page="progress" />
       <Sidebar active="progress" onNavigate={onNavigate} />
-      <main style={{ flex: 1, minWidth: 0, paddingBottom: 60 }}>
+      <main style={{ flex: 1, minWidth: 0, width: "100%", paddingBottom: 60 }}>
         <TopBar userInitial="S" onOpenProfile={onOpenProfile} />
 
         <Reveal style={{ padding: "clamp(14px,4vw,20px) clamp(14px,4vw,40px) 0" }}>
@@ -133,7 +135,14 @@ export default function FocusModeProgress({ onNavigate, onOpenProfile }) {
         <Reveal delay={250} style={{ padding: "clamp(14px,4vw,20px) clamp(14px,4vw,40px) 0" }}>
           <Card padding={26} style={{ boxShadow: SHADOW.secondary }} className={hoverClass("secondary")}>
             <Eyebrow style={{ marginBottom: 18 }}>Your Recovery Timeline</Eyebrow>
-            <RecoveryTimeline milestones={MILESTONES} streak={streak} color={pColor} />
+            {/* Fixed ~464px minimum width (6 nodes + connectors) never
+                shrinks below its label text — scroll inside the card on
+                narrow phones instead of overflowing the page. */}
+            <div style={{ overflowX: isMobile ? "auto" : "visible", WebkitOverflowScrolling: "touch" }}>
+              <div style={{ minWidth: isMobile ? 480 : "auto" }}>
+                <RecoveryTimeline milestones={MILESTONES} streak={streak} color={pColor} />
+              </div>
+            </div>
           </Card>
         </Reveal>
 
@@ -210,21 +219,23 @@ export default function FocusModeProgress({ onNavigate, onOpenProfile }) {
             <Card padding={26} style={{ boxShadow: SHADOW.secondary }} className={hoverClass("secondary")}>
               <Eyebrow style={{ marginBottom: 8 }}>Mission Performance</Eyebrow>
               {missionPerf.length > 0 ? (
-                <>
-                  <div style={{ display: "grid", gridTemplateColumns: "28px 1fr 3fr 30px 30px 30px", gap: 10, marginBottom: 2 }}>
-                    <span />
-                    <span />
-                    <span />
-                    <span style={{ fontSize: 9, color: fm.color.success, textAlign: "center" }}>Clean</span>
-                    <span style={{ fontSize: 9, color: fm.color.warning, textAlign: "center" }}>Part.</span>
-                    <span style={{ fontSize: 9, color: fm.color.danger, textAlign: "center" }}>Slip</span>
-                  </div>
-                  {missionPerf.map((m, i) => (
-                    <div key={m.id} className="fm-fade-up fm-row-hover" style={{ animationDelay: `${550 + i * 60}ms`, borderRadius: fm.radius.sm }}>
-                      <MissionProgressRow emoji={m.emoji} label={m.label} clean={m.clean} partial={m.partial} slip={m.slip} />
+                <div style={{ overflowX: isMobile ? "auto" : "visible", WebkitOverflowScrolling: "touch" }}>
+                  <div style={{ minWidth: isMobile ? 420 : "auto" }}>
+                    <div style={{ display: "grid", gridTemplateColumns: "28px 1fr 3fr 30px 30px 30px", gap: 10, marginBottom: 2 }}>
+                      <span />
+                      <span />
+                      <span />
+                      <span style={{ fontSize: 9, color: fm.color.success, textAlign: "center" }}>Clean</span>
+                      <span style={{ fontSize: 9, color: fm.color.warning, textAlign: "center" }}>Part.</span>
+                      <span style={{ fontSize: 9, color: fm.color.danger, textAlign: "center" }}>Slip</span>
                     </div>
-                  ))}
-                </>
+                    {missionPerf.map((m, i) => (
+                      <div key={m.id} className="fm-fade-up fm-row-hover" style={{ animationDelay: `${550 + i * 60}ms`, borderRadius: fm.radius.sm }}>
+                        <MissionProgressRow emoji={m.emoji} label={m.label} clean={m.clean} partial={m.partial} slip={m.slip} />
+                      </div>
+                    ))}
+                  </div>
+                </div>
               ) : (
                 <p style={{ fontSize: 12.5, color: fm.color.textTertiary }}>No missions set up yet.</p>
               )}

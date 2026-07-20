@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { motion } from "framer-motion";
 import { fm, phaseColor, useResponsive } from "./theme";
 import { readSynapseSnapshot, readArchetype, extractPlanSections, longestStreak } from "./synapseData";
+import { DebugOverflow } from "./DebugOverflow";
 import {
   FocusModeShell,
   Sidebar,
@@ -58,9 +59,10 @@ export default function FocusModePlan({ savedPlan, onNavigate, onOpenProfile }) 
 
   return (
     <FocusModeShell>
+      <DebugOverflow page="plan" />
       <AmbientBackground color={pColor} />
       <Sidebar active="plan" onNavigate={onNavigate} />
-      <main style={{ flex: 1, minWidth: 0, paddingBottom: 60, position: "relative", zIndex: 1 }}>
+      <main style={{ flex: 1, minWidth: 0, width: "100%", paddingBottom: 60, position: "relative", zIndex: 1 }}>
         <TopBar userInitial="S" onOpenProfile={onOpenProfile} />
 
         <div style={{ padding: "clamp(14px,4vw,26px) clamp(14px,4vw,48px) 0" }}>
@@ -163,7 +165,14 @@ export default function FocusModePlan({ savedPlan, onNavigate, onOpenProfile }) 
             <motion.div {...cardVariant(0.25)} {...HOVER_LIFT}>
               <Card padding={30} style={GLASS_CARD}>
                 <Eyebrow style={{ marginBottom: 20 }}>Your Recovery Timeline</Eyebrow>
-                <RecoveryTimeline milestones={MILESTONES} streak={streak} color={pColor} descriptions={MILESTONE_DESCRIPTIONS} />
+                {/* Fixed ~464px minimum width (6 nodes + connectors) never
+                    shrinks below its label text — scroll inside the card on
+                    narrow phones instead of overflowing the page. */}
+                <div style={{ overflowX: isMobile ? "auto" : "visible", WebkitOverflowScrolling: "touch" }}>
+                  <div style={{ minWidth: isMobile ? 480 : "auto" }}>
+                    <RecoveryTimeline milestones={MILESTONES} streak={streak} color={pColor} descriptions={MILESTONE_DESCRIPTIONS} />
+                  </div>
+                </div>
               </Card>
             </motion.div>
 

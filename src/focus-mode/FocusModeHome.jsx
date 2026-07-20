@@ -3,6 +3,7 @@ import { motion, useReducedMotion } from "framer-motion";
 import { Heart, ClipboardCheck, Target, ArrowRight, Sparkles, Headphones, Flag, TrendingUp, Smile, Meh, Frown } from "lucide-react";
 import { fm, useResponsive } from "./theme";
 import { readSynapseSnapshot } from "./synapseData";
+import { DebugOverflow } from "./DebugOverflow";
 import { FocusModeShell, Sidebar, TopBar, Card, Eyebrow, Button, VerdictBadge, StatTile, TaskRow, WeeklyTrendChart, RecoveryPhaseCard, RecoveryTimeline, NeuralOrb, AmbientBackground, EASE, GLASS_CARD, CountUp } from "./components";
 
 const MILESTONES = [
@@ -135,15 +136,16 @@ export default function FocusModeHome({ onNavigate, onOpenProfile }) {
 
   return (
     <FocusModeShell>
+      <DebugOverflow page="home" />
       <motion.div initial="hidden" animate="visible" variants={fadeIn} style={{ position: "fixed", inset: 0, zIndex: 0 }}>
         <AmbientBackground color={pColor} />
       </motion.div>
 
-      <motion.div initial="hidden" animate="visible" variants={sidebarSlide}>
+      <motion.div initial="hidden" animate="visible" variants={sidebarSlide} style={{ width: isMobile ? "100%" : "auto" }}>
         <Sidebar active="home" onNavigate={onNavigate} />
       </motion.div>
 
-      <main style={{ flex: 1, minWidth: 0, paddingBottom: 72, position: "relative", zIndex: 1 }}>
+      <main style={{ flex: 1, minWidth: 0, width: "100%", paddingBottom: 72, position: "relative", zIndex: 1 }}>
         <motion.div initial="hidden" animate="visible" variants={topIconsSlide}>
           <TopBar userInitial={firstName[0]?.toUpperCase() || "S"} onOpenProfile={onOpenProfile} />
         </motion.div>
@@ -337,7 +339,15 @@ export default function FocusModeHome({ onNavigate, onOpenProfile }) {
                 </span>
               )}
             </div>
-            <RecoveryTimeline milestones={MILESTONES} streak={streak} color={pColor} />
+            {/* Timeline has a fixed minimum width (6 nodes + connectors ≈
+                464px) that never shrinks below its label text. On narrow
+                phones that's wider than the viewport, so it scrolls inside
+                its own card instead of blowing out page width. */}
+            <div style={{ overflowX: isMobile ? "auto" : "visible", WebkitOverflowScrolling: "touch" }}>
+              <div style={{ minWidth: isMobile ? 480 : "auto" }}>
+                <RecoveryTimeline milestones={MILESTONES} streak={streak} color={pColor} />
+              </div>
+            </div>
           </Card>
         </motion.div>
 

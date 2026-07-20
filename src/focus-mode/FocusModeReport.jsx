@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { Flame, Shield, Target, Clock, TrendingUp, Download, Share2, Sparkles, Lock, Check } from "lucide-react";
 import { fm, phaseColor, useResponsive } from "./theme";
+import { DebugOverflow } from "./DebugOverflow";
 import {
   readSynapseSnapshot,
   readTriggerLog,
@@ -123,8 +124,9 @@ export default function FocusModeReport({ onNavigate, onOpenProfile }) {
 
   return (
     <FocusModeShell>
+      <DebugOverflow page="report" />
       <Sidebar active="report" onNavigate={onNavigate} />
-      <main style={{ flex: 1, minWidth: 0, paddingBottom: 60 }}>
+      <main style={{ flex: 1, minWidth: 0, width: "100%", paddingBottom: 60 }}>
         <TopBar userInitial="S" onOpenProfile={onOpenProfile} />
 
         {/* Header — centered */}
@@ -312,8 +314,8 @@ export default function FocusModeReport({ onNavigate, onOpenProfile }) {
                 return (
                   <div key={m.id} style={{ display: "grid", gridTemplateColumns: "clamp(18px,5vw,28px) 1fr 2.5fr clamp(36px,10vw,60px) clamp(36px,10vw,60px)", gap: 12, alignItems: "center", padding: "10px 0", borderTop: `1px solid ${fm.color.border}` }}>
                     <span style={{ fontSize: 16 }}>{m.emoji}</span>
-                    <span style={{ fontSize: 12, fontWeight: 700, color: fm.color.textPrimary }}>{m.label}</span>
-                    <div style={{ height: 8, borderRadius: 4, overflow: "hidden", background: fm.color.surfaceSunken }}>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: fm.color.textPrimary, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m.label}</span>
+                    <div style={{ height: 8, borderRadius: 4, overflow: "hidden", background: fm.color.surfaceSunken, minWidth: 0 }}>
                       <div style={{ height: "100%", width: `${successPct}%`, background: fm.color.success, transition: "width 1s cubic-bezier(.16,1,.3,1)" }} />
                     </div>
                     <span style={{ textAlign: "center", fontSize: 11.5, fontWeight: 700, color: fm.color.textPrimary }}>{run.longest}d</span>
@@ -329,7 +331,14 @@ export default function FocusModeReport({ onNavigate, onOpenProfile }) {
         <Reveal delay={660} style={{ padding: "clamp(14px,4vw,24px) clamp(14px,4vw,40px) 0" }}>
           <Card padding={30} style={{ boxShadow: SHADOW.secondary }} className={hoverClass("secondary")}>
             <Eyebrow style={{ marginBottom: 20 }}>Recovery Timeline</Eyebrow>
-            <RecoveryTimeline milestones={MILESTONES} streak={streak} color={pColor} />
+            {/* Fixed ~464px minimum width (6 nodes + connectors) never
+                shrinks below its label text — scroll inside the card on
+                narrow phones instead of overflowing the page. */}
+            <div style={{ overflowX: isMobile ? "auto" : "visible", WebkitOverflowScrolling: "touch" }}>
+              <div style={{ minWidth: isMobile ? 480 : "auto" }}>
+                <RecoveryTimeline milestones={MILESTONES} streak={streak} color={pColor} />
+              </div>
+            </div>
           </Card>
         </Reveal>
 
