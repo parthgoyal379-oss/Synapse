@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Search, BookHeart } from "lucide-react";
-import { fm } from "./theme";
+import { fm, useResponsive } from "./theme";
 import {
   readJournalEntries, saveJournalEntry, deleteJournalEntry,
   syncJournalEntryToCloud, journalWritingStreak, journalMoodDistribution,
@@ -38,6 +38,7 @@ const DEPTH_COLORS = {
 const FILTERS = ["All", "Today", "Week", "Month", "Favorites"];
 
 export default function FocusModeJournal({ uid, onNavigate, onOpenProfile }) {
+  const { isMobile } = useResponsive();
   const [entries, setEntries] = useState(() => readJournalEntries());
   const [draftTitle, setDraftTitle] = useState("");
   const [draftContent, setDraftContent] = useState("");
@@ -131,8 +132,8 @@ export default function FocusModeJournal({ uid, onNavigate, onOpenProfile }) {
           </div>
         </motion.div>
 
-        <div style={{ padding: "clamp(14px,4vw,20px) clamp(14px,4vw,44px) 0", display: "flex", flexWrap: "wrap", gap: 20, alignItems: "start" }}>
-          <motion.div {...cv(0.05)} style={{ flex: "1.5 1 300px", minWidth: 0, width: "100%" }}>
+        <div style={{ padding: "clamp(14px,4vw,20px) clamp(14px,4vw,44px) 0", display: "flex", flexDirection: isMobile ? "column" : "row", flexWrap: "wrap", gap: 20, alignItems: "start" }}>
+          <motion.div {...cv(0.05)} style={{ flex: isMobile ? "1 1 auto" : "1.5 1 300px", minWidth: 0, width: "100%" }}>
             <Card padding={28} style={GLASS_CARD}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
                 <Eyebrow>Today's Reflection</Eyebrow>
@@ -152,11 +153,11 @@ export default function FocusModeJournal({ uid, onNavigate, onOpenProfile }) {
             </Card>
           </motion.div>
 
-          <motion.div {...cv(0.11)} style={{ flex: "0.8 1 220px", minWidth: 0 }}>
+          <motion.div {...cv(0.11)} style={{ flex: isMobile ? "1 1 auto" : "0.8 1 220px", minWidth: 0, width: isMobile ? "100%" : "auto" }}>
             <PromptCard prompt={PROMPTS[promptIdx]} dotCount={PROMPTS.length} dotIndex={promptIdx} onRefresh={() => setPromptIdx((i) => (i + 1) % PROMPTS.length)} />
           </motion.div>
 
-          <motion.div {...cv(0.17)} {...HOVER_LIFT} style={{ flex: "0.7 1 200px", minWidth: 0 }}>
+          <motion.div {...cv(0.17)} {...HOVER_LIFT} style={{ flex: isMobile ? "1 1 auto" : "0.7 1 200px", minWidth: 0, width: isMobile ? "100%" : "auto" }}>
             <Card padding={22} style={{ ...GLASS_CARD, textAlign: "center" }}>
               <Eyebrow style={{ marginBottom: 12 }}>Writing Streak</Eyebrow>
               <div style={{ width: 84, height: 84, borderRadius: "50%", border: `6px solid ${fm.color.accentSoft}`, borderTopColor: fm.color.accent, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", margin: "0 auto 12px" }}>
@@ -190,7 +191,7 @@ export default function FocusModeJournal({ uid, onNavigate, onOpenProfile }) {
           </Card>
         </motion.div>
 
-        <div style={{ padding: "clamp(14px,4vw,20px) clamp(14px,4vw,44px) 0", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(280px,100%), 1fr))", gap: 20, alignItems: "start" }}>
+        <div style={{ padding: "clamp(14px,4vw,20px) clamp(14px,4vw,44px) 0", display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 20, alignItems: "start" }}>
           <motion.div {...cv(0.28)} {...HOVER_LIFT}>
             <Card padding={26} style={GLASS_CARD}>
               <Eyebrow style={{ marginBottom: 14 }}>Reflection Calendar</Eyebrow>
@@ -231,7 +232,7 @@ export default function FocusModeJournal({ uid, onNavigate, onOpenProfile }) {
           </div>
         </div>
 
-        <div style={{ padding: "clamp(14px,4vw,20px) clamp(14px,4vw,44px) 0", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(260px,100%), 1fr))", gap: 20 }}>
+        <div style={{ padding: "clamp(14px,4vw,20px) clamp(14px,4vw,44px) 0", display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 20 }}>
           <motion.div {...cv(0.4)} {...HOVER_LIFT}>
             <Card padding={22} style={GLASS_CARD}>
               <Eyebrow style={{ marginBottom: 14 }}>Emotion Distribution</Eyebrow>

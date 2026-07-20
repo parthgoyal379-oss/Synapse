@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Flame, Shield, Target, Clock, TrendingUp, Download, Share2, Sparkles, Lock, Check } from "lucide-react";
-import { fm, phaseColor } from "./theme";
+import { fm, phaseColor, useResponsive } from "./theme";
 import {
   readSynapseSnapshot,
   readTriggerLog,
@@ -61,6 +61,7 @@ const SHADOW = {
 };
 
 export default function FocusModeReport({ onNavigate, onOpenProfile }) {
+  const { isMobile } = useResponsive();
   const snapshot = useMemo(() => readSynapseSnapshot(), []);
   const triggerLog = useMemo(() => readTriggerLog(), []);
   const archetype = useMemo(() => readArchetype(), []);
@@ -135,8 +136,8 @@ export default function FocusModeReport({ onNavigate, onOpenProfile }) {
         {/* Hero — recovery score */}
         <Reveal delay={80} style={{ padding: "clamp(14px,4vw,24px) clamp(14px,4vw,40px) 0" }}>
           <Card padding={40} style={{ boxShadow: SHADOW.primary }} className={hoverClass("primary")}>
-            <div data-fm-center-mobile style={{ display: "flex", flexWrap: "wrap", gap: 30, alignItems: "center" }}>
-              <div data-fm-center-mobile style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 32, flex: "1 1 280px", minWidth: 0 }}>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 30, alignItems: "center", justifyContent: isMobile ? "center" : "flex-start" }}>
+              <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: isMobile ? "center" : "flex-start", textAlign: isMobile ? "center" : "left", gap: 32, flex: "1 1 280px", minWidth: 0 }}>
                 <ScoreRing score={score} color={pColor} />
                 <div>
                   <Eyebrow style={{ marginBottom: 6 }}>Your Recovery Score</Eyebrow>
@@ -152,7 +153,7 @@ export default function FocusModeReport({ onNavigate, onOpenProfile }) {
                   )}
                 </div>
               </div>
-              <div data-fm-grid="2" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, flex: "1 1 260px", minWidth: 0 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, flex: "1 1 260px", minWidth: 0 }}>
                 <MiniScore label="Recovery Score" value={score} color={pColor} />
                 <MiniScore label="Consistency" value={consistencyPct} color={fm.color.info} />
                 <MiniScore label="Urge Resistance" value={urgePct} color={fm.color.success} />
@@ -166,7 +167,7 @@ export default function FocusModeReport({ onNavigate, onOpenProfile }) {
         <Reveal delay={160} style={{ padding: "clamp(14px,4vw,24px) clamp(14px,4vw,40px) 0" }}>
           <Card padding={30} style={{ boxShadow: SHADOW.secondary }} className={hoverClass("secondary")}>
             <Eyebrow style={{ marginBottom: 20 }}>Monthly Summary</Eyebrow>
-            <div data-fm-grid="4" style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 16 }}>
+            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(4,1fr)", gap: 16 }}>
               {weeks.map((w, i) => (
                 <div key={w.label} style={{ padding: "16px 14px", borderRadius: fm.radius.md, background: fm.color.surfaceMuted, border: `1px solid ${fm.color.border}` }}>
                   <div style={{ fontSize: 10.5, fontWeight: 700, color: fm.color.textTertiary, marginBottom: 10 }}>{w.label.toUpperCase()}</div>
@@ -244,11 +245,11 @@ export default function FocusModeReport({ onNavigate, onOpenProfile }) {
         </div>
 
         {/* Streak + Urge analytics */}
-        <div style={{ padding: "clamp(14px,4vw,24px) clamp(14px,4vw,40px) 0", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(300px,100%), 1fr))", gap: 20 }}>
+        <div style={{ padding: "clamp(14px,4vw,24px) clamp(14px,4vw,40px) 0", display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 20 }}>
           <Reveal delay={420}>
             <Card padding={26} style={{ boxShadow: SHADOW.secondary }} className={hoverClass("secondary")}>
               <Eyebrow style={{ marginBottom: 16 }}>Streak Analytics</Eyebrow>
-              <div data-fm-grid="3" style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 12 }}>
+              <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(3,1fr)", gap: 12 }}>
                 <MetricCard icon={<Flame size={15} color={pColor} />} value={<CountUp to={streak} />} label="Current" tint={pColor} tintSoft={`${pColor}1a`} />
                 <MetricCard icon={<TrendingUp size={15} color={fm.color.accent} />} value={<CountUp to={longest} />} label="Longest" tint={fm.color.accent} tintSoft={fm.color.accentSoft} />
                 <MetricCard icon={<Target size={15} color={fm.color.info} />} value={<CountUp to={avgRun} />} label="Average" tint={fm.color.info} tintSoft={fm.color.infoSoft} />
@@ -261,7 +262,7 @@ export default function FocusModeReport({ onNavigate, onOpenProfile }) {
           <Reveal delay={480}>
             <Card padding={26} style={{ boxShadow: SHADOW.secondary }} className={hoverClass("secondary")}>
               <Eyebrow style={{ marginBottom: 16 }}>Urge Analytics</Eyebrow>
-              <div data-fm-grid="3" style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 12 }}>
+              <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(3,1fr)", gap: 12 }}>
                 <MetricCard icon={<Target size={15} color={fm.color.accent} />} value={urgeLog.length} label="Total Urges" tint={fm.color.accent} tintSoft={fm.color.accentSoft} />
                 <MetricCard icon={<Shield size={15} color={fm.color.success} />} value={urgeLog.filter((u) => u.survived).length} label="Managed" tint={fm.color.success} tintSoft={fm.color.successSoft} />
                 <MetricCard icon={<Flame size={15} color={fm.color.danger} />} value={urgeLog.filter((u) => !u.survived).length} label="Failed" tint={fm.color.danger} tintSoft={fm.color.dangerSoft} />
@@ -352,7 +353,7 @@ export default function FocusModeReport({ onNavigate, onOpenProfile }) {
         </Reveal>
 
         {/* Strengths + Growth */}
-        <div style={{ padding: "clamp(14px,4vw,24px) clamp(14px,4vw,40px) 0", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(240px,100%), 1fr))", gap: 20 }}>
+        <div style={{ padding: "clamp(14px,4vw,24px) clamp(14px,4vw,40px) 0", display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 20 }}>
           <Reveal delay={780}>
             <Card padding={24} style={{ boxShadow: SHADOW.small }} className={hoverClass("small")}>
               <Eyebrow style={{ marginBottom: 12 }}>Personal Strengths</Eyebrow>
@@ -381,7 +382,7 @@ export default function FocusModeReport({ onNavigate, onOpenProfile }) {
         <Reveal delay={860} style={{ padding: "clamp(14px,4vw,24px) clamp(14px,4vw,40px) 0" }}>
           <Card padding={26} style={{ boxShadow: SHADOW.secondary }} className={hoverClass("secondary")}>
             <Eyebrow style={{ marginBottom: 16 }}>Achievements</Eyebrow>
-            <div data-fm-grid="5" style={{ display: "grid", gridTemplateColumns: "repeat(5,1fr)", gap: 14 }}>
+            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(5,1fr)", gap: 14 }}>
               {achievements.map((a) => (
                 <div key={a.id} className="fm-hover-card fm-hover-card--small" style={{ textAlign: "center", padding: "18px 10px", borderRadius: fm.radius.md, background: a.unlocked ? fm.color.accentSoft : fm.color.surfaceMuted, border: `1px solid ${a.unlocked ? fm.color.accentSoftBorder : fm.color.border}`, opacity: a.unlocked ? 1 : 0.5 }}>
                   <div style={{ fontSize: 24, marginBottom: 8, filter: a.unlocked ? "none" : "grayscale(1)" }}>{a.unlocked ? a.icon : <Lock size={20} color={fm.color.textTertiary} style={{ margin: "0 auto" }} />}</div>

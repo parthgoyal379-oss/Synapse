@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { fm, phaseColor } from "./theme";
+import { fm, phaseColor, useResponsive } from "./theme";
 import {
   readTriggerLog,
   urgeResistancePct,
@@ -49,6 +49,7 @@ const INTENSITY_LEVELS = ["MILD", "MODERATE", "INTENSE", "OVERWHELMING"];
  *   onNavigate, onOpenProfile
  */
 export default function FocusModeUrgeLog({ rescue, streak, onNavigate, onOpenProfile }) {
+  const { isMobile } = useResponsive();
   const { active, done, task, intensity, setIntensity, urgeLog, phase, progress, mins, secs, startTimer, reset, logUrge, newTask, survived, total } = rescue;
 
   const triggerLog = useMemo(() => readTriggerLog(), []);
@@ -90,9 +91,9 @@ export default function FocusModeUrgeLog({ rescue, streak, onNavigate, onOpenPro
         </div>
 
         {/* ── Hero / active rescue + Today's Overview ──────────── */}
-        <div style={{ padding: "clamp(14px,4vw,20px) clamp(14px,4vw,40px) 0", display: "flex", flexWrap: "wrap", gap: 20, alignItems: "start" }}>
+        <div style={{ padding: "clamp(14px,4vw,20px) clamp(14px,4vw,40px) 0", display: "flex", flexDirection: isMobile ? "column" : "row", flexWrap: "wrap", gap: 20, alignItems: "start" }}>
           {!active && !done && (
-            <Card padding={36} style={{ flex: "1.7 1 320px", minWidth: 0 }}>
+            <Card padding={36} style={{ flex: isMobile ? "1 1 auto" : "1.7 1 320px", minWidth: 0, width: isMobile ? "100%" : "auto" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
                 <div style={{ width: 44, height: 44, borderRadius: fm.radius.sm, background: fm.color.accentSoft, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20 }}>
                   ⚡
@@ -118,7 +119,7 @@ export default function FocusModeUrgeLog({ rescue, streak, onNavigate, onOpenPro
           )}
 
           {active && (
-            <div style={{ flex: "1.7 1 320px", minWidth: 0 }}>
+            <div style={{ flex: isMobile ? "1 1 auto" : "1.7 1 320px", minWidth: 0, width: isMobile ? "100%" : "auto" }}>
               <RescueActiveCard
                 timeLabel={`${mins}:${secs}`}
                 phaseLabel={phase.label}
@@ -133,7 +134,7 @@ export default function FocusModeUrgeLog({ rescue, streak, onNavigate, onOpenPro
           )}
 
           {done && (
-            <Card padding={36} style={{ textAlign: "center", flex: "1.7 1 320px", minWidth: 0 }}>
+            <Card padding={36} style={{ textAlign: "center", flex: isMobile ? "1 1 auto" : "1.7 1 320px", minWidth: 0, width: isMobile ? "100%" : "auto" }}>
               <div style={{ fontSize: 44, marginBottom: 12 }}>✦</div>
               <div style={{ fontFamily: fm.font.display, fontSize: 24, fontWeight: 700, color: fm.color.success, marginBottom: 10 }}>You Held the Line</div>
               <p style={{ fontSize: 13, color: fm.color.textSecondary, lineHeight: 1.7, marginBottom: 22, maxWidth: 420, marginInline: "auto" }}>
@@ -150,7 +151,7 @@ export default function FocusModeUrgeLog({ rescue, streak, onNavigate, onOpenPro
             </Card>
           )}
 
-          <Card padding={22} style={{ flex: "0.9 1 260px", minWidth: 0 }}>
+          <Card padding={22} style={{ flex: isMobile ? "1 1 auto" : "0.9 1 260px", minWidth: 0, width: isMobile ? "100%" : "auto" }}>
             <Eyebrow style={{ marginBottom: 16 }}>Today's Overview</Eyebrow>
             <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
               <StatTile icon="🔥" label="Current Streak (days)" value={streak ?? 0} tint={pColor} tintSoft={`${pColor}1a`} />
@@ -162,7 +163,7 @@ export default function FocusModeUrgeLog({ rescue, streak, onNavigate, onOpenPro
         </div>
 
         {/* ── Success rate trend + Peak hours ──────────────────── */}
-        <div style={{ padding: "clamp(14px,4vw,20px) clamp(14px,4vw,40px) 0", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(260px,100%), 1fr))", gap: 20 }}>
+        <div style={{ padding: "clamp(14px,4vw,20px) clamp(14px,4vw,40px) 0", display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 20 }}>
           <Card padding={22}>
             <Eyebrow style={{ marginBottom: 14 }}>Success Rate Over Time</Eyebrow>
             {urgeLog.length > 0 ? (
@@ -190,8 +191,8 @@ export default function FocusModeUrgeLog({ rescue, streak, onNavigate, onOpenPro
         </div>
 
         {/* ── Triggers + Urge survival rate ─────────────────────── */}
-        <div style={{ padding: "clamp(14px,4vw,20px) clamp(14px,4vw,40px) 0", display: "flex", flexWrap: "wrap", gap: 20 }}>
-          <Card padding={22} style={{ flex: "1.1 1 280px", minWidth: 0 }}>
+        <div style={{ padding: "clamp(14px,4vw,20px) clamp(14px,4vw,40px) 0", display: "flex", flexDirection: isMobile ? "column" : "row", flexWrap: "wrap", gap: 20 }}>
+          <Card padding={22} style={{ flex: isMobile ? "1 1 auto" : "1.1 1 280px", minWidth: 0, width: isMobile ? "100%" : "auto" }}>
             <Eyebrow style={{ marginBottom: 4 }}>Most Common Triggers</Eyebrow>
             <div style={{ fontSize: 10.5, color: fm.color.textTertiary, marginBottom: 14 }}>From your logged check-ins</div>
             {triggers.length > 0 ? (
@@ -218,7 +219,7 @@ export default function FocusModeUrgeLog({ rescue, streak, onNavigate, onOpenPro
             )}
           </Card>
 
-          <div style={{ display: "flex", flexDirection: "column", gap: 20, flex: "0.9 1 240px", minWidth: 0 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 20, flex: isMobile ? "1 1 auto" : "0.9 1 240px", minWidth: 0, width: isMobile ? "100%" : "auto" }}>
             <Card padding={22}>
               <Eyebrow style={{ marginBottom: 6 }}>Average Urge Duration</Eyebrow>
               <div style={{ fontFamily: fm.font.display, fontSize: 26, fontWeight: 700, color: fm.color.textPrimary }}>{fmtDuration(duration?.avgSec)}</div>
@@ -241,8 +242,8 @@ export default function FocusModeUrgeLog({ rescue, streak, onNavigate, onOpenPro
         </div>
 
         {/* ── Recent sessions + Insight + Quick actions ────────── */}
-        <div style={{ padding: "clamp(14px,4vw,20px) clamp(14px,4vw,40px) 0", display: "flex", flexWrap: "wrap", gap: 20, alignItems: "start" }}>
-          <Card padding={26} style={{ flex: "1.3 1 280px", minWidth: 0 }}>
+        <div style={{ padding: "clamp(14px,4vw,20px) clamp(14px,4vw,40px) 0", display: "flex", flexDirection: isMobile ? "column" : "row", flexWrap: "wrap", gap: 20, alignItems: "start" }}>
+          <Card padding={26} style={{ flex: isMobile ? "1 1 auto" : "1.3 1 280px", minWidth: 0, width: isMobile ? "100%" : "auto" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
               <Eyebrow>Recent Rescue Sessions</Eyebrow>
               {urgeLog.length > 5 && (

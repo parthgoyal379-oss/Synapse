@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ShieldCheck, Target, Activity, CloudRain, Flag, BadgeCheck, Hourglass, Loader2, Check, Users, Smartphone, MessageCircleX, Moon, TrendingDown, Repeat2, Frown as FrownIcon, HelpCircle, Sunrise, Sun, Sunset, MoonStar } from "lucide-react";
-import { fm } from "./theme";
+import { fm, useResponsive } from "./theme";
 import { readSynapseSnapshot, MOODS, TRIGGERS, TIME_SLOTS, getCheckinCountdownLabel, computeVerdict } from "./synapseData";
 import { FocusModeShell, Sidebar, TopBar, Card, Eyebrow, Button, VerdictBadge, WeeklyTrendChart, RecoveryPhaseCard, AmbientBackground, EASE, GLASS_CARD, HOVER_LIFT, CountUp } from "./components";
 
@@ -32,6 +32,7 @@ export default function FocusModeCheckIn({
   onOpenProfile,
 }) {
   const snapshot = useMemo(() => readSynapseSnapshot(), []);
+  const { isMobile } = useResponsive();
   const { addictions, level, nextLevel, xpPct, daysToNext, quote, weekly, history } = snapshot;
   const pColor = fm.color.accent;
 
@@ -170,8 +171,8 @@ export default function FocusModeCheckIn({
           <div style={{ fontSize: 12, color: fm.color.textTertiary }}>Your honesty builds your transformation.</div>
         </div>
 
-        <div style={{ padding: "clamp(14px,4vw,22px) clamp(14px,4vw,48px) 0", display: "flex", flexWrap: "wrap", gap: 22, alignItems: "start" }}>
-          <div style={{ display: "flex", flexDirection: "column", gap: 22, flex: "1.4 1 320px", minWidth: 0 }}>
+        <div style={{ padding: "clamp(14px,4vw,22px) clamp(14px,4vw,48px) 0", display: "flex", flexDirection: isMobile ? "column" : "row", flexWrap: "wrap", gap: 22, alignItems: "start" }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 22, flex: isMobile ? "1 1 auto" : "1.4 1 320px", minWidth: 0, width: isMobile ? "100%" : "auto" }}>
             {!done ? (
               <>
                 <motion.div {...cardVariant(0)}>
@@ -188,7 +189,7 @@ export default function FocusModeCheckIn({
                   <Card padding={26} style={GLASS_CARD}>
                     <Eyebrow style={{ marginBottom: 4 }}>How do you feel right now?</Eyebrow>
                     <div style={{ fontSize: 11.5, color: fm.color.textTertiary, marginBottom: 16 }}>Be honest with yourself. There's no right or wrong.</div>
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(min(150px,100%),1fr))", gap: 10 }}>
+                    <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(3,1fr)", gap: 10 }}>
                       {MOODS.map((m, i) => {
                         const Icon = MOOD_ICONS[m.id];
                         const t = MOOD_TINTS[m.id];
@@ -335,7 +336,7 @@ export default function FocusModeCheckIn({
           </div>
 
           {/* Right rail */}
-          <div style={{ display: "flex", flexDirection: "column", gap: 20, flex: "1 1 260px", minWidth: 0 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 20, flex: isMobile ? "1 1 auto" : "1 1 260px", minWidth: 0, width: isMobile ? "100%" : "auto" }}>
             <motion.div {...cardVariant(0.02)} {...HOVER_LIFT}>
               <Card padding={22} style={GLASS_CARD}>
                 <Eyebrow style={{ marginBottom: 10 }}>Today's Progress</Eyebrow>

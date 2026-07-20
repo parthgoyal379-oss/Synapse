@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import { Heart, ClipboardCheck, Target, ArrowRight, Sparkles, Headphones, Flag, TrendingUp, Smile, Meh, Frown } from "lucide-react";
-import { fm } from "./theme";
+import { fm, useResponsive } from "./theme";
 import { readSynapseSnapshot } from "./synapseData";
 import { FocusModeShell, Sidebar, TopBar, Card, Eyebrow, Button, VerdictBadge, StatTile, TaskRow, WeeklyTrendChart, RecoveryPhaseCard, RecoveryTimeline, NeuralOrb, AmbientBackground, EASE, GLASS_CARD, CountUp } from "./components";
 
@@ -55,6 +55,7 @@ export default function FocusModeHome({ onNavigate, onOpenProfile }) {
     stats,
   } = data;
 
+  const { isMobile } = useResponsive();
   const prefersReducedMotion = useReducedMotion();
   const [playIntro] = useState(() => !prefersReducedMotion);
 
@@ -153,7 +154,7 @@ export default function FocusModeHome({ onNavigate, onOpenProfile }) {
             {/* Hero */}
             <motion.div initial="hidden" animate="visible" variants={heroCard} {...hoverLift}>
               <Card padding={0} style={{ ...GLASS_CARD, overflow: "hidden" }}>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(240px,100%), 1fr))", alignItems: "center", minHeight: 320 }}>
+                <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1.05fr 1fr", alignItems: "center", minHeight: isMobile ? "auto" : 320 }}>
                   <motion.div variants={heroTextContainer} initial="hidden" animate="visible" style={{ padding: "clamp(24px,6vw,40px) clamp(8px,3vw,8px) clamp(24px,6vw,40px) clamp(20px,6vw,40px)" }}>
                     <motion.div variants={heroTextItem} style={{ fontFamily: fm.font.display, fontSize: 15, color: fm.color.textSecondary, marginBottom: 4, letterSpacing: 0.2 }}>
                       {greeting},
@@ -267,7 +268,7 @@ export default function FocusModeHome({ onNavigate, onOpenProfile }) {
             </motion.div>
 
             <motion.div initial="hidden" animate="visible" variants={statsCard} {...hoverLift}>
-              <Card padding={22} style={{ ...GLASS_CARD, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(84px,100%), 1fr))", gap: 14 }}>
+              <Card padding={22} style={{ ...GLASS_CARD, display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(3,1fr)", gap: 14 }}>
                 <motion.div variants={statItem}>
                   <StatTile icon={<Heart size={14} strokeWidth={2.2} color={fm.color.success} />} label="Urges Managed" value={stats.urgesManaged} tint={fm.color.success} tintSoft={fm.color.successSoft} />
                 </motion.div>
@@ -341,7 +342,7 @@ export default function FocusModeHome({ onNavigate, onOpenProfile }) {
         </motion.div>
 
         {/* ── Insight / Weekly Progress / Recent check-in / Support ── */}
-        <div data-fm-grid="4" style={{ padding: "24px clamp(14px,4vw,48px) 0", display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 20 }}>
+        <div style={{ padding: "24px clamp(14px,4vw,48px) 0", display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(4,1fr)", gap: 20 }}>
           <motion.div initial="hidden" animate="visible" variants={bottomRow(playIntro ? 1.45 : 0)} {...hoverLift}>
             <Card padding={24} style={GLASS_CARD}>
               <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>

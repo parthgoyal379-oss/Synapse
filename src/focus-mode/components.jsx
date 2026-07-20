@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
-import { fm, injectFocusModeStyles } from "./theme";
+import { fm, injectFocusModeStyles, useResponsive } from "./theme";
 
 /* ─────────────────────────────────────────────────────────────────────────
    FOCUS MODE — SHARED COMPONENT LIBRARY
@@ -27,6 +27,8 @@ export const NAV_ITEMS = [
 /* ── Shell : mounts once per Focus Mode session, injects styles + scopes
    the .focus-mode CSS variable namespace, lays out sidebar + content. ── */
 export function FocusModeShell({ children }) {
+  const { isMobile } = useResponsive();
+
   useEffect(() => {
     injectFocusModeStyles();
   }, []);
@@ -36,6 +38,7 @@ export function FocusModeShell({ children }) {
       className="focus-mode"
       style={{
         display: "flex",
+        flexDirection: isMobile ? "column" : "row",
         alignItems: "flex-start",
         width: "100%",
         minHeight: "100vh",
@@ -52,41 +55,63 @@ export function FocusModeShell({ children }) {
 
 /* ── Sidebar navigation, shared across every screen ── */
 export function Sidebar({ active, onNavigate, streakSubtitle = "Reset · Rewire · Reconquer" }) {
+  const { isMobile } = useResponsive();
+
   return (
     <aside
-      style={{
-        width: 268,
-        flexShrink: 0,
-        minHeight: "100vh",
-        padding: "32px 20px",
-        display: "flex",
-        flexDirection: "column",
-        gap: 34,
-        position: "sticky",
-        top: 0,
-      }}
+      style={
+        isMobile
+          ? {
+              width: "100%",
+              flexShrink: 0,
+              minHeight: 0,
+              padding: "14px 16px",
+              display: "flex",
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 14,
+              position: "relative",
+              top: "auto",
+              overflowX: "auto",
+              WebkitOverflowScrolling: "touch",
+              borderBottom: `1px solid ${fm.color.border}`,
+            }
+          : {
+              width: 268,
+              flexShrink: 0,
+              minHeight: "100vh",
+              padding: "32px 20px",
+              display: "flex",
+              flexDirection: "column",
+              gap: 34,
+              position: "sticky",
+              top: 0,
+            }
+      }
     >
-      <div style={{ display: "flex", alignItems: "center", gap: 11, padding: "0 8px" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 11, padding: isMobile ? 0 : "0 8px", flexShrink: 0 }}>
         <NeuralGlyph />
-        <div>
-          <div
-            style={{
-              fontFamily: fm.font.display,
-              fontWeight: 600,
-              fontSize: 15.5,
-              letterSpacing: 3,
-              color: fm.color.textPrimary,
-            }}
-          >
-            SYNAPSE
+        {!isMobile && (
+          <div>
+            <div
+              style={{
+                fontFamily: fm.font.display,
+                fontWeight: 600,
+                fontSize: 15.5,
+                letterSpacing: 3,
+                color: fm.color.textPrimary,
+              }}
+            >
+              SYNAPSE
+            </div>
+            <div style={{ fontSize: 8.5, letterSpacing: 1.1, color: fm.color.textTertiary, marginTop: 3 }}>
+              {streakSubtitle.toUpperCase()}
+            </div>
           </div>
-          <div style={{ fontSize: 8.5, letterSpacing: 1.1, color: fm.color.textTertiary, marginTop: 3 }}>
-            {streakSubtitle.toUpperCase()}
-          </div>
-        </div>
+        )}
       </div>
 
-      <nav style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+      <nav style={{ display: "flex", flexDirection: isMobile ? "row" : "column", gap: isMobile ? 4 : 3, flexShrink: 0 }}>
         {NAV_ITEMS.map((item) => {
           const isActive = active === item.id;
           return (
@@ -96,16 +121,18 @@ export function Sidebar({ active, onNavigate, streakSubtitle = "Reset · Rewire 
               style={{
                 display: "flex",
                 alignItems: "center",
-                gap: 13,
-                padding: "11px 16px",
+                gap: isMobile ? 6 : 13,
+                padding: isMobile ? "8px 10px" : "11px 16px",
                 borderRadius: 14,
                 border: "none",
                 background: isActive ? fm.color.surface : "transparent",
                 boxShadow: isActive ? fm.shadow.card : "none",
                 color: isActive ? fm.color.accent : fm.color.textSecondary,
-                fontSize: 13,
+                fontSize: isMobile ? 11 : 13,
                 fontWeight: isActive ? 600 : 500,
                 textAlign: "left",
+                whiteSpace: isMobile ? "nowrap" : "normal",
+                flexShrink: 0,
                 transition: "all .18s ease",
               }}
             >
@@ -116,15 +143,17 @@ export function Sidebar({ active, onNavigate, streakSubtitle = "Reset · Rewire 
         })}
       </nav>
 
-      <div data-fm-role="sidebar-footer" style={{ marginTop: "auto", display: "flex", flexDirection: "column", gap: 10 }}>
-        <Card padding={14} style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <span style={{ fontSize: 16 }}>🛡️</span>
-          <div>
-            <div style={{ fontSize: 11, fontWeight: 700, color: fm.color.textPrimary }}>Streak Protector</div>
-            <div style={{ fontSize: 10, color: fm.color.textTertiary }}>You've got this.</div>
-          </div>
-        </Card>
-      </div>
+      {!isMobile && (
+        <div style={{ marginTop: "auto", display: "flex", flexDirection: "column", gap: 10 }}>
+          <Card padding={14} style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <span style={{ fontSize: 16 }}>🛡️</span>
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: fm.color.textPrimary }}>Streak Protector</div>
+              <div style={{ fontSize: 10, color: fm.color.textTertiary }}>You've got this.</div>
+            </div>
+          </Card>
+        </div>
+      )}
     </aside>
   );
 }
@@ -177,8 +206,9 @@ function NavIcon({ name, active }) {
 
 /* ── Top bar : notifications + avatar, reused on every screen ── */
 export function TopBar({ userInitial = "S", onOpenProfile }) {
+  const { isMobile } = useResponsive();
   return (
-    <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 14, padding: "clamp(16px,4vw,28px) clamp(14px,4vw,40px) 0" }}>
+    <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 14, padding: isMobile ? "16px 16px 0" : "28px 40px 0" }}>
       <button
         aria-label="Notifications"
         style={{

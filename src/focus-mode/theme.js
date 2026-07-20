@@ -13,6 +13,32 @@
    Focus Mode can be mounted alongside Command Mode with zero visual bleed.
 ──────────────────────────────────────────────────────────────────────── */
 
+import { useState, useEffect } from "react";
+
+/* ─────────────────────────────────────────────────────────────────────────
+   RESPONSIVE HOOK — single source of truth for layout breakpoints.
+   Every page computes its own layout values (grid columns, flex direction,
+   paddings that need to differ structurally, sidebar layout) directly from
+   this hook instead of relying on injected CSS / media queries. Desktop and
+   mobile literally render different values from component logic, so there
+   is no CSS specificity or !important to fight.
+   Breakpoint matches the project's original mobile boundary (≤768px).
+──────────────────────────────────────────────────────────────────────── */
+export function useViewportWidth() {
+  const [width, setWidth] = useState(() => (typeof window !== "undefined" ? window.innerWidth : 1280));
+  useEffect(() => {
+    const onResize = () => setWidth(window.innerWidth);
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+  return width;
+}
+
+export function useResponsive() {
+  const width = useViewportWidth();
+  return { width, isMobile: width <= 768, isTablet: width > 768 && width < 1024, isDesktop: width >= 1024 };
+}
+
 export const fm = {
   color: {
     // Warm ivory canvas + soft amber glow, matching the approved Home mock
@@ -187,76 +213,6 @@ export function injectFocusModeStyles() {
 
     @media (prefers-reduced-motion: reduce) {
       .focus-mode * { animation-duration: 0.001ms !important; }
-    }
-
-    /* ── MOBILE (≤768px) — additive structural overrides only ──
-       Desktop (≥1024px) and tablet are completely untouched: these rules
-       are gated behind the max-width query and only override the specific
-       inline properties needed to turn the fixed 268px side-rail into a
-       horizontally-scrollable top strip, and stack the two-column shell
-       into a single column. No JSX/component changes, no new classNames —
-       targets the existing semantic <aside>/<main> tags only. */
-    @media (max-width: 768px) {
-      .focus-mode {
-        flex-direction: column !important;
-      }
-      .focus-mode aside {
-        width: 100% !important;
-        min-height: 0 !important;
-        position: relative !important;
-        top: auto !important;
-        flex-direction: row !important;
-        align-items: center !important;
-        gap: clamp(10px, 3vw, 18px) !important;
-        padding: 14px clamp(12px, 4vw, 20px) !important;
-        overflow-x: auto !important;
-        -webkit-overflow-scrolling: touch !important;
-        border-bottom: 1px solid ${fm.color.border};
-      }
-      .focus-mode aside > div:first-child {
-        flex-shrink: 0;
-      }
-      .focus-mode aside nav {
-        flex-direction: row !important;
-        gap: 4px !important;
-        flex-shrink: 0;
-      }
-      .focus-mode aside nav button {
-        padding: 8px 10px !important;
-        white-space: nowrap;
-      }
-      .focus-mode aside nav button span,
-      .focus-mode aside nav button {
-        font-size: 11px !important;
-      }
-      .focus-mode aside > div[data-fm-role="sidebar-footer"] {
-        display: none !important;
-      }
-      .focus-mode main {
-        padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px)) !important;
-      }
-    }
-
-    @media (max-width: 480px) {
-      .focus-mode aside nav button {
-        padding: 7px 8px !important;
-      }
-    }
-
-    /* ── Multi-column (3+) grids that must stay pixel-identical to their
-       exact original desktop value at every desktop/tablet width — CSS
-       Grid's auto-fit track-collapse math cannot guarantee that safely at
-       borderline widths, so these keep their literal original
-       gridTemplateColumns inline and only get force-collapsed to a single
-       column here, strictly below the mobile breakpoint. */
-    @media (max-width: 768px) {
-      .focus-mode [data-fm-grid] {
-        grid-template-columns: 1fr !important;
-      }
-      .focus-mode [data-fm-center-mobile] {
-        text-align: center !important;
-        justify-content: center !important;
-      }
     }
   `;
   document.head.appendChild(style);

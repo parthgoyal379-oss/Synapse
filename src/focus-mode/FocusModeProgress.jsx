@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { fm, phaseColor } from "./theme";
+import { fm, phaseColor, useResponsive } from "./theme";
 import {
   readSynapseSnapshot,
   monthlyCheckinsCount,
@@ -56,6 +56,7 @@ const SHADOW = {
 const hoverClass = (tier) => `fm-hover-card fm-hover-card--${tier}`;
 
 export default function FocusModeProgress({ onNavigate, onOpenProfile }) {
+  const { isMobile } = useResponsive();
   const snapshot = useMemo(() => readSynapseSnapshot(), []);
   const triggerLog = useMemo(() => readTriggerLog(), []);
   const { streak, level, nextLevel, xpPct, daysToNext, quote, history, addictions, urgeLog } = snapshot;
@@ -89,7 +90,7 @@ export default function FocusModeProgress({ onNavigate, onOpenProfile }) {
           <div style={{ fontSize: 12.5, color: fm.color.textSecondary, marginTop: 4 }}>See how far you've come. Track what matters.</div>
         </Reveal>
 
-        <div data-fm-grid="5" style={{ padding: "clamp(14px,4vw,20px) clamp(14px,4vw,40px) 0", display: "grid", gridTemplateColumns: "repeat(5,1fr)", gap: 14 }}>
+        <div style={{ padding: "clamp(14px,4vw,20px) clamp(14px,4vw,40px) 0", display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(5,1fr)", gap: 14 }}>
           {[
             { icon: "🔥", value: streak, label: "Current Streak (days)", tint: pColor, tintSoft: `${pColor}1a` },
             { icon: "📈", value: longest, label: "Longest Streak (days)", tint: fm.color.accent, tintSoft: fm.color.accentSoft },
@@ -136,7 +137,7 @@ export default function FocusModeProgress({ onNavigate, onOpenProfile }) {
           </Card>
         </Reveal>
 
-        <div data-fm-grid="3" style={{ padding: "clamp(14px,4vw,20px) clamp(14px,4vw,40px) 0", display: "grid", gridTemplateColumns: "1.1fr 1fr 1.1fr", gap: 20 }}>
+        <div style={{ padding: "clamp(14px,4vw,20px) clamp(14px,4vw,40px) 0", display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1.1fr 1fr 1.1fr", gap: 20 }}>
           <Reveal delay={320}>
             <Card padding={22} style={{ boxShadow: SHADOW.secondary }} className={hoverClass("secondary")}>
               <Eyebrow style={{ marginBottom: 14 }}>Check-In Consistency</Eyebrow>
@@ -265,7 +266,7 @@ export default function FocusModeProgress({ onNavigate, onOpenProfile }) {
           </Reveal>
         </div>
 
-        <div data-fm-grid="3" style={{ padding: "clamp(14px,4vw,20px) clamp(14px,4vw,40px) 0", display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 20 }}>
+        <div style={{ padding: "clamp(14px,4vw,20px) clamp(14px,4vw,40px) 0", display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr 1fr", gap: 20 }}>
           <Reveal delay={620}>
             <Card padding={22} style={{ boxShadow: SHADOW.small }} className={hoverClass("small")}>
               <Eyebrow style={{ marginBottom: 12 }}>Strengths This Month</Eyebrow>

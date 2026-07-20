@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { fm } from "./theme";
+import { fm, useResponsive } from "./theme";
 import {
   readSynapseSnapshot,
   readArchetype,
@@ -73,6 +73,7 @@ function SectionLabel({ n, title, sub }) {
  *   onNavigate, onOpenProfile
  */
 export default function FocusModeSettings({ uid, coach, onDeleteAccount, onNavigate, onOpenProfile }) {
+  const { isMobile } = useResponsive();
   const snapshot = readSynapseSnapshot();
   const archetype = readArchetype();
   const longest = longestStreak(snapshot.history, snapshot.streak);
@@ -177,7 +178,7 @@ export default function FocusModeSettings({ uid, coach, onDeleteAccount, onNavig
         {/* ── 1. Recovery Preferences ────────────────────────────── */}
         <Section>
           <SectionLabel n={1} title="Recovery Preferences" />
-          <div data-fm-grid="3" style={{ display: "grid", gridTemplateColumns: "1.1fr 0.8fr 0.9fr", gap: 20, alignItems: "start" }}>
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1.1fr 0.8fr 0.9fr", gap: 20, alignItems: "start" }}>
             <Card padding={24}>
               <Eyebrow style={{ marginBottom: 2 }}>Recovery Tone</Eyebrow>
               <div style={{ fontSize: 10.5, color: fm.color.textTertiary, marginBottom: 14 }}>Choose how your AI Coach talks to you.</div>
@@ -244,10 +245,10 @@ export default function FocusModeSettings({ uid, coach, onDeleteAccount, onNavig
 
         {/* ── 2 & 3. Notifications + Recovery Overview ───────────── */}
         <Section>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(280px,100%), 1fr))", gap: 20, alignItems: "start" }}>
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1.4fr 1fr", gap: 20, alignItems: "start" }}>
             <Card padding={26}>
               <SectionLabel n={2} title="Notifications" sub="Manage your recovery reminders and updates." />
-              <div data-fm-grid="2" style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: 14 }}>
+              <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(2,1fr)", gap: 14 }}>
                 {NOTIF_ITEMS.map((n) => (
                   <div key={n.key} style={{ padding: 16, borderRadius: fm.radius.md, border: `1px solid ${fm.color.border}`, background: fm.color.surfaceMuted }}>
                     <div style={{ fontSize: 18, marginBottom: 8 }}>{n.icon}</div>
@@ -261,7 +262,7 @@ export default function FocusModeSettings({ uid, coach, onDeleteAccount, onNavig
 
             <Card padding={26}>
               <SectionLabel n={3} title="Recovery Overview" sub="Your current recovery status." />
-              <div data-fm-grid="2" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+              <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 12 }}>
                 <MetricCard icon="🔥" value={snapshot.streak} label="Current Streak" tint={fm.color.accent} tintSoft={fm.color.accentSoft} />
                 <MetricCard icon="🏆" value={longest} label="Longest Streak" tint={fm.color.warning} tintSoft={fm.color.warningSoft} />
                 <MetricCard icon="🌀" value={snapshot.level.title.charAt(0) + snapshot.level.title.slice(1).toLowerCase()} label="Current Phase" tint={fm.color.info} tintSoft={fm.color.infoSoft} />
@@ -273,7 +274,7 @@ export default function FocusModeSettings({ uid, coach, onDeleteAccount, onNavig
 
         {/* ── 4 & 5. Privacy + Appearance ─────────────────────────── */}
         <Section>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(280px,100%), 1fr))", gap: 20, alignItems: "start" }}>
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1.4fr 1fr", gap: 20, alignItems: "start" }}>
             <Card padding={26}>
               <SectionLabel n={4} title="Privacy & Security" sub="Your data is yours. Always." />
               <SettingsRow icon="📍" title="Local Data Status" description="All your data is stored locally on this device." meta={<span style={{ color: fm.color.success, fontWeight: 700 }}>Secure</span>} />
@@ -307,7 +308,7 @@ export default function FocusModeSettings({ uid, coach, onDeleteAccount, onNavig
         <Section>
           <Card padding={26}>
             <SectionLabel n={6} title="Connected Features" sub="Core features that power your recovery." />
-            <div data-fm-grid="5" style={{ display: "grid", gridTemplateColumns: "repeat(5,1fr)", gap: 14 }}>
+            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(5,1fr)", gap: 14 }}>
               {FEATURE_ITEMS.map((f) => (
                 <div key={f.key} style={{ padding: 18, borderRadius: fm.radius.md, border: `1px solid ${fm.color.border}`, textAlign: "center" }}>
                   <div style={{ fontSize: 20, marginBottom: 10 }}>{f.icon}</div>
@@ -326,7 +327,7 @@ export default function FocusModeSettings({ uid, coach, onDeleteAccount, onNavig
         <Section>
           <Card padding={26}>
             <SectionLabel n={7} title="About SYNAPSE" sub="Built with purpose. Backed by science." />
-            <div data-fm-grid="6" style={{ display: "grid", gridTemplateColumns: "repeat(6,1fr)", gap: 14 }}>
+            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(6,1fr)", gap: 14 }}>
               <AboutTile icon="ℹ️" label="Version" value="v1.0" />
               <AboutTile icon="👤" label="Built By" value="Parth Goyal & Sandali Tiwari" />
               <AboutTile icon="{ }" label="Build" value="Focus Mode" />
@@ -342,7 +343,7 @@ export default function FocusModeSettings({ uid, coach, onDeleteAccount, onNavig
           <Card padding={26} style={{ border: `1px solid ${fm.color.dangerBorder}` }}>
             <div style={{ fontSize: 11, fontWeight: 700, color: fm.color.danger, letterSpacing: 1, marginBottom: 4 }}>DANGER ZONE</div>
             <div style={{ fontSize: 11.5, color: fm.color.textTertiary, marginBottom: 16 }}>These actions are permanent and cannot be undone.</div>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(220px,100%), 1fr))", gap: 12 }}>
+            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 12 }}>
               <DangerAction icon="↺" title="Reset Progress" description="This will reset your streak and progress. Journal, account, and chats are kept." onClick={() => setConfirmAction("resetProgress")} />
               <DangerAction icon="🗑" title="Delete Account Data" description="This will delete everything forever." onClick={() => setConfirmAction("deleteAccount")} />
             </div>

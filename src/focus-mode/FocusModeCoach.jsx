@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Brain, Send, Paperclip, Mic, Target, TrendingUp, NotebookPen, ChevronRight } from "lucide-react";
-import { fm } from "./theme";
+import { fm, useResponsive } from "./theme";
 import { readSynapseSnapshot, urgeResistancePct } from "./synapseData";
 import {
   FocusModeShell,
@@ -39,6 +39,7 @@ export default function FocusModeCoach({
   onNavigate,
   onOpenProfile,
 }) {
+  const { isMobile } = useResponsive();
   const [input, setInput] = useState("");
   const [focused, setFocused] = useState(false);
   const bottomRef = useRef(null);
@@ -119,7 +120,7 @@ export default function FocusModeCoach({
 
         {/* Tone selector */}
         {toneList.length > 0 && (
-          <motion.div {...cardVariant(0.1)} data-fm-grid="tone" style={{ padding: "clamp(14px,4vw,18px) clamp(14px,4vw,44px) 0", display: "grid", gridTemplateColumns: `repeat(${toneList.length},1fr)`, gap: 14 }}>
+          <motion.div {...cardVariant(0.1)} style={{ padding: "clamp(14px,4vw,18px) clamp(14px,4vw,44px) 0", display: "grid", gridTemplateColumns: isMobile ? "1fr" : `repeat(${toneList.length},1fr)`, gap: 14 }}>
             {toneList.map((t) => (
               <ToneCard
                 key={t.id}

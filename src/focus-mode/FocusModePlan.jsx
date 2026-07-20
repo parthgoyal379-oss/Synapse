@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { motion } from "framer-motion";
-import { fm, phaseColor } from "./theme";
+import { fm, phaseColor, useResponsive } from "./theme";
 import { readSynapseSnapshot, readArchetype, extractPlanSections, longestStreak } from "./synapseData";
 import {
   FocusModeShell,
@@ -39,6 +39,7 @@ const MILESTONE_DESCRIPTIONS = {
 };
 
 export default function FocusModePlan({ savedPlan, onNavigate, onOpenProfile }) {
+  const { isMobile } = useResponsive();
   const snapshot = useMemo(() => readSynapseSnapshot(), []);
   const archetype = useMemo(() => readArchetype(), []);
   const planSections = useMemo(() => extractPlanSections(savedPlan), [savedPlan]);
@@ -82,8 +83,8 @@ export default function FocusModePlan({ savedPlan, onNavigate, onOpenProfile }) 
           </Card>
         </motion.div>
 
-        <div style={{ padding: "clamp(14px,4vw,20px) clamp(14px,4vw,48px) 0", display: "flex", flexWrap: "wrap", gap: 20, alignItems: "start" }}>
-          <div style={{ display: "flex", flexDirection: "column", gap: 20, flex: "1.4 1 320px", minWidth: 0 }}>
+        <div style={{ padding: "clamp(14px,4vw,20px) clamp(14px,4vw,48px) 0", display: "flex", flexDirection: isMobile ? "column" : "row", flexWrap: "wrap", gap: 20, alignItems: "start" }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 20, flex: isMobile ? "1 1 auto" : "1.4 1 320px", minWidth: 0, width: isMobile ? "100%" : "auto" }}>
             {/* Archetype — visual centerpiece */}
             <motion.div {...cardVariant(0.05)} {...HOVER_LIFT}>
               <Card padding={30} style={GLASS_CARD}>
@@ -203,7 +204,7 @@ export default function FocusModePlan({ savedPlan, onNavigate, onOpenProfile }) 
           </div>
 
           {/* Right rail */}
-          <div style={{ display: "flex", flexDirection: "column", gap: 20, flex: "1 1 260px", minWidth: 0 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 20, flex: isMobile ? "1 1 auto" : "1 1 260px", minWidth: 0, width: isMobile ? "100%" : "auto" }}>
             <motion.div {...cardVariant(0.08)} {...HOVER_LIFT}>
               <RecoveryPhaseCard level={level} nextLevel={nextLevel} streak={streak} xpPct={xpPct} daysToNext={daysToNext} color={pColor} animateOnMount />
             </motion.div>
