@@ -5,8 +5,9 @@ import { auth, googleProvider, db, storage, messaging, requestNotificationPermis
 import {
   signInWithEmailAndPassword, createUserWithEmailAndPassword,
   signInWithPopup, signOut, onAuthStateChanged, updateProfile,
-  sendPasswordResetEmail, sendEmailVerification
+  sendPasswordResetEmail, sendEmailVerification, reload
 } from "firebase/auth";
+import EmailVerification from "./EmailVerification";
 import { ref as sRef, uploadBytes, getDownloadURL } from "firebase/storage";
 import {
   collection, doc, setDoc, getDoc, getDocs, addDoc,
@@ -1020,7 +1021,7 @@ function FloatingNeurons() {
 }
 
 /* ─── NEURAL MARK ────────────────────────────────────────────────────────── */
-function NeuralMark({size=36}) {
+export function NeuralMark({size=36}) {
   const ref=useRef(null);
   useEffect(()=>{ const canvas=ref.current, ctx=canvas.getContext("2d"); const S=size; canvas.width=S; canvas.height=S; const cx=S/2,cy=S/2; let raf,t=0; const nodes=[{x:cx,y:cy,r:S*.11,tier:0},...Array.from({length:6},(_,i)=>{const a=(i/6)*Math.PI*2-Math.PI/2;return{x:cx+Math.cos(a)*S*.22,y:cy+Math.sin(a)*S*.22,r:S*.045,tier:1};}),...Array.from({length:6},(_,i)=>{const a=(i/6)*Math.PI*2-Math.PI/2+Math.PI/6;return{x:cx+Math.cos(a)*S*.38,y:cy+Math.sin(a)*S*.38,r:S*.03,tier:2};})]; const edges=[]; for(let i=1;i<=6;i++)edges.push({a:0,b:i,w:1}); for(let i=0;i<6;i++){edges.push({a:i+1,b:7+i,w:.7});edges.push({a:i+1,b:7+((i+1)%6),w:.5});} for(let i=0;i<6;i++)edges.push({a:7+i,b:7+((i+1)%6),w:.4}); const sigs=edges.slice(0,8).map((e,i)=>({edge:e,t:i/8,speed:.005+Math.random()*.007})); const draw=()=>{ if(document.hidden){raf=requestAnimationFrame(draw);return;} t+=.015;ctx.clearRect(0,0,S,S); const bg=ctx.createRadialGradient(cx,cy,0,cx,cy,S*.5);bg.addColorStop(0,"rgba(255,120,0,0.08)");bg.addColorStop(1,"rgba(0,0,0,0)"); ctx.beginPath();ctx.arc(cx,cy,S*.5,0,Math.PI*2);ctx.fillStyle=bg;ctx.fill(); edges.forEach(({a,b,w})=>{const na=nodes[a],nb=nodes[b];if(!na||!nb)return;const g=ctx.createLinearGradient(na.x,na.y,nb.x,nb.y);g.addColorStop(0,`rgba(255,160,40,${w*.3})`);g.addColorStop(.5,`rgba(255,200,80,${w*.5})`);g.addColorStop(1,`rgba(255,120,0,${w*.3})`);ctx.beginPath();ctx.moveTo(na.x,na.y);ctx.lineTo(nb.x,nb.y);ctx.strokeStyle=g;ctx.lineWidth=w*1.5;ctx.stroke();}); sigs.forEach(sig=>{sig.t+=sig.speed;if(sig.t>1)sig.t=0;const na=nodes[sig.edge.a],nb=nodes[sig.edge.b];if(!na||!nb)return;const sx=na.x+(nb.x-na.x)*sig.t,sy=na.y+(nb.y-na.y)*sig.t;const p=Math.sin(sig.t*Math.PI);const pg=ctx.createRadialGradient(sx,sy,0,sx,sy,S*.04*p+S*.015);pg.addColorStop(0,`rgba(255,240,180,${p*.9})`);pg.addColorStop(1,"rgba(255,100,0,0)");ctx.beginPath();ctx.arc(sx,sy,S*.04*p+S*.015,0,Math.PI*2);ctx.fillStyle=pg;ctx.fill();}); nodes.forEach((n,i)=>{const pulse=.85+.15*Math.sin(t*2+i*.9);if(n.tier===0){const og=ctx.createRadialGradient(cx,cy,0,cx,cy,n.r*5);og.addColorStop(0,"rgba(255,140,0,0.3)");og.addColorStop(1,"rgba(0,0,0,0)");ctx.beginPath();ctx.arc(cx,cy,n.r*5,0,Math.PI*2);ctx.fillStyle=og;ctx.fill();const cg=ctx.createRadialGradient(cx-n.r*.3,cy-n.r*.3,0,cx,cy,n.r*pulse);cg.addColorStop(0,"#fff8e0");cg.addColorStop(.3,"#ffdd88");cg.addColorStop(.7,"#ff9500");cg.addColorStop(1,"#cc2200");ctx.beginPath();ctx.arc(cx,cy,n.r*pulse,0,Math.PI*2);ctx.fillStyle=cg;ctx.shadowColor="#ff8c00";ctx.shadowBlur=S*.1;ctx.fill();ctx.shadowBlur=0;const sg=ctx.createRadialGradient(cx-n.r*.4,cy-n.r*.5,0,cx,cy,n.r*.7);sg.addColorStop(0,"rgba(255,255,255,0.65)");sg.addColorStop(1,"rgba(255,255,255,0)");ctx.beginPath();ctx.arc(cx,cy,n.r*pulse,0,Math.PI*2);ctx.fillStyle=sg;ctx.fill();}else{const bg2=ctx.createRadialGradient(n.x-n.r*.2,n.y-n.r*.2,0,n.x,n.y,n.r*pulse);bg2.addColorStop(0,n.tier===1?"#ffeeaa":"#ffd060");bg2.addColorStop(1,n.tier===1?"#cc4400":"#aa3300");ctx.beginPath();ctx.arc(n.x,n.y,n.r*pulse,0,Math.PI*2);ctx.fillStyle=bg2;ctx.shadowColor="#ff8800";ctx.shadowBlur=n.r*2;ctx.fill();ctx.shadowBlur=0;}}); raf=requestAnimationFrame(draw); }; draw(); return()=>cancelAnimationFrame(raf); },[size]);
   return <canvas ref={ref} style={{display:"block",flexShrink:0}}/>;
@@ -3516,7 +3517,7 @@ function PrivacyModal({isL,onClose}){
   );
 }
 
-function Auth({ onAuth, context="" }) {
+function Auth({ onAuth, onNeedsVerification, context="" }) {
   const [mode, setMode]           = useState("signin");
   const [email, setEmail]         = useState("");
   const [password, setPassword]   = useState("");
@@ -3547,14 +3548,35 @@ function Auth({ onAuth, context="" }) {
       if(mode === "signup") {
         cred = await createUserWithEmailAndPassword(auth, email.trim(), password);
         await updateProfile(cred.user, { displayName: name.trim() });
-        // Fire-and-forget — never block signup on this. Firebase's own
-        // rate limiting protects the endpoint from abuse (e.g. spamming
-        // verification emails to someone else's inbox via repeated signup
-        // attempts on an already-taken address, which createUser would
-        // reject before we even get here).
-        sendEmailVerification(cred.user).catch(e=>console.warn("Verification email failed:",e));
+        // Unlike before, this is no longer fire-and-forget — the whole point
+        // of this screen is to guarantee the email actually got sent before
+        // we tell the user to go check their inbox. If it fails, we still
+        // let them into the verification screen (their account exists
+        // either way) but surface the failure so "Resend" is the obvious
+        // next step instead of them just staring at an empty inbox.
+        let sendFailed = false;
+        try {
+          await sendEmailVerification(cred.user);
+        } catch(e) {
+          console.warn("Verification email failed:", e);
+          sendFailed = true;
+        }
+        setLoading(false);
+        onNeedsVerification({ email: cred.user.email, reason: "signup", sendFailed });
+        return;
       } else {
         cred = await signInWithEmailAndPassword(auth, email.trim(), password);
+        // Re-check against the server rather than trusting cred.user's
+        // cached emailVerified flag, which only reflects the state at the
+        // time the ID token was last issued.
+        await reload(cred.user);
+        if (!cred.user.emailVerified) {
+          const blockedEmail = cred.user.email;
+          await signOut(auth).catch(()=>{});
+          setLoading(false);
+          onNeedsVerification({ email: blockedEmail, reason: "login" });
+          return;
+        }
       }
     } catch(e) {
       // Auth itself failed — this IS a sign-in error, show it.
@@ -6192,6 +6214,8 @@ function AppRoot() {
   const [authed,setAuthed]  =useState(false);
   const [authLoading,setAuthLoading]=useState(true);
   const [showAuth,setShowAuth]=useState(false);
+  const [unverifiedEmail,setUnverifiedEmail]=useState(null);
+  const [verifyReason,setVerifyReason]=useState("signup");
   const [plan,setPlan]      =useState("");
   const [planLoading,setPL] =useState(false);
   const [pendingPlan,setPendingPlan]=useState("");
@@ -6357,6 +6381,17 @@ function AppRoot() {
   useEffect(()=>{
     const unsub=onAuthStateChanged(auth, (user)=>{
       if(user){
+        if(!user.emailVerified){
+          // Covers the case this listener exists specifically to catch:
+          // session restored on page load/reopen while still unverified
+          // (e.g. they signed up, closed the tab before verifying, and came
+          // back later). Never route these into the app.
+          setAuthed(false);
+          setAuthLoading(false);
+          setUnverifiedEmail(user.email);
+          return;
+        }
+        setUnverifiedEmail(null);
         const displayName=user.displayName||user.email?.split("@")[0]||"";
         ls.set("syn_user",JSON.stringify({email:user.email,name:displayName,uid:user.uid,photoURL:user.photoURL||""}));
         setAuthed(true);
@@ -6486,6 +6521,17 @@ function AppRoot() {
     if(pendingArch){ls.set("syn_archetype",JSON.stringify(pendingArch));}
     setAuthed(true);setShowAuth(false);
     goTo(pendingPlan?"checkin":savedPlan?"checkin":"confess");
+  };
+
+  const handleNeedsVerification=({email,reason})=>{
+    setShowAuth(false);
+    setUnverifiedEmail(email);
+    setVerifyReason(reason||"signup");
+  };
+
+  const handleVerifiedEntry=(user)=>{
+    setUnverifiedEmail(null);
+    handleAuth({ email:user.email, name:user.displayName||user.email.split("@")[0], uid:user.uid });
   };
 
   const handleBegin=()=>{
@@ -6849,9 +6895,18 @@ function AppRoot() {
           )}
         </>
         )
+      ) : unverifiedEmail ? (
+        <div style={{position:"relative",zIndex:2}}>
+          <EmailVerification
+            email={unverifiedEmail}
+            reason={verifyReason}
+            onVerified={handleVerifiedEntry}
+            onBackToSignIn={()=>{setUnverifiedEmail(null);setShowAuth(true);}}
+          />
+        </div>
       ) : showAuth ? (
         <div style={{position:"relative",zIndex:2}}>
-          <Auth onAuth={handleAuth} context={pendingPlan?"lock":""}/>
+          <Auth onAuth={handleAuth} onNeedsVerification={handleNeedsVerification} context={pendingPlan?"lock":""}/>
         </div>
       ) : (
         <div style={{position:"relative",zIndex:2}}>
