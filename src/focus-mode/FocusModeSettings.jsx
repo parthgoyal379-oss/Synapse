@@ -33,11 +33,16 @@ import {
 } from "./components";
 
 const NOTIF_ITEMS = [
+  { key: "morning", icon: "☀️", title: "Morning Recovery", desc: "A short nudge to start your day with intent." },
   { key: "checkin", icon: "🔔", title: "Daily Check-In Reminder", desc: "Reminds you to complete your daily check-in." },
   { key: "journal", icon: "📖", title: "Journal Reminder", desc: "Gentle nudges to write your thoughts." },
   { key: "urge", icon: "⚡", title: "Urge Rescue Reminder", desc: "Get help when urges hit hard." },
+  { key: "highRisk", icon: "🚨", title: "High-Risk Alerts", desc: "AI-personalized check-ins during rough moments." },
   { key: "weekly", icon: "📊", title: "Weekly Report Reminder", desc: "Receive your weekly recovery insights." },
+  { key: "monthly", icon: "🗓️", title: "Monthly Recovery Report", desc: "Your full month of progress, on the 1st." },
   { key: "milestones", icon: "🏆", title: "Streak Milestone Alerts", desc: "Celebrate 3, 7, 14, 30+ day milestones." },
+  { key: "sound", icon: "🔊", title: "Sound", desc: "Play a sound when a notification arrives." },
+  { key: "vibration", icon: "📳", title: "Vibration", desc: "Vibrate when a notification arrives (mobile)." },
   { key: "silentMode", icon: "🔕", title: "Silent Mode", desc: "Pause all reminders temporarily." },
 ];
 

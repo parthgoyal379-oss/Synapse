@@ -1,5 +1,7 @@
-import { defineConfig } from 'vite'
+import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
+import { readFileSync, writeFileSync, existsSync } from 'fs'
+import { resolve } from 'path'
 
 /*
  * Build-time prerender of the homepage.
@@ -137,14 +139,47 @@ function prerenderHome() {
   }
 }
 
+// Templates the real Firebase project config into the built service worker
+// from the SAME VITE_FIREBASE_* env vars src/firebase.js already reads —
+// so there is exactly one source of truth for Firebase config, and the
+// deployed service worker can never point at a different project than the
+// app that issues its FCM tokens (see public/firebase-messaging-sw.js's
+// header comment for the bug this replaced).
+function templateFirebaseMessagingSW(env) {
+  const TOKEN_MAP = {
+    __VITE_FIREBASE_API_KEY__: env.VITE_FIREBASE_API_KEY || '',
+    __VITE_FIREBASE_AUTH_DOMAIN__: env.VITE_FIREBASE_AUTH_DOMAIN || '',
+    __VITE_FIREBASE_PROJECT_ID__: env.VITE_FIREBASE_PROJECT_ID || '',
+    __VITE_FIREBASE_STORAGE_BUCKET__: env.VITE_FIREBASE_STORAGE_BUCKET || '',
+    __VITE_FIREBASE_MESSAGING_SENDER_ID__: env.VITE_FIREBASE_MESSAGING_SENDER_ID || '',
+    __VITE_FIREBASE_APP_ID__: env.VITE_FIREBASE_APP_ID || '',
+  }
+  return {
+    name: 'synapse-template-firebase-messaging-sw',
+    apply: 'build',
+    closeBundle() {
+      const outFile = resolve('.', 'dist/firebase-messaging-sw.js')
+      if (!existsSync(outFile)) return // nothing to template if it wasn't copied to dist
+      let content = readFileSync(outFile, 'utf8')
+      for (const [token, value] of Object.entries(TOKEN_MAP)) {
+        content = content.split(token).join(value)
+      }
+      writeFileSync(outFile, content)
+    },
+  }
+}
+
 // https://vite.dev/config/
-export default defineConfig({
-  plugins: [react(), prerenderHome()],
-  build: {
-    // SYNAPSE ships as a single large App.jsx (5800+ lines) — raise the warning
-    // threshold so the build doesn't spam chunk-size warnings on every deploy.
-    // Real fix for bundle size is code-splitting AdminDashboard via React.lazy()
-    // which requires extracting it to its own file (pending task).
-    chunkSizeWarningLimit: 1500,
-  },
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, '.', '')
+  return {
+    plugins: [react(), prerenderHome(), templateFirebaseMessagingSW(env)],
+    build: {
+      // SYNAPSE ships as a single large App.jsx (5800+ lines) — raise the warning
+      // threshold so the build doesn't spam chunk-size warnings on every deploy.
+      // Real fix for bundle size is code-splitting AdminDashboard via React.lazy()
+      // which requires extracting it to its own file (pending task).
+      chunkSizeWarningLimit: 1500,
+    },
+  }
 })

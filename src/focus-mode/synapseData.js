@@ -719,13 +719,19 @@ export function setTone(toneId) {
 
 const NOTIF_KEYS = {
   dailyMaster: "syn_notif_daily_master",
+  morning: "syn_notif_morning",
   checkin: "syn_notif_checkin",
   journal: "syn_notif_journal",
   urge: "syn_notif_urge",
   weekly: "syn_notif_weekly",
+  monthly: "syn_notif_monthly",
   milestones: "syn_notif_milestones",
+  highRisk: "syn_notif_high_risk",
   silentMode: "syn_notif_silent",
+  sound: "syn_notif_sound",
+  vibration: "syn_notif_vibration",
   reminderTime: "syn_reminder_time",
+  morningReminderTime: "syn_morning_reminder_time",
   timezone: "syn_timezone",
 };
 
@@ -735,54 +741,80 @@ const NOTIF_KEYS = {
 export function readNotificationPrefs() {
   return {
     dailyMaster: ls.get(NOTIF_KEYS.dailyMaster, "true") === "true",
+    morning: ls.get(NOTIF_KEYS.morning, "true") === "true",
     checkin: ls.get(NOTIF_KEYS.checkin, "true") === "true",
     journal: ls.get(NOTIF_KEYS.journal, "true") === "true",
     urge: ls.get(NOTIF_KEYS.urge, "true") === "true",
     weekly: ls.get(NOTIF_KEYS.weekly, "true") === "true",
+    monthly: ls.get(NOTIF_KEYS.monthly, "true") === "true",
     milestones: ls.get(NOTIF_KEYS.milestones, "true") === "true",
+    highRisk: ls.get(NOTIF_KEYS.highRisk, "true") === "true",
     silentMode: ls.get(NOTIF_KEYS.silentMode, "false") === "true",
+    sound: ls.get(NOTIF_KEYS.sound, "true") === "true",
+    vibration: ls.get(NOTIF_KEYS.vibration, "true") === "true",
     reminderTime: ls.get(NOTIF_KEYS.reminderTime, "20:00"),
+    morningReminderTime: ls.get(NOTIF_KEYS.morningReminderTime, "08:00"),
     timezone: ls.get(NOTIF_KEYS.timezone, Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC"),
   };
 }
 
 function writeLocalNotifCache(prefs) {
   ls.set(NOTIF_KEYS.dailyMaster, String(prefs.dailyMaster));
+  ls.set(NOTIF_KEYS.morning, String(prefs.morning));
   ls.set(NOTIF_KEYS.checkin, String(prefs.checkin));
   ls.set(NOTIF_KEYS.journal, String(prefs.journal));
   ls.set(NOTIF_KEYS.urge, String(prefs.urge));
   ls.set(NOTIF_KEYS.weekly, String(prefs.weekly));
+  ls.set(NOTIF_KEYS.monthly, String(prefs.monthly));
   ls.set(NOTIF_KEYS.milestones, String(prefs.milestones));
+  ls.set(NOTIF_KEYS.highRisk, String(prefs.highRisk));
   ls.set(NOTIF_KEYS.silentMode, String(prefs.silentMode));
+  ls.set(NOTIF_KEYS.sound, String(prefs.sound));
+  ls.set(NOTIF_KEYS.vibration, String(prefs.vibration));
   ls.set(NOTIF_KEYS.reminderTime, prefs.reminderTime);
+  ls.set(NOTIF_KEYS.morningReminderTime, prefs.morningReminderTime);
   ls.set(NOTIF_KEYS.timezone, prefs.timezone);
 }
 
 // Maps this app's local pref shape <-> the `notifications` map Cloud
-// Functions read from users/{uid}.notifications (see functions/eligibility.js).
+// Functions read from users/{uid}.notifications (see functions/lib/eligibility.js).
+// Sound/vibration are client-only presentation prefs — Cloud Functions
+// never need them (FCM webpush notifications don't carry a sound/vibrate
+// payload the browser Notifications API honors), so they're deliberately
+// left out of the cloud shape rather than synced pointlessly.
 function toCloudShape(prefs) {
   return {
     enabled: prefs.dailyMaster,
+    morningReminder: prefs.morning,
     dailyCheckin: prefs.checkin,
     journalReminder: prefs.journal,
     urgeRescue: prefs.urge,
     weeklyReport: prefs.weekly,
+    monthlyReport: prefs.monthly,
     streakMilestones: prefs.milestones,
+    highRiskAlerts: prefs.highRisk,
     silentMode: prefs.silentMode,
     reminderTime: prefs.reminderTime,
+    morningReminderTime: prefs.morningReminderTime,
     timezone: prefs.timezone,
   };
 }
 function fromCloudShape(notif) {
   return {
     dailyMaster: notif.enabled ?? true,
+    morning: notif.morningReminder ?? true,
     checkin: notif.dailyCheckin ?? true,
     journal: notif.journalReminder ?? true,
     urge: notif.urgeRescue ?? true,
     weekly: notif.weeklyReport ?? true,
+    monthly: notif.monthlyReport ?? true,
     milestones: notif.streakMilestones ?? true,
+    highRisk: notif.highRiskAlerts ?? true,
     silentMode: notif.silentMode ?? false,
+    sound: readNotificationPrefs().sound, // client-only — not part of cloud shape
+    vibration: readNotificationPrefs().vibration, // client-only — not part of cloud shape
     reminderTime: notif.reminderTime || "20:00",
+    morningReminderTime: notif.morningReminderTime || "08:00",
     timezone: notif.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC",
   };
 }
@@ -812,7 +844,7 @@ export async function setNotificationPrefCloud(uid, key, value) {
 }
 
 const SILENT_SNAPSHOT_KEY = "syn_notif_silent_snapshot";
-const SILENCEABLE_KEYS = ["checkin", "journal", "urge", "weekly", "milestones"];
+const SILENCEABLE_KEYS = ["morning", "checkin", "journal", "urge", "weekly", "monthly", "milestones", "highRisk"];
 
 /**
  * Turning Silent Mode ON snapshots the current per-type toggle states and

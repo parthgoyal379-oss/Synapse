@@ -23,6 +23,8 @@ import {
   Activity, LogOut, Settings, User, Mail, Map, Info
 } from "lucide-react";
 import FocusModeRouter, { FOCUS_SUPPORTED_SCREENS } from "./focus-mode/FocusModeRouter";
+import { callAI, RateLimitError } from "./aiClient";
+import { useSmartStreakRecovery, MOMENTUM_RGB } from "./recoveryEngine";
 
 /* Escapes free-text user input before it's interpolated into a raw HTML
    string (document.write PDF export windows). Prevents self-XSS if a
@@ -37,64 +39,6 @@ function escapeHtml(str) {
    Calls go through /api/chat (Vercel serverless function).
    GROQ_KEY lives in Vercel env variables — never in the frontend bundle.
 ──────────────────────────────────────────────────────────────────────────── */
-/* Thrown when the backend returns the Free Plan rate-limit response, so the
-   UI can show the premium upgrade prompt instead of a generic error. */
-class RateLimitError extends Error {
-  constructor(message, limitType) {
-    super(message);
-    this.isRateLimit = true;
-    this.limitType = limitType; // "minute" | "day"
-  }
-}
-
-async function callAI(userMessages, systemPrompt, opts={}) {
-  // Send a short-lived Firebase ID token so the server can verify identity
-  // itself (see api/chat.js) instead of trusting a client-claimed uid.
-  // getIdToken() returns the cached token and silently refreshes it if
-  // needed — cheap to call on every request.
-  const idToken = auth.currentUser ? await auth.currentUser.getIdToken() : null;
-  // Abort the request if the serverless function doesn't respond in time.
-  // Without this, a slow/dead connection leaves fetch pending forever, which
-  // hangs any UI awaiting it (check-in "reading your day..." spinner, chat
-  // send button) with no way to recover short of a reload.
-  const controller = new AbortController();
-  const timeoutMs = opts.timeoutMs ?? 30000;
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
-  let res;
-  try {
-    res = await fetch("/api/chat", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        ...(idToken ? { "Authorization": `Bearer ${idToken}` } : {}),
-      },
-      body: JSON.stringify({
-        model: "openai/gpt-oss-120b",
-        max_tokens: opts.max_tokens ?? 1024,
-        temperature: opts.temperature ?? 0.85,
-        messages: [
-          { role: "system", content: systemPrompt },
-          ...userMessages,
-        ],
-      }),
-      signal: controller.signal,
-    });
-  } catch (e) {
-    if (e.name === "AbortError") throw new Error("Request timed out — check your connection and try again.");
-    throw e;
-  } finally {
-    clearTimeout(timer);
-  }
-  const data = await res.json();
-  if (res.status === 429) {
-    if (data.error?.code === "PLAN_LIMIT_REACHED") {
-      throw new RateLimitError(data.error.message, data.error.limitType);
-    }
-    throw new Error(data.error?.message || "Too many requests — wait a minute and try again.");
-  }
-  if (data.error) throw new Error(data.error.message);
-  return data.choices?.[0]?.message?.content || "Keep going. You showed up today — that's the mission.";
-}
 
 const SYSTEM_SAFETY_CLASSIFIER = `You are a mental health safety classifier. Analyze the user message for indirect or subtle signs of suicidal ideation, self-harm intent, or severe hopelessness — including phrases like "everyone would be better off without me", "I don't see the point anymore", "I can't do this anymore", "I just want it to stop", "nobody would miss me", or similar indirect language. Respond with ONLY compact JSON, no whitespace, no markdown, no explanation: {"risk":true} or {"risk":false}`;
 
@@ -326,6 +270,34 @@ STRICT RULE: Only for messages with NO connection to recovery, mental health, se
 For on-topic messages: speak like a tough, direct recovery coach who genuinely believes in the person. No therapy speak. No "I understand your feelings." Practical, honest, fired up. Keep responses under 120 words unless depth is truly needed. No bullet points — flowing prose only. (Greetings and app-feature questions can be shorter and more relaxed in tone than this.)
 
 SAFETY RULE — ALWAYS PRESENT: If the message contains any language suggesting self-harm or suicidal ideation, stop everything and respond ONLY with: "This is bigger than recovery coaching. India: KIRAN 1800-599-0019 | USA: 988. Talk to a real person right now."`;
+
+/* ─── WELCOME GREETING (first-ever entry, after onboarding) ────────────────
+   One-shot, dynamically generated — never hardcoded. Fed the user's real
+   name/archetype/addictions/day so no two greetings read the same. */
+const SYSTEM_WELCOME_GREETING=`You are SYNAPSE — the user's AI recovery coach — speaking to them for the very first time, immediately after they finished onboarding and their Day 1 battle plan was generated.
+
+Write a short welcome message (3-5 sentences, plain text, no markdown headers, no bullet points) that:
+- Greets them by first name
+- Signals you already understand their situation — reference their chosen archetype identity and what they're fighting, naturally, not as a list
+- Confirms their recovery protocol/battle plan is ready
+- Ends with a short, motivating line to begin today (Day 1)
+
+Speak directly, second person, like a coach who already has their file open — never generic filler like "As an AI" or "I'm here to help you on your journey." No therapy speak.`;
+
+function buildWelcomeGreetingUserPrompt({name,archetype,addictions,day}){
+  const archLine=archetype?`${archetype.title} — ${archetype.sub}`:"Not yet assigned";
+  const fightLine=addictions?.length?addictions.join(", "):"unspecified patterns";
+  return `New user profile — first entry:\nName: ${name}\nArchetype (their chosen identity / recovery goal): ${archLine}\nFighting: ${fightLine}\nDay: ${day}\n\nWrite the welcome message now.`;
+}
+
+// Handcrafted fallback — used only if the AI call fails or times out. Still
+// fully dynamic (name/archetype/addictions/day interpolated), just not
+// model-generated.
+function buildWelcomeGreetingFallback({name,archetype,addictions,day}){
+  const fightLine=addictions?.length?addictions[0]:"what's been holding you back";
+  const archLine=archetype?.title?` — the ${archetype.title}`:"";
+  return `Welcome back, ${name}${archLine}.\n\nI've already started analysing your behaviour around ${fightLine}. Your recovery protocol is ready, and Day ${day} starts now.\n\nLet's begin.`;
+}
 
 /* ─── CRISIS DETECTION ────────────────────────────────────────────────────
    Safety floor — runs BEFORE any AI call, on check-in and chat input.
@@ -4744,6 +4716,343 @@ const getDailyQuote=()=>{
   return DAILY_QUOTES[dayOfYear%DAILY_QUOTES.length];
 };
 
+/* ─── AI DAILY QUOTE ─────────────────────────────────────────────────────
+   One AI-generated "transmission" per calendar day (local time), cached by
+   date so it's never regenerated mid-day and never blocks page load — it
+   generates in the background while the Checkin screen shows a shimmer
+   skeleton, then fades in. Falls back to the curated DAILY_QUOTES pool
+   above (still deterministic/handcrafted, never repeats) if the AI call
+   fails, times out, or returns something too long. ─────────────────────── */
+const localDateKey=(d=new Date())=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+
+const SYSTEM_DAILY_QUOTE=`You are SYNAPSE — an AI recovery coach generating today's one-line "transmission" for a user actively fighting an addiction.
+
+Write EXACTLY ONE short quote-style line, under 25 words, plain text, no quotation marks in your output (the app adds them), no attribution, no explanation — just the line itself. It should read like a sharp, original piece of motivating wisdom tailored to this person's fight and archetype identity, in the tone described below. Never generic filler. Never quote a real famous person — write an original line.`;
+
+function buildDailyQuotePrompt({name,archetype,addictions,day,mission}){
+  const archLine=archetype?`${archetype.title} — ${archetype.sub}`:"unassigned";
+  const fightLine=addictions?.length?addictions.join(", "):"unspecified patterns";
+  const missionLine=mission?`\nToday's mission excerpt: ${mission}`:"";
+  return `User: ${name}\nArchetype (identity/recovery goal): ${archLine}\nFighting: ${fightLine}\nDay: ${day}${missionLine}\n\nWrite today's one-line transmission now.`;
+}
+
+function useDailyQuote({streak,savedPlan}){
+  const [quote,setQuote]=useState(()=>{
+    try{
+      const cached=JSON.parse(ls.get("syn_daily_quote","null"));
+      if(cached&&cached.date===localDateKey()) return cached;
+    }catch{ /* fall through to null below */ void 0; }
+    return null; // null = not yet generated today → skeleton shows
+  });
+
+  useEffect(()=>{
+    let cancelled=false;
+    const generate=async()=>{
+      const todayKey=localDateKey();
+      try{
+        const cached=JSON.parse(ls.get("syn_daily_quote","null"));
+        if(cached&&cached.date===todayKey){ if(!cancelled) setQuote(cached); return; } // cached — never regenerate same day
+      }catch{ void 0; }
+      let archetype, confessData;
+      try{archetype=JSON.parse(ls.get("syn_archetype","null"));}catch{archetype=null;}
+      try{confessData=JSON.parse(ls.get("syn_confess","null"));}catch{confessData=null;}
+      const addictions=(confessData?.addictions||[]).map(a=>a.label||a.id).filter(Boolean);
+      const user=(()=>{try{return JSON.parse(ls.get("syn_user","{}"));}catch{return{};}})();
+      const name=(user.name||"").split(" ")[0]||"there";
+      const mode=getMode();
+      const mission=savedPlan?savedPlan.replace(/[#*_>`]/g,"").trim().slice(0,180):"";
+      const day=Math.max(1,streak||1);
+      let entryQA=null;
+      try{
+        const raw=await callAI(
+          [{role:"user",content:buildDailyQuotePrompt({name,archetype,addictions,day,mission})}],
+          SYSTEM_DAILY_QUOTE+(mode.toneAddon||""),
+          {timeoutMs:10000,max_tokens:70,temperature:0.95},
+        );
+        const cleaned=raw?raw.replace(/^["""]+|["""]+$/g,"").replace(/\s+/g," ").trim():"";
+        const wc=cleaned?cleaned.split(" ").filter(Boolean).length:0;
+        if(cleaned&&wc>0&&wc<=25) entryQA={q:cleaned,a:"SYNAPSE AI"};
+      }catch{ entryQA=null; }
+      if(!entryQA){ const fb=getDailyQuote(); entryQA={q:fb.q,a:fb.a}; } // handcrafted fallback, still dynamic-per-day
+      const entry={date:todayKey,...entryQA};
+      ls.set("syn_daily_quote",JSON.stringify(entry));
+      if(!cancelled) setQuote(entry);
+    };
+    generate();
+    // Covers the app staying open across local midnight — re-checks every 5min
+    // and only regenerates once the cached date actually rolls over.
+    const iv=setInterval(()=>{
+      try{
+        const cached=JSON.parse(ls.get("syn_daily_quote","null"));
+        if(!cached||cached.date!==localDateKey()) generate();
+      }catch{ generate(); }
+    },5*60*1000);
+    return()=>{cancelled=true;clearInterval(iv);};
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[]);
+
+  return quote;
+}
+
+/* ─── RECOVERY SCORE ─────────────────────────────────────────────────────
+   A 0-100 daily score computed entirely LOCALLY from data the app already
+   collects — no AI, no randomness, same inputs always produce the same
+   score. The only AI call in this feature is the short 2-sentence
+   "AI Insight" paragraph underneath it, cached once per day exactly like
+   the Daily Quote (reuses localDateKey/callAI — no duplicated logic). ─── */
+
+const RECOVERY_LEVELS=[ // checked top-down — first match (score >= min) wins
+  {min:95,label:"SYNAPSED",    rgb:"255,215,0"},  // gold
+  {min:85,label:"OPTIMIZED",   rgb:"0,200,120"},  // green
+  {min:70,label:"REWIRING",    rgb:"0,210,220"},  // cyan
+  {min:55,label:"STABILIZING", rgb:"70,140,255"}, // blue
+  {min:40,label:"AWAKENING",   rgb:"255,140,0"},  // orange (brand accent)
+  {min:0,  label:"COMPROMISED",rgb:"255,70,70"},  // red
+];
+const getRecoveryLevel=score=>RECOVERY_LEVELS.find(l=>score>=l.min)||RECOVERY_LEVELS[RECOVERY_LEVELS.length-1];
+const getNextRecoveryLevel=score=>{ const higher=RECOVERY_LEVELS.filter(l=>l.min>score); return higher.length?higher[higher.length-1]:null; };
+
+// Single source of truth for every point value in the score formula.
+// Change retention/scoring balance by editing THIS object only — nothing
+// else in computeRecoveryScore() should ever contain a bare number again.
+const SCORE_WEIGHTS={
+  base:50,
+  streakPerDay:0.8,   streakCapDays:30,   // current streak → up to streakCapDays*streakPerDay (+24)
+  checkinCompleted:8,                     // daily check-in completed
+  journalWritten:4,                       // journal written today
+  urgeResisted:3,     urgeCapCount:3,     // per urge resisted, capped → up to +9
+  tasksCompletedMax:10,                   // scaled by clean-task ratio → up to +10
+  positiveVerdict:6,                      // today's AI verdict is WIN
+  consistencyMax:10,                      // scaled by non-slip ratio over last 7 → up to +10
+  slip:-15,                               // today is a slip
+  missedCheckin:-10,                      // had an established pattern, then a gap
+  brokenStreak:-8,                        // streak just reset, still fresh
+};
+
+// Single definition of "did today's check-in include a journal entry" —
+// written once at check-in time onto the history record's `journal` field
+// (see handleCheckin), read back here as a typed boolean. Falls back to
+// this same text check only for entries saved before this field existed,
+// so old history isn't silently miscounted.
+const hasJournalNotes=msg=>/Additional notes:/.test(msg||"");
+
+/* Formula (documented — see the "Explain score formula" note in chat):
+   Base 50, then earned points for what actually happened today/recently,
+   minus penalties for slips/misses, clamped to 0-100, entirely driven by
+   SCORE_WEIGHTS above. Every term reads from data the app already stores
+   (syn_history, syn_urge_log, syn_confess) — nothing new is tracked just
+   for this score. */
+function computeRecoveryScore({streak,history,urgeLog,confessData}){
+  const W=SCORE_WEIGHTS;
+  const today=new Date().toDateString();
+  const yesterday=new Date(Date.now()-86400000).toDateString();
+  const todayEntry=history.find(h=>h.date===today)||null;
+  const yestEntry=history.find(h=>h.date===yesterday)||null;
+
+  let score=W.base;
+
+  score+=Math.min(streak,W.streakCapDays)*W.streakPerDay;
+
+  if(todayEntry) score+=W.checkinCompleted;
+
+  const journalToday=!!todayEntry&&(typeof todayEntry.journal==="boolean"?todayEntry.journal:hasJournalNotes(todayEntry.msg));
+  if(journalToday) score+=W.journalWritten;
+
+  const urgesToday=(urgeLog||[]).filter(u=>{ try{return new Date(u.date).toDateString()===today;}catch{return false;} });
+  const urgesResisted=urgesToday.filter(u=>u.survived).length;
+  score+=Math.min(urgesResisted,W.urgeCapCount)*W.urgeResisted;
+
+  const totalTasks=confessData?.addictions?.length||0;
+  const cleanTasks=todayEntry?(todayEntry.msg.match(/CLEAN ✓/g)||[]).length:0;
+  if(totalTasks>0) score+=(cleanTasks/totalTasks)*W.tasksCompletedMax;
+
+  if(todayEntry?.status==="win") score+=W.positiveVerdict;
+
+  const last7=history.slice(0,7);
+  if(last7.length) score+=(last7.filter(h=>h.status!=="slip").length/last7.length)*W.consistencyMax;
+
+  if(todayEntry?.status==="slip") score+=W.slip;
+  const hasOlderHistory=history.some(h=>h.date!==today&&h.date!==yesterday);
+  if(hasOlderHistory&&!yestEntry) score+=W.missedCheckin;
+  const recentSlip=history.slice(0,2).some(h=>h.status==="slip");
+  if(streak===0&&recentSlip&&todayEntry?.status!=="slip") score+=W.brokenStreak;
+
+  return {score:Math.max(0,Math.min(100,Math.round(score))),journalToday,urgesResisted,todayEntry};
+}
+
+function loadScoreHistory(){ try{return JSON.parse(ls.get("syn_score_history","[]"));}catch{return [];} }
+
+// Writes/updates TODAY's entry only — every prior day's entry, once written,
+// is never touched again (spec: "never overwrite history"). Best-effort
+// mirrored to Firestore via the same durableWrite() queue+retry system
+// already used for checkins, so a network blip never drops it.
+function saveTodayScore(score){
+  const dateKey=localDateKey();
+  const hist=loadScoreHistory();
+  const idx=hist.findIndex(e=>e.date===dateKey);
+  if(idx>=0) hist[idx]={date:dateKey,score}; // today can still move through the day
+  else hist.unshift({date:dateKey,score});
+  const trimmed=hist.slice(0,30);
+  ls.set("syn_score_history",JSON.stringify(trimmed));
+  const uid=auth.currentUser?.uid;
+  if(uid){
+    const docId=`${uid}_${dateKey}`;
+    durableWrite(`score_${docId}`,"recoveryScores",docId,{uid,date:dateKey,score,timestamp:serverTimestamp()}).catch(()=>{});
+  }
+  return trimmed;
+}
+
+// Short, real-data-driven bullet points — deterministic, no AI.
+function buildScoreFactoids({streak,delta,score,journalToday,urgesResisted}){
+  const out=[];
+  if(streak>=2) out.push(`You've completed ${streak} consecutive check-ins.`);
+  const next=getNextRecoveryLevel(score);
+  if(next){ const away=next.min-score; if(away>0&&away<=6) out.push(`${away} more point${away===1?"":"s"} unlocks ${next.label}.`); }
+  if(delta>0) out.push(`Your consistency is improving — up ${delta} since yesterday.`);
+  else if(delta<0) out.push(`You lost ${Math.abs(delta)} point${Math.abs(delta)===1?"":"s"} since yesterday.`);
+  if(urgesResisted>0) out.push(`You resisted ${urgesResisted} urge${urgesResisted===1?"":"s"} today.`);
+  if(!journalToday) out.push(`Adding a journal note today can boost your score.`);
+  return out.slice(0,3);
+}
+
+const SYSTEM_SCORE_INSIGHT=`You are SYNAPSE — an AI recovery coach. The user's Recovery Score for today has just been calculated. Write EXACTLY 2 short motivational sentences explaining what's driving their current standing and what to focus on next. Do NOT state or repeat the numeric score itself. Plain text, no markdown. Tone follows the style described below.`;
+
+function buildScoreInsightPrompt({name,level,delta,streak}){
+  const deltaLine=delta>0?`up ${delta} points since yesterday`:delta<0?`down ${Math.abs(delta)} points since yesterday`:"unchanged since yesterday";
+  return `User: ${name}\nRecovery level: ${level.label}\nTrend: ${deltaLine}\nCurrent streak: ${streak} day(s)\n\nWrite the 2-sentence insight now.`;
+}
+function buildScoreInsightFallback({level,delta}){
+  if(delta>0) return `You're trending upward, and it shows. Keep stacking days like this and ${level.label.toLowerCase()} becomes your new baseline.`;
+  if(delta<0) return `Today pulled you back slightly, but one strong check-in resets the direction. Focus on today, not yesterday's dip.`;
+  return `You're holding steady right now. Consistency here is exactly what turns a good week into a rewired habit.`;
+}
+
+// Same one-per-day cache pattern as useDailyQuote — keyed by localDateKey(),
+// generation runs in the background (never blocks the score/ring rendering).
+function useScoreInsight({level,delta,streak}){
+  const [insight,setInsight]=useState(()=>{
+    try{ const c=JSON.parse(ls.get("syn_score_insight","null")); if(c&&c.date===localDateKey()) return c.text; }catch{ void 0; }
+    return null;
+  });
+  useEffect(()=>{
+    let cancelled=false;
+    (async()=>{
+      const todayKey=localDateKey();
+      try{
+        const cached=JSON.parse(ls.get("syn_score_insight","null"));
+        if(cached&&cached.date===todayKey){ if(!cancelled) setInsight(cached.text); return; }
+      }catch{ void 0; }
+      const user=(()=>{try{return JSON.parse(ls.get("syn_user","{}"));}catch{return{};}})();
+      const name=(user.name||"").split(" ")[0]||"there";
+      const mode=getMode();
+      let text=null;
+      try{
+        const raw=await callAI(
+          [{role:"user",content:buildScoreInsightPrompt({name,level,delta,streak})}],
+          SYSTEM_SCORE_INSIGHT+(mode.toneAddon||""),
+          {timeoutMs:10000,max_tokens:110},
+        );
+        if(raw&&raw.trim()) text=raw.trim();
+      }catch{ text=null; }
+      if(!text) text=buildScoreInsightFallback({level,delta});
+      ls.set("syn_score_insight",JSON.stringify({date:todayKey,text}));
+      if(!cancelled) setInsight(text);
+    })();
+    return()=>{cancelled=true;};
+  },[level,delta,streak]);
+  return insight;
+}
+
+// Ties it all together: computes today's score locally, persists it,
+// derives the delta vs. yesterday's frozen entry, and returns everything
+// the dashboard card needs. Recomputes when streak changes (the main
+// driver of daily state) — cheap, pure, no expensive recalculation.
+function useRecoveryScore({streak}){
+  const [data,setData]=useState(null);
+  useEffect(()=>{
+    let cancelled=false;
+    // Deferred one tick (not called synchronously in the effect body) — same
+    // async boundary as useDailyQuote/useScoreInsight above, just without an
+    // await since this computation is pure/local/instant.
+    queueMicrotask(()=>{
+      if(cancelled) return;
+      let confessData,history,urgeLog;
+      try{confessData=JSON.parse(ls.get("syn_confess","null"));}catch{confessData=null;}
+      try{history=JSON.parse(ls.get("syn_history","[]"));}catch{history=[];}
+      try{urgeLog=JSON.parse(ls.get("syn_urge_log","[]"));}catch{urgeLog=[];}
+
+      const {score,journalToday,urgesResisted}=computeRecoveryScore({streak,history,urgeLog,confessData});
+      const hist=saveTodayScore(score);
+      const yesterdayKey=localDateKey(new Date(Date.now()-86400000));
+      const yestEntry=hist.find(e=>e.date===yesterdayKey);
+      const prevScore=yestEntry?yestEntry.score:score;
+      const delta=score-prevScore;
+
+      setData({
+        score,prevScore,delta,
+        level:getRecoveryLevel(score),
+        trend:hist.slice(0,7).reverse().map(e=>e.score), // oldest → newest for the sparkline
+        factoids:buildScoreFactoids({streak,delta,score,journalToday,urgesResisted}),
+      });
+    });
+    return()=>{cancelled=true;};
+  },[streak]);
+  return data;
+}
+
+// Small count-up that animates FROM the previous score TO the new one
+// (spec: "78 ↓ 82"), matching AnimatedNumber's easing but parameterized
+// with a starting value since the existing helper always starts at 0.
+function AnimatedScoreNumber({from,to,duration=900}){
+  const [val,setVal]=useState(from);
+  useEffect(()=>{
+    let start=null;
+    const step=ts=>{
+      if(!start) start=ts;
+      const p=Math.min((ts-start)/duration,1);
+      const eased=1-Math.pow(1-p,3);
+      setVal(Math.round(from+(to-from)*eased));
+      if(p<1) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  },[from,to,duration]);
+  return <>{val}</>;
+}
+
+// Circular progress ring — pure SVG, no chart library.
+function RecoveryRing({score,rgb,size=132}){
+  const stroke=10, r=(size-stroke)/2, c=2*Math.PI*r;
+  const [dash,setDash]=useState(c);
+  useEffect(()=>{ const id=requestAnimationFrame(()=>setDash(c-(score/100)*c)); return()=>cancelAnimationFrame(id); },[score,c]);
+  return (
+    <svg width={size} height={size} style={{transform:"rotate(-90deg)"}}>
+      <circle cx={size/2} cy={size/2} r={r} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth={stroke}/>
+      <circle cx={size/2} cy={size/2} r={r} fill="none" stroke={`rgb(${rgb})`} strokeWidth={stroke} strokeLinecap="round"
+        strokeDasharray={c} strokeDashoffset={dash} style={{transition:"stroke-dashoffset 1.1s cubic-bezier(.22,1,.36,1), stroke .5s ease"}}/>
+    </svg>
+  );
+}
+
+// 7-day sparkline — pure SVG smooth curve, no chart library.
+function ScoreTrendChart({trend,rgb,width=220,height=44}){
+  if(!trend||trend.length<2) return null;
+  const min=Math.min(...trend), max=Math.max(...trend);
+  const range=Math.max(1,max-min);
+  const pts=trend.map((v,i)=>[ (i/(trend.length-1))*width, height-((v-min)/range)*height*0.8-height*0.1 ]);
+  const path=pts.reduce((d,[x,y],i)=>{
+    if(i===0) return `M${x},${y}`;
+    const [px,py]=pts[i-1];
+    const mx=(px+x)/2;
+    return `${d} C${mx},${py} ${mx},${y} ${x},${y}`;
+  },"");
+  return (
+    <svg width={width} height={height} style={{overflow:"visible"}}>
+      <path d={path} fill="none" stroke={`rgb(${rgb})`} strokeWidth={2} strokeLinecap="round"/>
+      <circle cx={pts[pts.length-1][0]} cy={pts[pts.length-1][1]} r={3} fill={`rgb(${rgb})`}/>
+    </svg>
+  );
+}
+
 /* ─── CHECKIN COUNTDOWN ──────────────────────────────────────────────────── */
 function CheckinCountdown(){
   const [label,setLabel]=useState("");
@@ -4763,10 +5072,154 @@ function CheckinCountdown(){
   return <strong style={{color:"var(--accent2)",fontWeight:700}}>{label}</strong>;
 }
 
+function RecoveryScoreCard({data,streak}){
+  const {score,prevScore,delta,level,trend,factoids}=data;
+  const insight=useScoreInsight({level,delta,streak});
+  return (
+    <div style={{marginBottom:28,padding:"22px 24px",borderRadius:14,background:"var(--accent3)",border:"1px solid var(--border)",backdropFilter:"blur(12px)"}}>
+      <div style={{display:"flex",alignItems:"center",gap:20,flexWrap:"wrap"}}>
+        <div style={{position:"relative",width:132,height:132,flexShrink:0}}>
+          <RecoveryRing score={score} rgb={level.rgb}/>
+          <div style={{position:"absolute",inset:0,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center"}}>
+            <div style={{fontSize:34,fontWeight:800,color:`rgb(${level.rgb})`,lineHeight:1}}><AnimatedScoreNumber from={prevScore} to={score}/></div>
+            <div style={{fontSize:9,letterSpacing:1.5,color:"var(--text4)",textTransform:"uppercase",marginTop:4}}>Recovery Score</div>
+          </div>
+        </div>
+        <div style={{flex:1,minWidth:160}}>
+          <div style={{fontSize:11,letterSpacing:2,fontWeight:700,color:`rgb(${level.rgb})`,textTransform:"uppercase",marginBottom:4}}>{level.label}</div>
+          <div style={{fontSize:11,color:delta>=0?"var(--accent2)":"var(--danger, #ff5555)",fontWeight:600,marginBottom:12}}>
+            {delta>0?"↑":delta<0?"↓":"—"} {delta===0?"No change":`${Math.abs(delta)} since yesterday`}
+          </div>
+          <ScoreTrendChart trend={trend} rgb={level.rgb}/>
+        </div>
+      </div>
+
+      {factoids.length>0 && (
+        <div style={{marginTop:16,paddingTop:14,borderTop:"1px solid var(--border)",display:"flex",flexDirection:"column",gap:6}}>
+          {factoids.map((f,i)=>(
+            <div key={i} style={{fontSize:12,color:"var(--text3)",display:"flex",gap:8}}>
+              <span style={{color:`rgb(${level.rgb})`}}>•</span><span>{f}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div style={{marginTop:14,paddingTop:14,borderTop:"1px solid var(--border)"}}>
+        {insight
+          ?<p style={{fontSize:12.5,lineHeight:1.7,color:"var(--text2)",fontWeight:300,margin:0,opacity:0,animation:"fadeIn .6s ease forwards"}}>{insight}</p>
+          :(
+            <div style={{height:11,width:"75%",borderRadius:4,background:"rgba(255,140,0,.07)",position:"relative",overflow:"hidden"}}>
+              <div style={{position:"absolute",inset:0,background:"linear-gradient(90deg,transparent,rgba(255,140,0,.35),transparent)",animation:"shimmer 1.6s ease-in-out infinite"}}/>
+            </div>
+          )
+        }
+      </div>
+    </div>
+  );
+}
+
+
+function RecoveryIntegrityCard({ data }) {
+  const { integrity, momentum, lifetimeCleanDays } = data;
+  const rgb = MOMENTUM_RGB[momentum] || MOMENTUM_RGB.Building;
+  return (
+    <div style={{ marginBottom: 28, padding: "20px 24px", borderRadius: 14, background: "var(--accent3)", border: "1px solid var(--border)" }}>
+      <div style={{ display: "flex", gap: 24, flexWrap: "wrap" }}>
+        <div>
+          <div style={{ fontSize: 9, letterSpacing: 2, color: "var(--text4)", textTransform: "uppercase", marginBottom: 4 }}>Recovery Integrity</div>
+          <div style={{ fontSize: 30, fontWeight: 800, color: `rgb(${rgb})`, opacity: 0, animation: "fadeIn .6s ease forwards" }}>{integrity}%</div>
+        </div>
+        <div>
+          <div style={{ fontSize: 9, letterSpacing: 2, color: "var(--text4)", textTransform: "uppercase", marginBottom: 4 }}>Recovery Momentum</div>
+          <div style={{ fontSize: 16, fontWeight: 700, color: `rgb(${rgb})` }}>{momentum}</div>
+        </div>
+        <div>
+          <div style={{ fontSize: 9, letterSpacing: 2, color: "var(--text4)", textTransform: "uppercase", marginBottom: 4 }}>Lifetime Clean Days</div>
+          <div style={{ fontSize: 16, fontWeight: 700, color: "var(--text)" }}>{lifetimeCleanDays}</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ComebackCard({ data, streak, score }) {
+  if (streak >= data.previousBest) return null; // not in a rebuild — nothing to show
+  return (
+    <div style={{ marginBottom: 28, padding: "20px 24px", borderRadius: 14, background: "var(--accent3)", border: "1px solid var(--border)", opacity: 0, animation: "fadeIn .7s ease forwards" }}>
+      <div style={{ fontSize: 9, letterSpacing: 2, color: "var(--text4)", textTransform: "uppercase", marginBottom: 10 }}>Recovery Restart</div>
+      <div style={{ display: "flex", gap: 24, flexWrap: "wrap" }}>
+        <div><div style={{ fontSize: 22, fontWeight: 800, color: "var(--accent)" }}>Day {streak}</div></div>
+        <div><div style={{ fontSize: 11, color: "var(--text4)" }}>Previous Best</div><div style={{ fontSize: 15, fontWeight: 700 }}>{data.previousBest} Days</div></div>
+        <div><div style={{ fontSize: 11, color: "var(--text4)" }}>Lifetime Clean Days</div><div style={{ fontSize: 15, fontWeight: 700 }}>{data.lifetimeCleanDays}</div></div>
+        {score != null && <div><div style={{ fontSize: 11, color: "var(--text4)" }}>Recovery Score</div><div style={{ fontSize: 15, fontWeight: 700 }}>{score}</div></div>}
+      </div>
+    </div>
+  );
+}
+
+function EmergencyMissionCard({ data }) {
+  const [mission, setMission] = useState(data.mission);
+  if (!data.isSlipToday || !mission) return null;
+
+  const onToggle = (taskId) => {
+    const updated = toggleEmergencyTask(data.todayDate, taskId);
+    if (updated) setMission({ ...updated });
+  };
+
+  return (
+    <div style={{ marginBottom: 28, padding: "20px 24px", borderRadius: 14, background: "var(--accent3)", border: "1px solid var(--border)", opacity: 0, animation: "fadeIn .8s ease forwards" }}>
+      <div style={{ fontSize: 9, letterSpacing: 2, color: "var(--text4)", textTransform: "uppercase", marginBottom: 10 }}>Emergency Recovery Mission</div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 14 }}>
+        {mission.tasks.map((t) => (
+          <label key={t.id} style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 13, color: t.done ? "var(--text4)" : "var(--text2)", textDecoration: t.done ? "line-through" : "none", cursor: "pointer" }}>
+            <input type="checkbox" checked={t.done} onChange={() => onToggle(t.id)} style={{ width: 16, height: 16, accentColor: "var(--accent)" }} />
+            {t.text}
+          </label>
+        ))}
+      </div>
+      {mission.completed && <div style={{ fontSize: 11.5, color: "var(--accent2)", marginBottom: 8 }}>Mission complete — today's integrity penalty has been reduced.</div>}
+
+      {data.analysis && (
+        <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid var(--border)" }}>
+          <div style={{ fontSize: 9, letterSpacing: 2, color: "var(--text4)", textTransform: "uppercase", marginBottom: 8 }}>AI Recovery Analysis</div>
+          <p style={{ fontSize: 12.5, lineHeight: 1.8, color: "var(--text2)", fontWeight: 300, whiteSpace: "pre-wrap", margin: 0 }}>{data.analysis}</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function RecoveryTimeline({ timeline }) {
+  if (!timeline || timeline.length < 2) return null;
+  const markerColor = (label) => (label === "Relapse" ? "255,90,90" : label === "Comeback" || label === "Integrity Restored" ? "0,200,120" : "255,140,0");
+  return (
+    <div style={{ marginBottom: 28, padding: "20px 24px", borderRadius: 14, background: "var(--accent3)", border: "1px solid var(--border)", overflowX: "auto" }}>
+      <div style={{ fontSize: 9, letterSpacing: 2, color: "var(--text4)", textTransform: "uppercase", marginBottom: 16 }}>Recovery Timeline</div>
+      <svg width={Math.max(320, timeline.length * 130)} height={70}>
+        <line x1={20} y1={35} x2={Math.max(300, timeline.length * 130) - 20} y2={35} stroke="var(--border)" strokeWidth={2} />
+        {timeline.map((ev, i) => {
+          const x = 20 + i * ((Math.max(300, timeline.length * 130) - 40) / Math.max(1, timeline.length - 1));
+          const rgb = markerColor(ev.label);
+          return (
+            <g key={i}>
+              <circle cx={x} cy={35} r={6} fill={`rgb(${rgb})`} />
+              <text x={x} y={20} textAnchor="middle" fontSize={10} fill="var(--text2)">{ev.label}</text>
+              <text x={x} y={58} textAnchor="middle" fontSize={9} fill="var(--text4)">{ev.date?.slice(0, 10)}</text>
+            </g>
+          );
+        })}
+      </svg>
+    </div>
+  );
+}
+
 function Checkin({streak,savedPlan,lastCheckin,onCheckin,onGoChat}) {
   // Load saved confess data (addictions + baseline values)
   const confessData = useMemo(()=>{ try{ return JSON.parse(ls.get("syn_confess","null")); }catch{ return null; } },[]);
   const addictions = confessData?.addictions||[];
+  const dailyQuote = useDailyQuote({streak,savedPlan}); // null until generated/cached for today
+  const recoveryScore = useRecoveryScore({streak}); // null until computed (near-instant, local)
+  const smartRecovery = useSmartStreakRecovery({streak}); // shared engine — src/recoveryEngine.js (identical for both themes)
 
   // Per-addiction status: "clean" | "partial" | "slip"
   const [adStatus,setAdStatus]=useState(()=>Object.fromEntries(addictions.map(a=>[a.id,"clean"])));
@@ -5027,14 +5480,33 @@ function Checkin({streak,savedPlan,lastCheckin,onCheckin,onGoChat}) {
 
       <div className="ci-body" style={{maxWidth:820,margin:"0 auto",padding:"clamp(32px,5vw,60px) clamp(16px,8vw,100px)",position:"relative",zIndex:1}}>
         {/* Daily Quote */}
-        {(()=>{ const dq=getDailyQuote(); return(
-          <div className="ci-quote" style={{marginBottom:28,padding:"18px 24px",borderRadius:12,background:"var(--accent3)",border:"1px solid var(--border)",position:"relative",overflow:"hidden"}}>
-            <div style={{position:"absolute",top:0,left:0,width:3,height:"100%",background:"linear-gradient(180deg,rgba(255,140,0,0.6),rgba(255,80,0,0.2))",borderRadius:"3px 0 0 3px"}}/>
-            <div style={{fontSize:9,letterSpacing:2.5,color:"var(--accent)",textTransform:"uppercase",fontWeight:600,marginBottom:8,paddingLeft:4}}>⚡ Today's Signal</div>
-            <div style={{fontSize:13,lineHeight:1.75,color:"var(--text2)",fontWeight:300,fontStyle:"italic",paddingLeft:4,marginBottom:6}}>"{dq.q}"</div>
-            <div style={{fontSize:10,color:"var(--text4)",letterSpacing:1,paddingLeft:4}}>— {dq.a}</div>
-          </div>
-        ); })()}
+        {smartRecovery && <EmergencyMissionCard data={smartRecovery}/>}
+        {smartRecovery && <ComebackCard data={smartRecovery} streak={streak} score={recoveryScore?.score}/>}
+        {smartRecovery && <RecoveryIntegrityCard data={smartRecovery}/>}
+        {smartRecovery && <RecoveryTimeline timeline={smartRecovery.timeline}/>}
+
+        {recoveryScore && <RecoveryScoreCard data={recoveryScore} streak={streak}/>}
+
+        {/* Daily Quote — AI-generated per calendar day, cached, shimmer while loading */}
+        <div className="ci-quote" style={{marginBottom:28,padding:"18px 24px",borderRadius:12,background:"var(--accent3)",border:"1px solid var(--border)",position:"relative",overflow:"hidden"}}>
+          <div style={{position:"absolute",top:0,left:0,width:3,height:"100%",background:"linear-gradient(180deg,rgba(255,140,0,0.6),rgba(255,80,0,0.2))",borderRadius:"3px 0 0 3px"}}/>
+          <div style={{fontSize:9,letterSpacing:2.5,color:"var(--accent)",textTransform:"uppercase",fontWeight:600,marginBottom:8,paddingLeft:4}}>⚡ Today's Transmission</div>
+          {dailyQuote ? (
+            <div style={{opacity:0,animation:"fadeIn .6s ease forwards",paddingLeft:4}}>
+              <div style={{fontSize:13,lineHeight:1.75,color:"var(--text2)",fontWeight:300,fontStyle:"italic",marginBottom:6}}>"{dailyQuote.q}"</div>
+              <div style={{fontSize:10,color:"var(--text4)",letterSpacing:1}}>— {dailyQuote.a}</div>
+            </div>
+          ):(
+            <div style={{paddingLeft:4}}>
+              <div style={{height:13,width:"85%",borderRadius:4,background:"rgba(255,140,0,.08)",position:"relative",overflow:"hidden",marginBottom:8}}>
+                <div style={{position:"absolute",inset:0,background:"linear-gradient(90deg,transparent,rgba(255,140,0,.4),transparent)",animation:"shimmer 1.6s ease-in-out infinite"}}/>
+              </div>
+              <div style={{height:10,width:"45%",borderRadius:4,background:"rgba(255,140,0,.06)",position:"relative",overflow:"hidden"}}>
+                <div style={{position:"absolute",inset:0,background:"linear-gradient(90deg,transparent,rgba(255,140,0,.3),transparent)",animation:"shimmer 1.6s ease-in-out infinite"}}/>
+              </div>
+            </div>
+          )}
+        </div>
 
         {!done?(
           <>
@@ -6208,6 +6680,119 @@ function EmergencyOverlay({savedPlan,streak,onClose,onCoach}){
   );
 }
 
+/* ─── WELCOME EXPERIENCE ─────────────────────────────────────────────────
+   Shown exactly ONCE — the first time a verified user lands on their
+   dashboard after finishing onboarding (Day-1 plan → Check-In). Two
+   phases: a short cinematic "neural profile" init sequence, then a
+   personalized AI Coach greeting. Purely additive overlay — does not
+   touch routing, auth, or any existing screen. Gated by the
+   "syn_welcome_seen" localStorage flag, set once shown (or grandfathered
+   in for existing users — see AppRoot). ────────────────────────────────── */
+const WELCOME_INIT_LINES=[
+  "Initializing Neural Profile",
+  "Analyzing behaviour...",
+  "Loading AI Coach...",
+  "Building Recovery Protocol...",
+  "Preparing Dashboard...",
+  "Generating Neural Identity...",
+];
+function WelcomeExperience({onComplete}){
+  const [phase,setPhase]=useState("init"); // "init" -> "greet"
+  const [lines,setLines]=useState([]);
+  const [pct,setPct]=useState(0);
+  const [vis,setVis]=useState(false);
+  const [greeting,setGreeting]=useState(()=>ls.get("syn_welcome_msg","")||null);
+
+  const mode=getMode();
+  const user=(()=>{try{return JSON.parse(ls.get("syn_user","{}"));}catch{return {};}})();
+  const name=(user.name||"").split(" ")[0]||"there";
+
+  // Kick off generation immediately (in parallel with the cinematic), so
+  // the message is ready — or already cached from a prior attempt — by the
+  // time the "greet" phase needs it. Runs once per mount; the component
+  // itself only ever mounts once (see AppRoot's syn_welcome_seen gate).
+  useEffect(()=>{
+    if(greeting) return; // already cached — never regenerate
+    (async()=>{
+      let archetype, confessData;
+      try{archetype=JSON.parse(ls.get("syn_archetype","null"));}catch{archetype=null;}
+      try{confessData=JSON.parse(ls.get("syn_confess","null"));}catch{confessData=null;}
+      const addictions=(confessData?.addictions||[]).map(a=>a.label||a.id).filter(Boolean);
+      const day=Math.max(1,parseInt(ls.get("syn_streak","0"))+1);
+      const ctx={name,archetype,addictions,day};
+      let msg;
+      try{
+        msg=await callAI(
+          [{role:"user",content:buildWelcomeGreetingUserPrompt(ctx)}],
+          SYSTEM_WELCOME_GREETING+(mode.toneAddon||""),
+          {timeoutMs:12000,max_tokens:220},
+        );
+        if(!msg||!msg.trim()) throw new Error("empty");
+      }catch{
+        msg=buildWelcomeGreetingFallback(ctx); // AI unavailable — handcrafted, still dynamic
+      }
+      ls.set("syn_welcome_msg",msg);
+      setGreeting(msg);
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[]);
+
+  useEffect(()=>{
+    setTimeout(()=>setVis(true),40);
+    let i=0;
+    const addLine=()=>{
+      if(i>=WELCOME_INIT_LINES.length){
+        setTimeout(()=>setPhase("greet"),420);
+        return;
+      }
+      setLines(l=>[...l,WELCOME_INIT_LINES[i]]);
+      i++;
+      setTimeout(addLine,270);
+    };
+    setTimeout(addLine,200);
+  },[]);
+
+  useEffect(()=>{
+    if(phase!=="init") return;
+    let p=0;
+    const iv=setInterval(()=>{
+      p=Math.min(p+3.4,100);
+      setPct(Math.round(p));
+      if(p>=100) clearInterval(iv);
+    },55);
+    return()=>clearInterval(iv);
+  },[phase]);
+
+  return (
+    <div style={{position:"fixed",inset:0,zIndex:9500,display:"flex",alignItems:"center",justifyContent:"center",background:"#07040a",opacity:vis?1:0,transition:"opacity .5s ease",padding:20,boxSizing:"border-box"}}>
+      {phase==="init" ? (
+        <div style={{width:"min(440px,88vw)",fontFamily:"'JetBrains Mono',monospace"}}>
+          <div style={{fontSize:10,letterSpacing:3,color:"rgba(255,180,80,.5)",textTransform:"uppercase",marginBottom:18}}>Neural Profile</div>
+          <div style={{minHeight:150}}>
+            {lines.map((l,i)=>(
+              <div key={i} style={{fontSize:12,color:"rgba(255,200,140,.85)",marginBottom:9,opacity:0,animation:"fadeIn .4s ease forwards"}}>{"> "}{l}</div>
+            ))}
+          </div>
+          <div style={{height:3,borderRadius:2,background:"rgba(255,140,0,.12)",overflow:"hidden",marginTop:10}}>
+            <div style={{height:"100%",width:`${pct}%`,background:"linear-gradient(90deg,#ff9500,#ffcc00)",transition:"width .1s linear"}}/>
+          </div>
+          <div style={{fontSize:10,color:"rgba(255,180,80,.4)",marginTop:8,letterSpacing:1}}>{pct}%</div>
+        </div>
+      ):(
+        <div style={{maxWidth:480,padding:"0 12px",textAlign:"center",opacity:0,animation:"fadeIn .7s ease forwards"}}>
+          <div style={{width:56,height:56,borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",fontSize:26,margin:"0 auto 22px",background:`${mode.accent}18`,border:`1px solid ${mode.accent}55`,boxShadow:`0 0 40px ${mode.accent}33`}}>{mode.icon}</div>
+          <div style={{fontSize:10,letterSpacing:3,color:"rgba(255,180,80,.5)",textTransform:"uppercase",marginBottom:16,fontFamily:"'JetBrains Mono',monospace"}}>Your {mode.label} Coach</div>
+          {greeting
+            ?<p style={{fontSize:16,lineHeight:1.9,color:"var(--text)",fontWeight:300,whiteSpace:"pre-wrap",marginBottom:36}}>{greeting}</p>
+            :<div style={{padding:"18px 0 36px"}}><Dots label="Reading your file"/></div>
+          }
+          <button className="btn-primary" onClick={onComplete} disabled={!greeting} style={{fontSize:13,letterSpacing:1,padding:"15px 44px",opacity:greeting?1:.5,cursor:greeting?"pointer":"default"}}>Enter Command Center →</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ─── ROOT ───────────────────────────────────────────────────────────────── */
 function AppRoot() {
   const [screen,setScreen]  =useState("boot");
@@ -6240,6 +6825,7 @@ function AppRoot() {
       return next;
     });
   },[]);
+  const [showWelcome,setShowWelcome]=useState(false);
   const [showInstallPrompt,setShowInstallPrompt]=useState(false);
   const [showNotifPrompt,setShowNotifPrompt]=useState(false);
   const [showFeedback,setShowFeedback]=useState(false);
@@ -6274,6 +6860,13 @@ function AppRoot() {
   },[]);
 
   useEffect(()=>{const s=document.createElement("style");s.textContent=G;document.head.appendChild(s);return()=>document.head.removeChild(s);},[]);
+  // Welcome Experience is new — existing users who already have a plan have
+  // already "entered" SYNAPSE before, so they're grandfathered past it
+  // silently. Only brand-new users (no plan yet) will ever see it fire,
+  // triggered from handleBeginDay1 below.
+  useEffect(()=>{
+    if(ls.get("syn_plan","")&&!ls.get("syn_welcome_seen","")) ls.set("syn_welcome_seen","1");
+  },[]);
   useEffect(()=>{"serviceWorker" in navigator&&navigator.serviceWorker.register("/firebase-messaging-sw.js",{scope:"/"}).catch(()=>{});},[]);
 
   // Capture PWA install prompt — also sync from module-level capture
@@ -6583,6 +7176,10 @@ function AppRoot() {
   const handleBeginDay1=(freshPlan)=>{
     if(freshPlan){setSP(freshPlan);ls.set("syn_plan",freshPlan);}
     goTo("checkin");
+    if(!ls.get("syn_welcome_seen","")){
+      ls.set("syn_welcome_seen","1");
+      setTimeout(()=>setShowWelcome(true),700);
+    }
   };
 
   const handleCheckin=async (msg,forcedStatus)=>{
@@ -6646,13 +7243,13 @@ function AppRoot() {
     if(status === "SLIP"){
       setStreak(0); setLastCI(today);
       ls.set("syn_streak","0"); ls.set("syn_last",today);
-      const nh=[{date:today,msg,streak:0,status:"slip",reply},...history];
+      const nh=[{date:today,msg,streak:0,status:"slip",reply,journal:hasJournalNotes(msg)},...history];
       setHistory(nh); ls.set("syn_history",JSON.stringify(nh));
     } else {
       const ns=streak+1;
       setStreak(ns); setLastCI(today);
       ls.set("syn_streak",ns); ls.set("syn_last",today);
-      const nh=[{date:today,msg,streak:ns,status:status.toLowerCase(),reply},...history];
+      const nh=[{date:today,msg,streak:ns,status:status.toLowerCase(),reply,journal:hasJournalNotes(msg)},...history];
       setHistory(nh); ls.set("syn_history",JSON.stringify(nh));
       // Milestone celebration
       if([7,21,30,90].includes(ns)){
@@ -6786,7 +7383,7 @@ function AppRoot() {
 
   const handleReset=()=>{
     if(!confirm("Reset all progress? This cannot be undone."))return;
-    ["syn_streak","syn_last","syn_plan","syn_plan_history","syn_history","syn_user","syn_archetype","syn_milestones","syn_confess","syn_trigger_log","syn_chat_history"].forEach(k=>ls.remove(k));
+    ["syn_streak","syn_last","syn_plan","syn_plan_history","syn_history","syn_user","syn_archetype","syn_milestones","syn_confess","syn_trigger_log","syn_chat_history","syn_welcome_seen","syn_welcome_msg"].forEach(k=>ls.remove(k));
     setStreak(0);setLastCI(null);setSP("");setPlanHist([]);setHistory([]);setPlan("");
     setPendingPlan("");setPendingArch(null);
     setAuthed(false);setShowAuth(false);
@@ -6870,6 +7467,7 @@ function AppRoot() {
                           </button>
           )}
                     {milestone&&<MilestoneCelebration day={milestone} onClose={()=>setMilestone(null)}/>}
+          {showWelcome&&<WelcomeExperience onComplete={()=>setShowWelcome(false)}/>}
           <FcmToast toast={fcmToast} theme={theme}/>
           {showLifelinePrompt&&<LifelinePrompt theme={theme} missedDays={missedDays} onUse={useLifeline} onDecline={declineLifeline}/>}
           {showNotifPrompt&&<NotifPrompt theme={theme} onAllow={requestNotifPermission} onDismiss={()=>setShowNotifPrompt(false)}/>}
