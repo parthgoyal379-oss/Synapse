@@ -23,8 +23,8 @@ import {
   Activity, LogOut, Settings, User, Mail, Map, Info
 } from "lucide-react";
 import FocusModeRouter, { FOCUS_SUPPORTED_SCREENS } from "./focus-mode/FocusModeRouter";
-import { callAI, RateLimitError } from "./aiClient";
-import { useSmartStreakRecovery, MOMENTUM_RGB } from "./recoveryEngine";
+import { callAI } from "./aiClient";
+import { useSmartStreakRecovery, MOMENTUM_RGB, toggleEmergencyTask } from "./recoveryEngine";
 
 /* Escapes free-text user input before it's interpolated into a raw HTML
    string (document.write PDF export windows). Prevents self-XSS if a

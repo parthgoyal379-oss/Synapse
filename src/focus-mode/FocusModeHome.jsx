@@ -5,6 +5,7 @@ import { fm, useResponsive } from "./theme";
 import { readSynapseSnapshot } from "./synapseData";
 import { DebugOverflow } from "./DebugOverflow";
 import { FocusModeShell, Sidebar, TopBar, Card, Eyebrow, Button, VerdictBadge, StatTile, TaskRow, WeeklyTrendChart, RecoveryPhaseCard, RecoveryTimeline, NeuralOrb, AmbientBackground, EASE, GLASS_CARD, CountUp } from "./components";
+import SmartRecoveryCard from "./SmartRecoveryCard";
 
 const MILESTONES = [
   { label: "Awakening", days: 3 },
@@ -353,6 +354,10 @@ export default function FocusModeHome({ onNavigate, onOpenProfile }) {
 
         {/* ── Insight / Weekly Progress / Recent check-in / Support ── */}
         <div style={{ padding: "24px clamp(14px,4vw,48px) 0", display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(4,1fr)", gap: 20 }}>
+          <motion.div initial="hidden" animate="visible" variants={bottomRow(playIntro ? 1.41 : 0)} {...hoverLift} style={{ gridColumn: isMobile ? "auto" : "span 2" }}>
+            <SmartRecoveryCard streak={streak} onOpenCoach={() => onNavigate?.("chat")} />
+          </motion.div>
+
           <motion.div initial="hidden" animate="visible" variants={bottomRow(playIntro ? 1.45 : 0)} {...hoverLift}>
             <Card padding={24} style={GLASS_CARD}>
               <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
