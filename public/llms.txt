@@ -9,6 +9,7 @@ SYNAPSE is a privacy-first Progressive Web App (PWA). It is a self-help behavior
 - [About SYNAPSE](https://www.synapserewire.site/): Mission, vision, founders (Parth Goyal, Sandali Tiwari), and values.
 
 ## Guides
+- [Quit Addictive Habits — All Guides](https://www.synapserewire.site/quit/): Index of science-based recovery guides for every addiction SYNAPSE covers.
 - [How to Stop Watching Reels](https://www.synapserewire.site/quit/reels): A practical, research-informed guide to quitting short-form video addiction — why it's addictive and a step-by-step plan to break the loop.
 - [How to Stop Watching Porn](https://www.synapserewire.site/quit/porn): A judgment-free, research-informed guide to quitting pornography — the Coolidge effect, escalation, the shame loop, and a step-by-step plan.
 - [How to Quit Social Media](https://www.synapserewire.site/quit/social-media): Why social media is compulsive — validation, comparison, FOMO — and a step-by-step plan to take back your attention.
